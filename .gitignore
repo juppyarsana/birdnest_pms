@@ -14,7 +14,7 @@ venv.bak/
 *.log
 *.pot
 *.pyc
-migrations/
+# migrations/  (optional; uncomment to ignore)
 *.sqlite3
 *.sqlite3-journal
 
