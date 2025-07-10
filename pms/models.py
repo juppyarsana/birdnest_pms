@@ -37,7 +37,7 @@ class Reservation(models.Model):
         ('no_show', 'No-Show'),
     ]
     PAYMENT_METHODS = [
-        ('', 'Not Specified'),  # Empty choice for pending reservations
+        ('', 'Not Specified'),
         ('bank_transfer', 'Bank Transfer'),
         ('cash', 'Cash'),
         ('credit_card', 'Credit Card'),
@@ -48,6 +48,7 @@ class Reservation(models.Model):
     check_out = models.DateField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, blank=True, default='')
+    payment_notes = models.TextField(blank=True, default='')  # New field
 
     def __str__(self):
         return f"{self.guest.name} - {self.room.room_number} ({self.status})"

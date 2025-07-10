@@ -43,6 +43,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -55,11 +56,12 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                     <td><a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success">Confirm</a></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7">No pending reservations</td>
+                    <td colspan="8">No pending reservations</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -74,6 +76,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,10 +88,11 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">No expected arrivals</td>
+                    <td colspan="7">No expected arrivals</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -103,6 +107,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,10 +119,11 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">No expected departures</td>
+                    <td colspan="7">No expected departures</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -132,6 +138,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -143,10 +150,11 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">No confirmed reservations for today</td>
+                    <td colspan="7">No confirmed reservations for today</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -161,6 +169,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -172,10 +181,11 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">No canceled reservations</td>
+                    <td colspan="7">No canceled reservations</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -190,6 +200,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -201,10 +212,11 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">No no-show reservations</td>
+                    <td colspan="7">No no-show reservations</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -219,6 +231,7 @@
                     <th>Check-Out</th>
                     <th>Status</th>
                     <th>Payment Method</th>
+                    <th>Payment Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -230,10 +243,11 @@
                     <td>{{ reservation.check_out }}</td>
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                    <td>{{ reservation.payment_notes|default:"None" }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6">No reservations in database</td>
+                    <td colspan="7">No reservations in database</td>
                 </tr>
                 {% endfor %}
             </tbody>

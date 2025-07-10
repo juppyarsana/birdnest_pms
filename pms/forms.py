@@ -7,12 +7,13 @@ from datetime import date
 class ReservationForm(forms.ModelForm):
     class Meta:
         model = Reservation
-        fields = ['guest', 'room', 'check_in', 'check_out', 'status', 'payment_method']
+        fields = ['guest', 'room', 'check_in', 'check_out', 'status', 'payment_method', 'payment_notes']
         widgets = {
             'check_in': forms.DateInput(attrs={'type': 'date'}),
             'check_out': forms.DateInput(attrs={'type': 'date'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'payment_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
     def clean(self):
@@ -27,7 +28,6 @@ class ReservationForm(forms.ModelForm):
             if check_out <= check_in:
                 raise ValidationError("Check-out date must be after check-in date.")
 
-            # Check for overlapping active reservations
             overlapping = Reservation.objects.filter(
                 room=room,
                 check_in__lt=check_out,
@@ -38,7 +38,6 @@ class ReservationForm(forms.ModelForm):
             if overlapping.exists():
                 raise ValidationError(f"Room {room.room_number} is already booked for the selected dates.")
 
-        # Require payment method for confirmed, expected_arrival, or expected_departure
         if status in ['confirmed', 'expected_arrival', 'expected_departure'] and not payment_method:
             raise ValidationError("Payment method is required for confirmed or active reservations.")
 
@@ -48,7 +47,6 @@ class ReservationForm(forms.ModelForm):
         reservation = super().save(commit=commit)
         if commit:
             today = date.today()
-            # Update room status only for active statuses
             if reservation.status in ['confirmed', 'expected_arrival', 'expected_departure'] and reservation.check_in <= today < reservation.check_out:
                 reservation.room.status = 'occupied'
             else:
@@ -65,14 +63,20 @@ class ReservationForm(forms.ModelForm):
 class ConfirmReservationForm(forms.ModelForm):
     class Meta:
         model = Reservation
-        fields = ['payment_method']
+        fields = ['payment_method', 'payment_notes']
         widgets = {
-            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
+            'payment_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['payment_method'].required = True
+        self.fields['payment_method'].empty_label = None
 
     def clean(self):
         cleaned_data = super().clean()
         payment_method = cleaned_data.get('payment_method')
-        if not payment_method:
-            raise ValidationError("Payment method is required for confirmation.")
+        if not payment_method or payment_method == '':
+            raise ValidationError("Please select a payment method for confirmation.")
         return cleaned_data

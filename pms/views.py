@@ -1,10 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Room, Reservation
 from .forms import ReservationForm
+from .forms import ConfirmReservationForm  # Ensure this line is present
 from django.utils import timezone
 from django.http import JsonResponse
 from datetime import date, timedelta
 from calendar import monthrange
+
 
 def dashboard(request):
     rooms = Room.objects.all()
@@ -103,23 +105,15 @@ def edit_reservation(request, reservation_id):
 def confirm_reservation(request, reservation_id):
     reservation = get_object_or_404(Reservation, id=reservation_id)
     if request.method == 'POST':
-        reservation.status = 'confirmed'
-        reservation.save()
-        # Trigger room status update
-        today = date.today()
-        if reservation.check_in <= today < reservation.check_out:
-            reservation.room.status = 'occupied'
-        else:
-            has_other_active = Reservation.objects.filter(
-                room=reservation.room,
-                check_in__lte=today,
-                check_out__gt=today,
-                status__in=['confirmed', 'expected_arrival', 'expected_departure']
-            ).exclude(id=reservation.id).exists()
-            reservation.room.status = 'occupied' if has_other_active else 'available'
-        reservation.room.save()
-        return redirect('dashboard')
-    return render(request, 'pms/confirm_reservation.html', {'reservation': reservation})
+        form = ConfirmReservationForm(request.POST, instance=reservation)
+        if form.is_valid():
+            reservation = form.save()
+            reservation.status = 'confirmed'  # Set status manually
+            reservation.save()
+            return redirect('dashboard')
+    else:
+        form = ConfirmReservationForm(instance=reservation)
+    return render(request, 'pms/confirm_reservation.html', {'reservation': reservation, 'form': form})
 
 def calendar_data(request):
     reservations = Reservation.objects.all()

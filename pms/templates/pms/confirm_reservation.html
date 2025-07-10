@@ -30,16 +30,20 @@
         <form method="post">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="id_payment_method" class="form-label">Payment Method</label>
-                <select name="payment_method" id="id_payment_method" class="form-select">
-                    <option value="" {% if form.payment_method.value == '' %}selected{% endif %}>Not Specified</option>
-                    <option value="bank_transfer" {% if form.payment_method.value == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
-                    <option value="cash" {% if form.payment_method.value == 'cash' %}selected{% endif %}>Cash</option>
-                    <option value="credit_card" {% if form.payment_method.value == 'credit_card' %}selected{% endif %}>Credit Card</option>
-                </select>
+               <label for="id_payment_method" class="form-label">Payment Method</label>
+                {{ form.payment_method }}
                 {% if form.payment_method.errors %}
                     <div class="invalid-feedback d-block">
                         {{ form.payment_method.errors|join:", " }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+               <label for="id_payment_notes" class="form-label">Payment Notes (Optional)</label>
+                {{ form.payment_notes }}
+                {% if form.payment_notes.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.payment_notes.errors|join:", " }}
                     </div>
                 {% endif %}
             </div>
