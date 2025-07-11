@@ -1,3 +1,28 @@
+from .models import Reservation
+from .forms import CheckInGuestForm
+from django.shortcuts import get_object_or_404, render, redirect
+
+def reservations_list(request):
+    """View to display all reservations with appropriate actions"""
+    reservations = Reservation.objects.all().order_by('-check_in')
+    return render(request, 'pms/reservations.html', {'reservations': reservations})
+
+# View for check-in process
+def checkin_reservation(request, reservation_id):
+    reservation = get_object_or_404(Reservation, id=reservation_id, status='expected_arrival')
+    guest = reservation.guest
+    if request.method == 'POST':
+        form = CheckInGuestForm(request.POST, instance=guest)
+        if form.is_valid():
+            form.save()
+            reservation.status = 'checked_in'
+            reservation.save()
+            # Update room status after check-in
+            reservation.room.update_status()
+            return redirect('dashboard')
+    else:
+        form = CheckInGuestForm(instance=guest)
+    return render(request, 'pms/checkin.html', {'reservation': reservation, 'form': form})
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Room, Reservation
 from .forms import ReservationForm
@@ -12,20 +37,20 @@ def dashboard(request):
     rooms = Room.objects.all()
     today = date.today()
 
-    # Update reservation statuses
+    # Update reservation statuses and mark no-shows
+    no_show_updated = False
     for reservation in Reservation.objects.all():
+        old_status = reservation.status
         reservation.update_status()
+        # If a reservation was marked as no-show, update room status
+        if old_status != 'no_show' and reservation.status == 'no_show':
+            no_show_updated = True
+            reservation.room.update_status(today)
 
-    # Sync room statuses
-    for room in rooms:
-        is_occupied = Reservation.objects.filter(
-            room=room,
-            check_in__lte=today,
-            check_out__gt=today,
-            status__in=['confirmed', 'expected_arrival', 'expected_departure']
-        ).exists()
-        room.status = 'occupied' if is_occupied else 'available'
-        room.save()
+    # Update room statuses
+    if no_show_updated:
+        for room in rooms:
+            room.update_status(today)
 
     # Current reservations (active today, confirmed/arrival/departure)
     reservations = Reservation.objects.filter(
@@ -57,6 +82,7 @@ def dashboard(request):
     # Filter reservations by status
     pending_reservations = Reservation.objects.filter(status='pending')
     expected_arrivals = Reservation.objects.filter(status='expected_arrival')
+    checked_in_reservations = Reservation.objects.filter(status='checked_in')
     expected_departures = Reservation.objects.filter(status='expected_departure')
     canceled_reservations = Reservation.objects.filter(status='canceled')
     no_show_reservations = Reservation.objects.filter(status='no_show')
@@ -67,6 +93,7 @@ def dashboard(request):
         'reservations': reservations,
         'pending_reservations': pending_reservations,
         'expected_arrivals': expected_arrivals,
+        'checked_in_reservations': checked_in_reservations,
         'expected_departures': expected_departures,
         'canceled_reservations': canceled_reservations,
         'no_show_reservations': no_show_reservations,
@@ -110,6 +137,8 @@ def confirm_reservation(request, reservation_id):
             reservation = form.save()
             reservation.status = 'confirmed'  # Set status manually
             reservation.save()
+            # Update room status after confirmation
+            reservation.room.update_status()
             return redirect('dashboard')
     else:
         form = ConfirmReservationForm(instance=reservation)
@@ -135,3 +164,55 @@ def calendar_data(request):
             'color': colors.get(reservation.status, '#28a745'),
         })
     return JsonResponse(events, safe=False)
+
+def reservations_list(request):
+    """View to display all reservations with appropriate actions"""
+    reservations = Reservation.objects.all().order_by('-check_in')
+    return render(request, 'pms/reservations.html', {'reservations': reservations})
+
+def confirm_reservation(request, reservation_id):
+    """Confirm a pending reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id, status='pending')
+    if request.method == 'POST':
+        form = ConfirmReservationForm(request.POST, instance=reservation)
+        if form.is_valid():
+            reservation = form.save(commit=False)
+            reservation.status = 'confirmed'
+            reservation.save()
+            return redirect('reservations_list')
+    else:
+        form = ConfirmReservationForm(instance=reservation)
+    return render(request, 'pms/confirm_reservation.html', {'form': form, 'reservation': reservation})
+
+def checkout_reservation(request, reservation_id):
+    """Check out a guest"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    if reservation.status in ['checked_in', 'expected_departure']:
+        reservation.status = 'completed'
+        reservation.save()
+        # Update room status
+        reservation.room.update_status()
+        return redirect('reservations_list')
+    return redirect('reservations_list')
+
+def cancel_reservation(request, reservation_id):
+    """Cancel a reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    if request.method == 'POST' and reservation.status not in ['completed', 'cancelled', 'no_show']:
+        reservation.status = 'cancelled'
+        reservation.save()
+        # Update room status
+        reservation.room.update_status()
+    return redirect('reservations_list')
+
+def edit_reservation(request, reservation_id):
+    """Edit a reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    if request.method == 'POST':
+        form = ReservationForm(request.POST, instance=reservation)
+        if form.is_valid():
+            form.save()
+            return redirect('reservations_list')
+    else:
+        form = ReservationForm(instance=reservation)
+    return render(request, 'pms/reservation_form.html', {'form': form, 'editing': True})

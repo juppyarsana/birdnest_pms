@@ -1,3 +1,18 @@
+from .models import Guest, Reservation
+
+# Form for completing guest data during check-in
+from django import forms
+
+class CheckInGuestForm(forms.ModelForm):
+    class Meta:
+        model = Guest
+        fields = [
+            'name', 'email', 'phone', 'id_type', 'id_number', 'date_of_birth',
+            'address', 'emergency_contact_name', 'emergency_contact_phone'
+        ]
+        widgets = {
+            'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
+        }
 from django import forms
 from .models import Room, Guest, Reservation
 from django.core.exceptions import ValidationError
@@ -33,6 +48,31 @@ class ReservationForm(forms.ModelForm):
         cleaned_data = super().clean()
         room = cleaned_data.get('room')
         check_in = cleaned_data.get('check_in')
+        check_out = cleaned_data.get('check_out')
+
+        if room and check_in and check_out:
+            # Ensure check_out is after check_in
+            if check_out <= check_in:
+                raise ValidationError('Check-out date must be after check-in date')
+
+            # Check for overlapping reservations
+            if not room.is_available(check_in, check_out):
+                raise ValidationError('Room is not available for these dates')
+                
+            # Still check for existing reservations excluding current one if editing
+            overlapping = Reservation.objects.filter(
+                room=room,
+                check_in__lt=check_out,
+                check_out__gt=check_in,
+                status__in=['confirmed', 'checked_in', 'expected_arrival', 'expected_departure']
+            )
+            
+            # If editing, exclude the current reservation
+            if self.instance.pk:
+                overlapping = overlapping.exclude(pk=self.instance.pk)
+            
+            if overlapping.exists():
+                raise ValidationError('This room is already reserved for these dates')
         check_out = cleaned_data.get('check_out')
         status = cleaned_data.get('status') if self.is_edit else 'pending'
         payment_method = cleaned_data.get('payment_method') if self.is_edit else ''

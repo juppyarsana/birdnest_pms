@@ -19,9 +19,10 @@
 <body>
     <div class="container py-4">
         <div class="dashboard-header">
-            <h1 class="dashboard-title">Hotel Dashboard <span class="fs-5 text-muted">(5 Rooms)</span></h1>
+            <h1 class="dashboard-title">Hotel Dashboard <span class="fs-5 text-muted">({{ rooms|length }} Rooms)</span></h1>
             <div>
                 <a href="{% url 'create_reservation' %}" class="btn btn-primary me-2">New Reservation</a>
+                <a href="{% url 'reservations_list' %}" class="btn btn-info me-2">View Reservations</a>
                 <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
             </div>
         </div>
@@ -48,71 +49,77 @@
                 </div>
             </div>
         </div>
-        <div class="card mb-4 p-3">
-            <h3 class="section-title">Rooms</h3>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle bg-white rounded shadow-sm">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Room</th>
-                            <th>Type</th>
-                            <th>Rate</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for room in rooms %}
-                        <tr>
-                            <td>{{ room.room_number }}</td>
-                            <td>{{ room.room_type|title }}</td>
-                            <td>Rp {{ room.rate|intcomma }}</td>
-                            <td>
-                                {% if room.status == 'occupied' %}
-                                    <span class="badge bg-danger">Occupied</span>
-                                {% else %}
-                                    <span class="badge bg-success">Available</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-12 mb-4">
+            <div class="card stat-card p-3">
+                <h3 class="section-title">Rooms</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Room</th>
+                                <th>Type</th>
+                                <th>Rate</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for room in rooms %}
+                            <tr>
+                                <td>{{ room.room_number }}</td>
+                                <td>{{ room.room_type|title }}</td>
+                                <td>Rp {{ room.rate|intcomma }}</td>
+                                <td>
+                                    {% if room.status == 'occupied' %}
+                                        <span class="badge bg-danger">Occupied</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Available</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">Pending Reservations</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in pending_reservations %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                    <td><a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success">Confirm</a></td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8">No pending reservations</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="col-12 mb-4">
+            <div class="card stat-card p-3">
+                <h3 class="section-title">Pending Reservations</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Guest</th>
+                                <th>Room</th>
+                                <th>Check-In</th>
+                                <th>Check-Out</th>
+                                <th>Status</th>
+                                <th>Payment Method</th>
+                                <th>Payment Notes</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reservation in pending_reservations %}
+                            <tr>
+                                <td>{{ reservation.guest.name }}</td>
+                                <td>{{ reservation.room.room_number }}</td>
+                                <td>{{ reservation.check_in }}</td>
+                                <td>{{ reservation.check_out }}</td>
+                                <td>{{ reservation.status }}</td>
+                                <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                                <td>{{ reservation.payment_notes|default:"None" }}</td>
+                                <td><a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success">Confirm</a></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8">No pending reservations</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
         <div class="card mb-4 p-3">
         <h3 class="section-title">Expected Arrivals</h3>
@@ -138,6 +145,9 @@
                     <td>{{ reservation.status }}</td>
                     <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
                     <td>{{ reservation.payment_notes|default:"None" }}</td>
+                    <td>
+                        <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary">Check-In</a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -147,71 +157,42 @@
             </tbody>
         </table>
         </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">Expected Departures</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in expected_departures %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">No expected departures</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">Confirmed Reservations (Today)</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in reservations %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">No confirmed reservations for today</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="col-12 mb-4">
+            <div class="card stat-card p-3">
+                <h3 class="section-title">Expected Departures</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Guest</th>
+                                <th>Room</th>
+                                <th>Check-In</th>
+                                <th>Check-Out</th>
+                                <th>Status</th>
+                                <th>Payment Method</th>
+                                <th>Payment Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for reservation in expected_departures %}
+                            <tr>
+                                <td>{{ reservation.guest.name }}</td>
+                                <td>{{ reservation.room.room_number }}</td>
+                                <td>{{ reservation.check_in }}</td>
+                                <td>{{ reservation.check_out }}</td>
+                                <td>{{ reservation.status }}</td>
+                                <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                                <td>{{ reservation.payment_notes|default:"None" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7">No expected departures</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
         <div class="card mb-4 p-3">
         <h3 class="section-title">Canceled Reservations</h3>

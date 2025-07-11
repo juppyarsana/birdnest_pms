@@ -15,16 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from django.shortcuts import render  # Add this import
-from pms.views import dashboard, create_reservation, calendar_data, edit_reservation, confirm_reservation
+from django.urls import path, include
+from django.shortcuts import render
+from pms.views import dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', dashboard, name='dashboard'),
-    path('reservation/new/', create_reservation, name='create_reservation'),
-    path('calendar/data/', calendar_data, name='calendar_data'),
-    path('calendar/', lambda request: render(request, 'pms/calendar.html'), name='calendar'),
-    path('reservation/edit/<int:reservation_id>/', edit_reservation, name='edit_reservation'),
-    path('reservation/confirm/<int:reservation_id>/', confirm_reservation, name='confirm_reservation'),
+    path('', include('pms.urls')),  # Include all PMS app URLs
 ]

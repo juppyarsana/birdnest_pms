@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Check-In for Reservation #{{ reservation.id }}</h2>
+  <h4>Room: {{ reservation.room.room_number }} | Guest: {{ reservation.guest.name }}</h4>
+  <form method="post">
+    {% csrf_token %}
+    <div class="row">
+      <div class="col-md-6">
+        <h5>Guest Information</h5>
+        {{ form.as_p }}
+      </div>
+      <div class="col-md-6">
+        <h5>Reservation Details</h5>
+        <ul class="list-group">
+          <li class="list-group-item"><b>Check-in:</b> {{ reservation.check_in }}</li>
+          <li class="list-group-item"><b>Check-out:</b> {{ reservation.check_out }}</li>
+          <li class="list-group-item"><b>Status:</b> {{ reservation.get_status_display }}</li>
+          <li class="list-group-item"><b>Num Guests:</b> {{ reservation.num_guests }}</li>
+        </ul>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-success mt-3">Complete Check-In</button>
+  </form>
+</div>
+{% endblock %}
