@@ -32,7 +32,10 @@ class Reservation(models.Model):
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
         ('expected_arrival', 'Expected Arrival'),
+        ('checked_in', 'Checked In'),
+        ('in_house', 'In House'),
         ('expected_departure', 'Expected Departure'),
+        ('checked_out', 'Checked Out'),
         ('canceled', 'Canceled'),
         ('no_show', 'No-Show'),
     ]
