@@ -56,9 +56,10 @@ class Reservation(models.Model):
     def update_status(self):
         """Automatically update status based on current date."""
         today = date.today()
-        if self.status in ['pending', 'confirmed']:
+        # Only confirmed reservations can become expected_arrival or expected_departure
+        if self.status == 'confirmed':
             if self.check_in == today:
                 self.status = 'expected_arrival'
             elif self.check_out == today:
                 self.status = 'expected_departure'
-        self.save()
+            self.save()

@@ -78,28 +78,28 @@ def dashboard(request):
     })
 
 def create_reservation(request):
-    initial_data = {'status': 'pending'}
+    initial_data = {}
     if 'check_in' in request.GET:
         initial_data['check_in'] = request.GET['check_in']
 
     if request.method == 'POST':
-        form = ReservationForm(request.POST)
+        form = ReservationForm(request.POST, edit=False)
         if form.is_valid():
             form.save()
             return redirect('dashboard')
     else:
-        form = ReservationForm(initial=initial_data)
+        form = ReservationForm(initial=initial_data, edit=False)
     return render(request, 'pms/reservation_form.html', {'form': form})
 
 def edit_reservation(request, reservation_id):
     reservation = get_object_or_404(Reservation, id=reservation_id)
     if request.method == 'POST':
-        form = ReservationForm(request.POST, instance=reservation)
+        form = ReservationForm(request.POST, instance=reservation, edit=True)
         if form.is_valid():
             form.save()
             return redirect('dashboard')
     else:
-        form = ReservationForm(instance=reservation)
+        form = ReservationForm(instance=reservation, edit=True)
     return render(request, 'pms/reservation_edit.html', {'form': form, 'reservation': reservation})
 
 def confirm_reservation(request, reservation_id):
