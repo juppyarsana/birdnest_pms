@@ -43,6 +43,8 @@
                                     <span class="badge bg-warning text-dark">Pending</span>
                                 {% elif reservation.status == 'confirmed' %}
                                     <span class="badge bg-info">Confirmed</span>
+                                {% elif reservation.status == 'expected_arrival' %}
+                                    <span class="badge bg-primary">Expected Arrival</span>
                                 {% elif reservation.status == 'checked_in' %}
                                     <span class="badge bg-success">Checked In</span>
                                 {% elif reservation.status == 'completed' %}
@@ -51,23 +53,24 @@
                                     <span class="badge bg-danger">Cancelled</span>
                                 {% elif reservation.status == 'no_show' %}
                                     <span class="badge bg-dark">No Show</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ reservation.status|title }}</span>
                                 {% endif %}
                             </td>
                             <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
                             <td>{{ reservation.payment_notes|default:"None" }}</td>
-                            <td>
-                                {% if reservation.status == 'pending' %}
+                            <td>                                {% if reservation.status == 'pending' %}
                                     <a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success">
                                         <i class="bi bi-check-circle"></i> Confirm
                                     </a>
                                 {% endif %}
-                                
-                                {% if reservation.status == 'confirmed' %}
+
+                                {% if reservation.status == 'expected_arrival' %}
                                     <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary">
                                         <i class="bi bi-box-arrow-in-right"></i> Check In
                                     </a>
                                 {% endif %}
-                                
+
                                 {% if reservation.status == 'checked_in' %}
                                     <a href="{% url 'checkout_reservation' reservation.id %}" class="btn btn-sm btn-info">
                                         <i class="bi bi-box-arrow-right"></i> Check Out

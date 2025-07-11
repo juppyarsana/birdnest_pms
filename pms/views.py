@@ -1,37 +1,56 @@
-from .models import Reservation
-from .forms import CheckInGuestForm
-from django.shortcuts import get_object_or_404, render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import JsonResponse
+from datetime import datetime, date, time, timedelta
+from calendar import monthrange
+from .models import Room, Reservation, HotelSettings
+from .forms import ReservationForm, CheckInGuestForm, ConfirmReservationForm
 
 def reservations_list(request):
     """View to display all reservations with appropriate actions"""
+    # Update all reservation statuses before displaying
+    reservations = Reservation.objects.all()
+    for reservation in reservations:
+        reservation.update_status()
+    
+    # Get fresh queryset after updates, ordered by check-in date
     reservations = Reservation.objects.all().order_by('-check_in')
     return render(request, 'pms/reservations.html', {'reservations': reservations})
 
 # View for check-in process
 def checkin_reservation(request, reservation_id):
+    """View for check-in process with time restrictions"""
     reservation = get_object_or_404(Reservation, id=reservation_id, status='expected_arrival')
     guest = reservation.guest
+    settings = HotelSettings.get_settings()
+    current_time = datetime.now().time()
+
+    # Check if check-in is allowed at current time
+    if not settings.is_check_in_allowed(current_time):
+        messages.error(request, f"Check-in is only allowed between {settings.earliest_check_in_time.strftime('%I:%M %p')} and {settings.latest_check_in_time.strftime('%I:%M %p')}")
+        return redirect('reservations_list')
+
     if request.method == 'POST':
         form = CheckInGuestForm(request.POST, instance=guest)
         if form.is_valid():
             form.save()
             reservation.status = 'checked_in'
+            reservation.check_in_time = current_time
             reservation.save()
             # Update room status after check-in
             reservation.room.update_status()
+            messages.success(request, f'Successfully checked in {guest.name}')
             return redirect('dashboard')
     else:
         form = CheckInGuestForm(instance=guest)
-    return render(request, 'pms/checkin.html', {'reservation': reservation, 'form': form})
-from django.shortcuts import render, redirect, get_object_or_404
-from .models import Room, Reservation
-from .forms import ReservationForm
-from .forms import ConfirmReservationForm  # Ensure this line is present
-from django.utils import timezone
-from django.http import JsonResponse
-from datetime import date, timedelta
-from calendar import monthrange
 
+    context = {
+        'reservation': reservation,
+        'form': form,
+        'earliest_check_in': settings.earliest_check_in_time.strftime('%I:%M %p'),
+        'latest_check_in': settings.latest_check_in_time.strftime('%I:%M %p')
+    }
+    return render(request, 'pms/checkin.html', context)
 
 def dashboard(request):
     rooms = Room.objects.all()
@@ -167,6 +186,12 @@ def calendar_data(request):
 
 def reservations_list(request):
     """View to display all reservations with appropriate actions"""
+    # Update all reservation statuses before displaying
+    reservations = Reservation.objects.all()
+    for reservation in reservations:
+        reservation.update_status()
+    
+    # Get fresh queryset after updates, ordered by check-in date
     reservations = Reservation.objects.all().order_by('-check_in')
     return render(request, 'pms/reservations.html', {'reservations': reservations})
 

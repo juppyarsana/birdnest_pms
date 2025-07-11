@@ -1,5 +1,41 @@
 from django.db import models
-from datetime import date
+from datetime import date, datetime, time
+from django.core.exceptions import ValidationError
+
+class HotelSettings(models.Model):
+    earliest_check_in_time = models.TimeField(default=time(14, 0))  # Default 2 PM
+    latest_check_in_time = models.TimeField(default=time(22, 0))   # Default 10 PM
+    check_in_grace_period = models.IntegerField(default=0, help_text="Grace period in minutes")
+    
+    class Meta:
+        verbose_name = 'Hotel Settings'
+        verbose_name_plural = 'Hotel Settings'
+
+    def __str__(self):
+        return f"Hotel Settings (Check-in: {self.earliest_check_in_time.strftime('%I:%M %p')} - {self.latest_check_in_time.strftime('%I:%M %p')})"
+
+    def clean(self):
+        if self.earliest_check_in_time >= self.latest_check_in_time:
+            raise ValidationError("Earliest check-in time must be before latest check-in time")
+
+    def is_check_in_allowed(self, current_time=None):
+        if current_time is None:
+            current_time = datetime.now().time()
+        
+        # Add grace period to the comparison
+        if self.check_in_grace_period:
+            from datetime import timedelta
+            current_datetime = datetime.combine(date.today(), current_time)
+            current_time = (current_datetime + timedelta(minutes=self.check_in_grace_period)).time()
+        
+        return self.earliest_check_in_time <= current_time <= self.latest_check_in_time
+
+    @classmethod
+    def get_settings(cls):
+        settings = cls.objects.first()
+        if not settings:
+            settings = cls.objects.create()
+        return settings
 
 class Room(models.Model):
     ROOM_TYPES = [

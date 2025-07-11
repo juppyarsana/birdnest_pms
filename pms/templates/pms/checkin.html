@@ -1,8 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-4">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
   <h2>Check-In for Reservation #{{ reservation.id }}</h2>
   <h4>Room: {{ reservation.room.room_number }} | Guest: {{ reservation.guest.name }}</h4>
+  
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Check-in is allowed between {{ earliest_check_in }} and {{ latest_check_in }}
+  </div>
+
   <form method="post">
     {% csrf_token %}
     <div class="row">
