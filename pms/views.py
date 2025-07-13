@@ -8,49 +8,121 @@ from .forms import ReservationForm, CheckInGuestForm, ConfirmReservationForm
 
 def reservations_list(request):
     """View to display all reservations with appropriate actions"""
+    print("Debug: Accessing reservations list view")
+    
+    # Get sort parameters from request
+    sort_field = request.GET.get('sort', 'check_in')
+    sort_direction = request.GET.get('direction', 'asc')
+    
     # Update all reservation statuses before displaying
     reservations = Reservation.objects.all()
-    for reservation in reservations:
-        reservation.update_status()
+    print(f"Debug: Found {len(reservations)} reservations")
     
-    # Get fresh queryset after updates, ordered by check-in date
-    reservations = Reservation.objects.all().order_by('-check_in')
-    return render(request, 'pms/reservations.html', {'reservations': reservations})
+    for reservation in reservations:
+        old_status = reservation.status
+        reservation.update_status()
+        print(f"Debug: Reservation {reservation.id} status: {old_status} -> {reservation.status}")
+
+    # Define valid sort fields and their corresponding model fields
+    valid_sort_fields = {
+        'id': 'id',
+        'guest': 'guest__name',
+        'room': 'room__room_number',
+        'check_in': 'check_in',
+        'check_out': 'check_out',
+        'status': 'status',
+        'payment_method': 'payment_method'
+    }
+
+    # Apply sorting
+    if sort_field in valid_sort_fields:
+        sort_by = valid_sort_fields[sort_field]
+        if sort_direction == 'desc':
+            sort_by = f'-{sort_by}'
+        reservations = Reservation.objects.all().order_by(sort_by)
+    else:
+        # Default sort: check-in date closest to today
+        today = date.today()
+        reservations = Reservation.objects.all().extra(
+            select={'date_diff': "ABS(JULIANDAY(date(check_in)) - JULIANDAY(date('%s')))" % today},
+            order_by=['date_diff']
+        )
+
+    context = {
+        'reservations': reservations,
+        'current_sort': sort_field,
+        'current_direction': sort_direction
+    }
+    print("Debug: Rendering reservations list template")
+    return render(request, 'pms/reservations.html', context)
 
 # View for check-in process
 def checkin_reservation(request, reservation_id):
     """View for check-in process with time restrictions"""
-    reservation = get_object_or_404(Reservation, id=reservation_id, status='expected_arrival')
-    guest = reservation.guest
-    settings = HotelSettings.get_settings()
-    current_time = datetime.now().time()
-
-    # Check if check-in is allowed at current time
-    if not settings.is_check_in_allowed(current_time):
-        messages.error(request, f"Check-in is only allowed between {settings.earliest_check_in_time.strftime('%I:%M %p')} and {settings.latest_check_in_time.strftime('%I:%M %p')}")
+    try:
+        reservation = get_object_or_404(Reservation, id=reservation_id)
+        print(f"Debug: Found reservation {reservation_id} with status {reservation.status}")
+        
+        # Update reservation status before proceeding
+        old_status = reservation.status
+        reservation.update_status()
+        print(f"Debug: Status updated from {old_status} to {reservation.status}")
+        
+        if reservation.status != 'expected_arrival':
+            print(f"Debug: Invalid status for check-in: {reservation.status}")
+            messages.error(request, 'This reservation cannot be checked in at this time.')
+            return redirect('reservations_list')
+        
+        guest = reservation.guest
+        settings = HotelSettings.get_settings()
+        current_time = datetime.now().time()
+        
+        # Check if current time is within allowed check-in window
+        if not settings.is_check_in_allowed(current_time):
+            print(f"Debug: Check-in not allowed at {current_time}")
+            messages.warning(
+                request,
+                f'Check-in is only allowed between {settings.earliest_check_in_time.strftime("%I:%M %p")} '
+                f'and {settings.latest_check_in_time.strftime("%I:%M %p")}'
+            )
+            return redirect('reservations_list')
+        
+        if request.method == 'POST':
+            print("Debug: Processing POST request")
+            form = CheckInGuestForm(request.POST, instance=guest)
+            if form.is_valid():
+                print("Debug: Form is valid, saving guest info")
+                form.save()
+                reservation.status = 'checked_in'
+                reservation.check_in_time = current_time
+                reservation.save()
+                # Update room status after check-in
+                reservation.room.update_status()
+                messages.success(request, f'Successfully checked in {guest.name}')
+                return redirect('dashboard')
+            else:
+                print(f"Debug: Form validation errors: {form.errors}")
+        else:
+            print("Debug: Initializing GET request form")
+            form = CheckInGuestForm(instance=guest)
+        
+        context = {
+            'reservation': reservation,
+            'form': form,
+            'earliest_check_in': settings.earliest_check_in_time.strftime('%I:%M %p'),
+            'latest_check_in': settings.latest_check_in_time.strftime('%I:%M %p')
+        }
+        print("Debug: Rendering check-in form")
+        response = render(request, 'pms/checkin.html', context)
+        print("Debug: Response status code:", response.status_code)
+        return response
+    except Exception as e:
+        print(f"Debug: Error occurred: {str(e)}")
+        print(f"Debug: Error type: {type(e).__name__}")
+        import traceback
+        print(f"Debug: Traceback: {traceback.format_exc()}")
+        messages.error(request, 'An error occurred during check-in')
         return redirect('reservations_list')
-
-    if request.method == 'POST':
-        form = CheckInGuestForm(request.POST, instance=guest)
-        if form.is_valid():
-            form.save()
-            reservation.status = 'checked_in'
-            reservation.check_in_time = current_time
-            reservation.save()
-            # Update room status after check-in
-            reservation.room.update_status()
-            messages.success(request, f'Successfully checked in {guest.name}')
-            return redirect('dashboard')
-    else:
-        form = CheckInGuestForm(instance=guest)
-
-    context = {
-        'reservation': reservation,
-        'form': form,
-        'earliest_check_in': settings.earliest_check_in_time.strftime('%I:%M %p'),
-        'latest_check_in': settings.latest_check_in_time.strftime('%I:%M %p')
-    }
-    return render(request, 'pms/checkin.html', context)
 
 def dashboard(request):
     rooms = Room.objects.all()
@@ -75,7 +147,7 @@ def dashboard(request):
     reservations = Reservation.objects.filter(
         check_in__lte=today,
         check_out__gt=today,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure']
+        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'checked_in']
     )
     daily_occupancy = (len(reservations) / 5) * 100
 
@@ -149,7 +221,8 @@ def edit_reservation(request, reservation_id):
     return render(request, 'pms/reservation_edit.html', {'form': form, 'reservation': reservation})
 
 def confirm_reservation(request, reservation_id):
-    reservation = get_object_or_404(Reservation, id=reservation_id)
+    """Confirm a pending reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id, status='pending')
     if request.method == 'POST':
         form = ConfirmReservationForm(request.POST, instance=reservation)
         if form.is_valid():
@@ -184,39 +257,20 @@ def calendar_data(request):
         })
     return JsonResponse(events, safe=False)
 
-def reservations_list(request):
-    """View to display all reservations with appropriate actions"""
-    # Update all reservation statuses before displaying
-    reservations = Reservation.objects.all()
-    for reservation in reservations:
-        reservation.update_status()
-    
-    # Get fresh queryset after updates, ordered by check-in date
-    reservations = Reservation.objects.all().order_by('-check_in')
-    return render(request, 'pms/reservations.html', {'reservations': reservations})
-
-def confirm_reservation(request, reservation_id):
-    """Confirm a pending reservation"""
-    reservation = get_object_or_404(Reservation, id=reservation_id, status='pending')
-    if request.method == 'POST':
-        form = ConfirmReservationForm(request.POST, instance=reservation)
-        if form.is_valid():
-            reservation = form.save(commit=False)
-            reservation.status = 'confirmed'
-            reservation.save()
-            return redirect('reservations_list')
-    else:
-        form = ConfirmReservationForm(instance=reservation)
-    return render(request, 'pms/confirm_reservation.html', {'form': form, 'reservation': reservation})
+def reservation_detail(request, reservation_id):
+    """View to display detailed information about a specific reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    return render(request, 'pms/reservation_detail.html', {'reservation': reservation})
 
 def checkout_reservation(request, reservation_id):
     """Check out a guest"""
     reservation = get_object_or_404(Reservation, id=reservation_id)
     if reservation.status in ['checked_in', 'expected_departure']:
-        reservation.status = 'completed'
+        reservation.status = 'checked_out'
         reservation.save()
-        # Update room status
-        reservation.room.update_status()
+        # Update room status with today's date
+        today = date.today()
+        reservation.room.update_status(today)
         return redirect('reservations_list')
     return redirect('reservations_list')
 

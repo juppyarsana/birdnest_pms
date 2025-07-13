@@ -37,7 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.humanize',  # Add this line
+    'django.contrib.humanize',
+    'widget_tweaks',  # Add this line
     'pms',  # Your PMS app
 ]
 

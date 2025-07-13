@@ -4,6 +4,18 @@ from .models import Guest, Reservation
 from django import forms
 
 class CheckInGuestForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make all fields optional except for required ones
+        for field in self.fields.values():
+            field.required = False
+        
+        # Set required fields
+        self.fields['name'].required = True
+        self.fields['email'].required = True
+        self.fields['id_type'].required = True
+        self.fields['id_number'].required = True
+
     class Meta:
         model = Guest
         fields = [
@@ -12,6 +24,14 @@ class CheckInGuestForm(forms.ModelForm):
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'id_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Passport, KTP'}),
+            'id_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
         }
 from django import forms
 from .models import Room, Guest, Reservation

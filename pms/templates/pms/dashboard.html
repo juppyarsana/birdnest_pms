@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hotel PMS Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { background: #f8f9fa; }
         .dashboard-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
@@ -14,6 +15,52 @@
         .table thead { background: #f1f3f4; }
         .table th, .table td { vertical-align: middle; }
         .section-title { margin-top: 2.5rem; margin-bottom: 1rem; font-weight: 600; }
+        .room-cards { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 1rem; padding: 0.5rem; margin-bottom: 2rem; }
+        .room-card { min-width: 200px; flex: 0 0 auto; transition: transform 0.2s; padding: 0 !important; overflow: hidden; }
+        .room-card:hover { transform: translateY(-5px); }
+        .room-status-bar { width: 100%; padding: 0.5rem; text-align: center; color: white; font-weight: 500; }
+        .room-status-bar.occupied { background-color: #dc3545; }
+        .room-status-bar.available { background-color: #198754; }
+        .room-content { padding: 1rem; }
+        .room-number { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .room-guest { font-weight: 500; color: #0d6efd; }
+        .room-cards::-webkit-scrollbar { height: 6px; }
+        .room-cards::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .room-cards::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+        .room-cards::-webkit-scrollbar-thumb:hover { background: #555; }
+        .status-cards { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 0.5rem; 
+            margin-bottom: 2rem; 
+        }
+        .status-card { 
+            border-radius: 0.75rem; 
+            padding: 1rem; 
+            text-align: center; 
+            transition: transform 0.2s; 
+        }
+        .status-card:hover { transform: translateY(-5px); }
+        .status-card .number { 
+            font-size: 1.5rem; 
+            font-weight: 700; 
+            margin: 0.25rem 0; 
+        }
+        .status-card .label { 
+            font-size: 0.875rem; 
+            color: rgba(255,255,255,0.9);
+            white-space: nowrap;
+        }
+        .status-card i { 
+            font-size: 1.25rem !important; 
+        }
+        .status-card.in-house { background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%); color: white; }
+        .status-card.expected-arrival { background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; }
+        .status-card.expected-departure { background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: white; }
+        .status-card.confirmed { background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); color: white; }
+        .status-card.pending { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; }
+        .status-card.no-show { background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: white; }
+        .status-card.canceled { background: linear-gradient(135deg, #795548 0%, #5D4037 100%); color: white; }
     </style>
 </head>
 <body>
@@ -49,250 +96,73 @@
                 </div>
             </div>
         </div>
-        <div class="col-12 mb-4">
-            <div class="card stat-card p-3">
-                <h3 class="section-title">Rooms</h3>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Room</th>
-                                <th>Type</th>
-                                <th>Rate</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for room in rooms %}
-                            <tr>
-                                <td>{{ room.room_number }}</td>
-                                <td>{{ room.room_type|title }}</td>
-                                <td>Rp {{ room.rate|intcomma }}</td>
-                                <td>
-                                    {% if room.status == 'occupied' %}
-                                        <span class="badge bg-danger">Occupied</span>
-                                    {% else %}
-                                        <span class="badge bg-success">Available</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+
+        <h3 class="section-title">Rooms</h3>
+        <div class="room-cards">
+            {% for room in rooms %}
+            <div class="card room-card">
+                <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% else %}available{% endif %}">
+                    {% if room.status == 'occupied' %}
+                        <i class="bi bi-person-fill"></i> Occupied
+                    {% else %}
+                        <i class="bi bi-check-circle-fill"></i> Available
+                    {% endif %}
+                </div>
+                <div class="room-content">
+                    <div class="room-number">Room {{ room.room_number }}</div>
+                    {% if room.status == 'occupied' %}
+                        {% for reservation in checked_in_reservations %}
+                            {% if reservation.room == room %}
+                                <div class="room-guest">
+                                    <i class="bi bi-person"></i> {{ reservation.guest.name }}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
                 </div>
             </div>
+            {% endfor %}
         </div>
-        <div class="col-12 mb-4">
-            <div class="card stat-card p-3">
-                <h3 class="section-title">Pending Reservations</h3>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Guest</th>
-                                <th>Room</th>
-                                <th>Check-In</th>
-                                <th>Check-Out</th>
-                                <th>Status</th>
-                                <th>Payment Method</th>
-                                <th>Payment Notes</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for reservation in pending_reservations %}
-                            <tr>
-                                <td>{{ reservation.guest.name }}</td>
-                                <td>{{ reservation.room.room_number }}</td>
-                                <td>{{ reservation.check_in }}</td>
-                                <td>{{ reservation.check_out }}</td>
-                                <td>{{ reservation.status }}</td>
-                                <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                                <td>{{ reservation.payment_notes|default:"None" }}</td>
-                                <td><a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success">Confirm</a></td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="8">No pending reservations</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+
+        <h3 class="section-title">Reservations</h3>
+        <div class="status-cards">
+            <div class="status-card in-house">
+                <i class="bi bi-house-door-fill fs-1"></i>
+                <div class="number">{{ checked_in_reservations|length }}</div>
+                <div class="label">In House</div>
             </div>
-        </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">Expected Arrivals</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in expected_arrivals %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                    <td>
-                        <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary">Check-In</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">No expected arrivals</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-        <div class="col-12 mb-4">
-            <div class="card stat-card p-3">
-                <h3 class="section-title">Expected Departures</h3>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Guest</th>
-                                <th>Room</th>
-                                <th>Check-In</th>
-                                <th>Check-Out</th>
-                                <th>Status</th>
-                                <th>Payment Method</th>
-                                <th>Payment Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for reservation in expected_departures %}
-                            <tr>
-                                <td>{{ reservation.guest.name }}</td>
-                                <td>{{ reservation.room.room_number }}</td>
-                                <td>{{ reservation.check_in }}</td>
-                                <td>{{ reservation.check_out }}</td>
-                                <td>{{ reservation.status }}</td>
-                                <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                                <td>{{ reservation.payment_notes|default:"None" }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="7">No expected departures</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="status-card expected-arrival">
+                <i class="bi bi-box-arrow-in-right fs-1"></i>
+                <div class="number">{{ expected_arrivals|length }}</div>
+                <div class="label">Expected Arrival</div>
             </div>
-        </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">Canceled Reservations</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in canceled_reservations %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">No canceled reservations</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">No-Show Reservations</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in no_show_reservations %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">No no-show reservations</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        </div>
-        <div class="card mb-4 p-3">
-        <h3 class="section-title">All Reservations (Debug)</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Guest</th>
-                    <th>Room</th>
-                    <th>Check-In</th>
-                    <th>Check-Out</th>
-                    <th>Status</th>
-                    <th>Payment Method</th>
-                    <th>Payment Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for reservation in all_reservations %}
-                <tr>
-                    <td>{{ reservation.guest.name }}</td>
-                    <td>{{ reservation.room.room_number }}</td>
-                    <td>{{ reservation.check_in }}</td>
-                    <td>{{ reservation.check_out }}</td>
-                    <td>{{ reservation.status }}</td>
-                    <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                    <td>{{ reservation.payment_notes|default:"None" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7">No reservations in database</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            <div class="status-card expected-departure">
+                <i class="bi bi-box-arrow-right fs-1"></i>
+                <div class="number">{{ expected_departures|length }}</div>
+                <div class="label">Expected Departure</div>
+            </div>
+            <div class="status-card confirmed">
+                <i class="bi bi-check-circle fs-1"></i>
+                <div class="number">{{ confirmed_reservations|length }}</div>
+                <div class="label">Confirmed</div>
+            </div>
+            <div class="status-card pending">
+                <i class="bi bi-hourglass fs-1"></i>
+                <div class="number">{{ pending_reservations|length }}</div>
+                <div class="label">Pending</div>
+            </div>
+            <div class="status-card no-show">
+                <i class="bi bi-x-circle fs-1"></i>
+                <div class="number">{{ no_show_reservations|length }}</div>
+                <div class="label">No Show</div>
+            </div>
+            <div class="status-card canceled">
+                <i class="bi bi-slash-circle fs-1"></i>
+                <div class="number">{{ canceled_reservations|length }}</div>
+                <div class="label">Canceled</div>
+            </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

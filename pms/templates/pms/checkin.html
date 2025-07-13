@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load widget_tweaks %}
+
 {% block content %}
 <div class="container mt-4">
   {% if messages %}
@@ -16,24 +18,130 @@
     <i class="bi bi-info-circle"></i> Check-in is allowed between {{ earliest_check_in }} and {{ latest_check_in }}
   </div>
 
-  <form method="post">
+  <form method="post" class="needs-validation" novalidate id="checkinForm">
     {% csrf_token %}
     <div class="row">
       <div class="col-md-6">
-        <h5>Guest Information</h5>
-        {{ form.as_p }}
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">Guest Information</h5>
+            {% for field in form %}
+              <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label{% if field.field.required %} required{% endif %}">
+                  {{ field.label }}
+                  {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                {% if field.errors %}
+                  {% render_field field class="form-control is-invalid" placeholder=field.field.widget.attrs.placeholder %}
+                  <div class="invalid-feedback">
+                    {{ field.errors|join:" " }}
+                  </div>
+                {% else %}
+                  {% render_field field class="form-control" placeholder=field.field.widget.attrs.placeholder %}
+                {% endif %}
+                {% if field.help_text %}
+                  <div class="form-text">{{ field.help_text }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
       <div class="col-md-6">
-        <h5>Reservation Details</h5>
-        <ul class="list-group">
-          <li class="list-group-item"><b>Check-in:</b> {{ reservation.check_in }}</li>
-          <li class="list-group-item"><b>Check-out:</b> {{ reservation.check_out }}</li>
-          <li class="list-group-item"><b>Status:</b> {{ reservation.get_status_display }}</li>
-          <li class="list-group-item"><b>Num Guests:</b> {{ reservation.num_guests }}</li>
-        </ul>
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Reservation Details</h5>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item"><b>Check-in:</b> {{ reservation.check_in }}</li>
+              <li class="list-group-item"><b>Check-out:</b> {{ reservation.check_out }}</li>
+              <li class="list-group-item"><b>Status:</b> {{ reservation.get_status_display }}</li>
+              <li class="list-group-item"><b>Num Guests:</b> {{ reservation.num_guests }}</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
-    <button type="submit" class="btn btn-success mt-3">Complete Check-In</button>
+    <div class="mt-4">
+      <button type="submit" class="btn btn-success" id="checkinButton">
+        <i class="bi bi-check-circle"></i> Complete Check-In
+      </button>
+      <a href="{% url 'reservations_list' %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reservations
+      </a>
+    </div>
   </form>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+  .form-control:focus { border-color: #80bdff; box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); }
+  .required:after { content: " *"; color: red; }
+  .form-label { font-weight: 500; }
+  #checkinButton:disabled { cursor: not-allowed; opacity: 0.65; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  'use strict'
+
+  // Form validation
+  var forms = document.querySelectorAll('.needs-validation')
+  Array.prototype.slice.call(forms).forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+
+  function checkTimeValidity() {
+    const now = new Date()
+    const currentTime = now.getHours() * 60 + now.getMinutes()
+
+    // Parse check-in window times
+    const earliestMatch = '{{ earliest_check_in }}'.match(/([0-9]{1,2}):([0-9]{2}) ([AP]M)/)
+    const latestMatch = '{{ latest_check_in }}'.match(/([0-9]{1,2}):([0-9]{2}) ([AP]M)/)
+
+    if (!earliestMatch || !latestMatch) {
+      console.error('Could not parse check-in times')
+      return false
+    }
+
+    const [_, earliestHour, earliestMinute, earliestPeriod] = earliestMatch
+    const [__, latestHour, latestMinute, latestPeriod] = latestMatch
+
+    // Convert to 24-hour format
+    let earliest24Hour = parseInt(earliestHour)
+    if (earliestPeriod === 'PM' && earliest24Hour !== 12) earliest24Hour += 12
+    if (earliestPeriod === 'AM' && earliest24Hour === 12) earliest24Hour = 0
+
+    let latest24Hour = parseInt(latestHour)
+    if (latestPeriod === 'PM' && latest24Hour !== 12) latest24Hour += 12
+    if (latestPeriod === 'AM' && latest24Hour === 12) latest24Hour = 0
+
+    const earliestTime = earliest24Hour * 60 + parseInt(earliestMinute)
+    const latestTime = latest24Hour * 60 + parseInt(latestMinute)
+
+    return currentTime >= earliestTime && currentTime <= latestTime
+  }
+
+  // Check time validity and update button state
+  function updateButtonState() {
+    const checkinButton = document.getElementById('checkinButton')
+    checkinButton.disabled = !checkTimeValidity()
+  }
+
+  // Initial check
+  updateButtonState()
+
+  // Update every minute
+  setInterval(updateButtonState, 60000)
+});
+</script>
 {% endblock %}

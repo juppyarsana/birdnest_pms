@@ -2,95 +2,170 @@
 {% load humanize %}
 
 {% block content %}
-<div class="container py-4">
+<div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2">Reservations</h1>
-        <div>
-            <a href="{% url 'create_reservation' %}" class="btn btn-primary me-2">
+        <h1 class="h2 fw-bold text-primary">Reservations</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'create_reservation' %}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
                 <i class="bi bi-plus-circle"></i> New Reservation
             </a>
-            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                 <i class="bi bi-arrow-left"></i> Back to Dashboard
             </a>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
                         <tr>
-                            <th>Guest</th>
-                            <th>Room</th>
-                            <th>Check-In</th>
-                            <th>Check-Out</th>
-                            <th>Status</th>
-                            <th>Payment Method</th>
-                            <th>Payment Notes</th>
-                            <th>Actions</th>
+                            <th class="px-2">
+                                <a href="?sort=id&direction={% if current_sort == 'id' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    ID
+                                    {% if current_sort == 'id' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">
+                                <a href="?sort=guest&direction={% if current_sort == 'guest' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    Guest
+                                    {% if current_sort == 'guest' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">
+                                <a href="?sort=room&direction={% if current_sort == 'room' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    Room
+                                    {% if current_sort == 'room' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">
+                                <a href="?sort=check_in&direction={% if current_sort == 'check_in' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    Check-In
+                                    {% if current_sort == 'check_in' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">
+                                <a href="?sort=check_out&direction={% if current_sort == 'check_out' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    Check-Out
+                                    {% if current_sort == 'check_out' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">
+                                <a href="?sort=status&direction={% if current_sort == 'status' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    Status
+                                    {% if current_sort == 'status' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">
+                                <a href="?sort=payment_method&direction={% if current_sort == 'payment_method' and current_direction != 'desc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-flex align-items-center gap-1">
+                                    Payment
+                                    {% if current_sort == 'payment_method' %}
+                                        <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="px-2">Notes</th>
+                            <th class="px-2">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for reservation in reservations %}
-                        <tr>
-                            <td>{{ reservation.guest.name }}</td>
-                            <td>{{ reservation.room.room_number }}</td>
-                            <td>{{ reservation.check_in|date:"M d, Y" }}</td>
-                            <td>{{ reservation.check_out|date:"M d, Y" }}</td>
-                            <td>
+                        <tr class="border-bottom">
+                            <td class="px-2 fw-medium">{{ reservation.id }}</td>
+                            <td class="px-2">{{ reservation.guest.name }}</td>
+                            <td class="px-2">{{ reservation.room.room_number }}</td>
+                            <td class="px-2">{{ reservation.check_in|date:"M d, Y" }}</td>
+                            <td class="px-2">{{ reservation.check_out|date:"M d, Y" }}</td>
+                            <td class="px-2">
                                 {% if reservation.status == 'pending' %}
-                                    <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge rounded-pill bg-warning text-dark">Pending</span>
                                 {% elif reservation.status == 'confirmed' %}
-                                    <span class="badge bg-info">Confirmed</span>
+                                    <span class="badge rounded-pill bg-info">Confirmed</span>
                                 {% elif reservation.status == 'expected_arrival' %}
-                                    <span class="badge bg-primary">Expected Arrival</span>
+                                    <span class="badge rounded-pill bg-primary">Expected</span>
                                 {% elif reservation.status == 'checked_in' %}
-                                    <span class="badge bg-success">Checked In</span>
+                                    <span class="badge rounded-pill bg-success">In</span>
                                 {% elif reservation.status == 'completed' %}
-                                    <span class="badge bg-secondary">Completed</span>
+                                    <span class="badge rounded-pill bg-secondary">Done</span>
                                 {% elif reservation.status == 'cancelled' %}
-                                    <span class="badge bg-danger">Cancelled</span>
+                                    <span class="badge rounded-pill bg-danger">Cancelled</span>
                                 {% elif reservation.status == 'no_show' %}
-                                    <span class="badge bg-dark">No Show</span>
+                                    <span class="badge rounded-pill bg-dark">No Show</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ reservation.status|title }}</span>
+                                    <span class="badge rounded-pill bg-secondary">{{ reservation.status|title }}</span>
                                 {% endif %}
                             </td>
-                            <td>{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                            <td>{{ reservation.payment_notes|default:"None" }}</td>
-                            <td>                                {% if reservation.status == 'pending' %}
-                                    <a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success">
-                                        <i class="bi bi-check-circle"></i> Confirm
-                                    </a>
-                                {% endif %}
+                            <td class="px-2">{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                            <td class="px-2"><div class="payment-notes">{{ reservation.payment_notes|default:"None" }}</div></td>
+                            <td class="px-2">
+                                <div class="d-flex gap-1 align-items-center">
+                                    {% if reservation.status == 'pending' %}
+                                        <a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success d-inline-flex align-items-center" title="Confirm">
+                                            <i class="bi bi-check-circle"></i>
+                                        </a>
+                                    {% endif %}
 
-                                {% if reservation.status == 'expected_arrival' %}
-                                    <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-box-arrow-in-right"></i> Check In
-                                    </a>
-                                {% endif %}
+                                    {% if reservation.status == 'expected_arrival' %}
+                                        <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary d-inline-flex align-items-center" onclick="handleCheckin(event, '{% url 'checkin_reservation' reservation.id %}')" title="Check In">
+                                            <i class="bi bi-box-arrow-in-right"></i>
+                                        </a>
+                                    {% endif %}
 
-                                {% if reservation.status == 'checked_in' %}
-                                    <a href="{% url 'checkout_reservation' reservation.id %}" class="btn btn-sm btn-info">
-                                        <i class="bi bi-box-arrow-right"></i> Check Out
-                                    </a>
-                                {% endif %}
+                                    {% if reservation.status == 'checked_in' %}
+                                        <a href="{% url 'checkout_reservation' reservation.id %}" class="btn btn-sm btn-info d-inline-flex align-items-center" title="Check Out">
+                                            <i class="bi bi-box-arrow-right"></i>
+                                        </a>
+                                    {% endif %}
 
-                                {% if reservation.status != 'cancelled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
-                                    <button class="btn btn-sm btn-danger" onclick="confirmCancel('{{ reservation.id }}')">
-                                        <i class="bi bi-x-circle"></i> Cancel
-                                    </button>
-                                {% endif %}
-                                
-                                <a href="{% url 'edit_reservation' reservation.id %}" class="btn btn-sm btn-warning">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
+                                    {% if reservation.status != 'cancelled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
+                                        <button class="btn btn-sm btn-danger d-inline-flex align-items-center" onclick="confirmCancel('{{ reservation.id }}')" title="Cancel">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    {% endif %}
+                                    
+                                    <a href="{% url 'edit_reservation' reservation.id %}" class="btn btn-sm btn-warning d-inline-flex align-items-center" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    <a href="{% url 'reservation_detail' reservation.id %}" class="btn btn-sm btn-info d-inline-flex align-items-center" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center">No reservations found</td>
+                            <td colspan="9" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                No reservations found
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -102,17 +177,20 @@
 
 <!-- Cancel Confirmation Modal -->
 <div class="modal fade" id="cancelModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cancel Reservation</h5>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Cancel Reservation</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to cancel this reservation? This action cannot be undone.</p>
+            <div class="modal-body py-4">
+                <div class="text-center text-danger mb-3">
+                    <i class="bi bi-exclamation-triangle fs-1"></i>
+                </div>
+                <p class="text-center mb-0">Are you sure you want to cancel this reservation? This action cannot be undone.</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                 <form id="cancelForm" method="POST" style="display: inline;">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="cancel">
@@ -127,9 +205,22 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 <style>
-    .table td { vertical-align: middle; }
+    .table td { vertical-align: middle; padding: 0.5rem !important; }
+    .table th { padding: 0.75rem 0.5rem !important; white-space: nowrap; }
     .btn-group-sm > .btn { margin-right: 0.25rem; }
-    .badge { font-size: 0.875rem; }
+    .badge { font-size: 0.75rem; padding: 0.4em 0.6em; white-space: nowrap; }
+    .checkin-link { text-decoration: none; display: inline-block; }
+    .table > :not(caption) > * > * { background-color: transparent; }
+    .table tbody tr:hover { background-color: rgba(0,0,0,.02); }
+    .btn { transition: all 0.2s; padding: 0.25rem 0.5rem; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    th a:hover { color: var(--bs-primary) !important; }
+    th a:hover i { opacity: 1 !important; }
+    .table td, .table th { font-size: 0.875rem; }
+    .btn i { font-size: 0.875rem; }
+    .table { width: 100%; min-width: auto; }
+    .payment-notes { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 {% endblock %}
 
@@ -140,6 +231,13 @@ function confirmCancel(reservationId) {
     const form = document.getElementById('cancelForm');
     form.action = `/reservations/${reservationId}/cancel/`;
     modal.show();
+}
+
+function handleCheckin(event, url) {
+    event.preventDefault();
+    console.log('Handling check-in click...');
+    console.log('Navigating to:', url);
+    window.location.href = url;
 }
 </script>
 {% endblock %}

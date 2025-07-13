@@ -59,10 +59,13 @@ class Room(models.Model):
         """Update room status based on reservations.
         A room is occupied if there's an active reservation for the given date."""
         from django.db.models import Q
+        from datetime import date as date_class
+        
         if date is None:
-            date = date.today()
+            date = date_class.today()
         
         # Check if there are any active reservations for this room on the given date
+        # Exclude checked_out, canceled, and no_show reservations
         is_occupied = Reservation.objects.filter(
             Q(room=self) &
             Q(check_in__lte=date) &
@@ -136,21 +139,38 @@ class Reservation(models.Model):
     def update_status(self):
         """Automatically update status based on current date."""
         today = date.today()
+        print(f"Debug: Updating status for reservation {self.id}")
+        print(f"Debug: Current status: {self.status}")
+        print(f"Debug: Check-in date: {self.check_in}, Today: {today}")
+        
+        # Only update status for non-terminal states
+        if self.status in ['checked_out', 'canceled', 'no_show']:
+            print(f"Debug: Status is terminal, no update needed")
+            return
         
         # Handle no-shows: If check-in date has passed and status is still 'confirmed' or 'expected_arrival'
         if (self.check_in < today and 
             self.status in ['confirmed', 'expected_arrival']):
+            print(f"Debug: Marking as no-show")
             self.status = 'no_show'
             self.save()
             return
-
-        # Only confirmed reservations can become expected_arrival or expected_departure
-        if self.status == 'confirmed':
-            if self.check_in == today:
-                self.status = 'expected_arrival'
-            elif self.check_out == today:
-                self.status = 'expected_departure'
+    
+        # Handle expected_arrival: If today is check-in date and status is confirmed
+        if self.status == 'confirmed' and self.check_in == today:
+            print(f"Debug: Marking as expected arrival")
+            self.status = 'expected_arrival'
             self.save()
+            return
+        
+        # Handle expected_departure: If today is check-out date and status is checked_in
+        if self.status == 'checked_in' and self.check_out == today:
+            print(f"Debug: Marking as expected departure")
+            self.status = 'expected_departure'
+            self.save()
+            return
+        
+        print(f"Debug: No status update needed")
 
     def has_overlap(self):
         """Check if there are any overlapping reservations for the same room.

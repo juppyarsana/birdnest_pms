@@ -1,36 +1,39 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Booking Calendar</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-</head>
-<body>
-    <div class="container mt-4">
-        <h1>Booking Calendar (5 Rooms)</h1>
-        <p>Click a date to create a reservation or click an existing reservation to edit.</p>
-        <a href="{% url 'create_reservation' %}" class="btn btn-primary mb-3">New Reservation</a>
-        <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3">Back to Dashboard</a>
-        <div id="calendar"></div>
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                events: '/calendar/data/',
-                eventClick: function(info) {
-                    // Redirect to edit form with reservation ID
-                    window.location.href = "/reservation/edit/" + info.event.id + "/";
-                },
-                dateClick: function(info) {
-                    // Redirect to create reservation with selected date
-                    window.location.href = "{% url 'create_reservation' %}?check_in=" + info.dateStr;
-                }
-            });
-            calendar.render();
+{% extends 'base.html' %}
+
+{% block title %}Booking Calendar{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Booking Calendar (5 Rooms)</h1>
+    <p>Click a date to create a reservation or click an existing reservation to edit.</p>
+    <a href="{% url 'create_reservation' %}" class="btn btn-primary mb-3">New Reservation</a>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3">Back to Dashboard</a>
+    <div id="calendar"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            events: '/calendar/data/',
+            eventClick: function(info) {
+                // Use the correct URL pattern for editing reservations
+                window.location.href = '/reservations/' + info.event.id + '/edit/';
+            },
+            dateClick: function(info) {
+                // Redirect to create reservation with selected date
+                window.location.href = "{% url 'create_reservation' %}?check_in=" + info.dateStr;
+            }
         });
-    </script>
-</body>
-</html>
+        calendar.render();
+    });
+</script>
+{% endblock %}
