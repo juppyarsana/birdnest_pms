@@ -62,7 +62,7 @@
       </div>
     </div>
     <div class="mt-4">
-      <button type="submit" class="btn btn-success" id="checkinButton">
+      <button type="submit" class="btn btn-success" id="checkinButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Check-in is only allowed during the allowed time window. Please try again later.">
         <i class="bi bi-check-circle"></i> Complete Check-In
       </button>
       <a href="{% url 'reservations_list' %}" class="btn btn-secondary">
@@ -137,11 +137,26 @@ document.addEventListener('DOMContentLoaded', function() {
     checkinButton.disabled = !checkTimeValidity()
   }
 
+  // Initialize Bootstrap tooltip
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+    new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
   // Initial check
   updateButtonState()
 
   // Update every minute
   setInterval(updateButtonState, 60000)
+
+  // Add this event listener for the check-in button
+  const checkinButton = document.getElementById('checkinButton');
+  checkinButton.addEventListener('click', function(event) {
+    if (checkinButton.disabled) {
+      event.preventDefault();
+      alert('Check-in is only allowed during the allowed time window. Please try again later.');
+    }
+  });
 });
 </script>
 {% endblock %}

@@ -270,6 +270,8 @@ def checkout_reservation(request, reservation_id):
         reservation.save()
         # Update room status with today's date
         today = date.today()
+        reservation.room.status = 'vacant_dirty'
+        reservation.room.save()
         reservation.room.update_status(today)
         return redirect('reservations_list')
     return redirect('reservations_list')
@@ -295,3 +297,18 @@ def edit_reservation(request, reservation_id):
     else:
         form = ReservationForm(instance=reservation)
     return render(request, 'pms/reservation_form.html', {'form': form, 'editing': True})
+
+def rooms_list(request):
+    """View for housekeeping to update room statuses"""
+    from .models import Room
+    from django.shortcuts import redirect
+    if request.method == 'POST':
+        room_id = request.POST.get('room_id')
+        room = Room.objects.get(id=room_id)
+        # Only allow changing from vacant_dirty to vacant_clean
+        if room.status == 'vacant_dirty':
+            room.status = 'vacant_clean'
+            room.save()
+        return redirect('rooms_list')
+    rooms = Room.objects.all()
+    return render(request, 'pms/rooms.html', {'rooms': rooms})

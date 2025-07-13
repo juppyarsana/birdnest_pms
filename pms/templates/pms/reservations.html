@@ -133,15 +133,15 @@
                                     {% endif %}
 
                                     {% if reservation.status == 'expected_arrival' %}
-                                        <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary d-inline-flex align-items-center" onclick="handleCheckin(event, '{% url 'checkin_reservation' reservation.id %}')" title="Check In">
+                                        <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary d-inline-flex align-items-center" onclick="handleCheckin(event, '{% url 'checkin_reservation' reservation.id %}')" title="Check In" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Check-in is only allowed during the allowed time window. Please try again later.">
                                             <i class="bi bi-box-arrow-in-right"></i>
                                         </a>
                                     {% endif %}
 
                                     {% if reservation.status == 'checked_in' %}
-                                        <a href="{% url 'checkout_reservation' reservation.id %}" class="btn btn-sm btn-info d-inline-flex align-items-center" title="Check Out">
+                                        <button class="btn btn-sm btn-info d-inline-flex align-items-center" title="Check Out" onclick="confirmCheckoutModal('{{ reservation.id }}', '{% url 'checkout_reservation' reservation.id %}')">
                                             <i class="bi bi-box-arrow-right"></i>
-                                        </a>
+                                        </button>
                                     {% endif %}
 
                                     {% if reservation.status != 'cancelled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
@@ -170,6 +170,31 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Checkout Confirmation Modal -->
+<div class="modal fade" id="checkoutModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Check Out Guest</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div class="text-center text-info mb-3">
+                    <i class="bi bi-box-arrow-right fs-1"></i>
+                </div>
+                <p class="text-center mb-0">Are you sure you want to check out this guest? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <form id="checkoutForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-info">Check Out</button>
+                </form>
             </div>
         </div>
     </div>
@@ -235,9 +260,20 @@ function confirmCancel(reservationId) {
 
 function handleCheckin(event, url) {
     event.preventDefault();
-    console.log('Handling check-in click...');
-    console.log('Navigating to:', url);
     window.location.href = url;
 }
+
+function confirmCheckoutModal(reservationId, url) {
+    const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+    const form = document.getElementById('checkoutForm');
+    form.action = url;
+    modal.show();
+}
+
+// Initialize Bootstrap tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+    new bootstrap.Tooltip(tooltipTriggerEl);
+});
 </script>
 {% endblock %}

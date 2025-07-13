@@ -44,8 +44,11 @@ class Room(models.Model):
         ('suite', 'Suite'),
     ]
     STATUS_CHOICES = [
-        ('available', 'Available'),
+        ('vacant_clean', 'Vacant Clean'),
+        ('vacant_dirty', 'Vacant Dirty'),
         ('occupied', 'Occupied'),
+        ('out_of_order', 'Out of Order'),
+        ('maintenance', 'Maintenance'),
     ]
     room_number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=20, choices=ROOM_TYPES)
@@ -63,6 +66,11 @@ class Room(models.Model):
         
         if date is None:
             date = date_class.today()
+        
+        # If the room is marked as vacant_dirty, do not auto-update to available
+        if self.status == 'vacant_dirty':
+            self.save()
+            return
         
         # Check if there are any active reservations for this room on the given date
         # Exclude checked_out, canceled, and no_show reservations

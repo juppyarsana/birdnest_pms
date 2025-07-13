@@ -64,105 +64,257 @@
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <div class="dashboard-header">
-            <h1 class="dashboard-title">Hotel Dashboard <span class="fs-5 text-muted">({{ rooms|length }} Rooms)</span></h1>
-            <div>
-                <a href="{% url 'create_reservation' %}" class="btn btn-primary me-2">New Reservation</a>
-                <a href="{% url 'reservations_list' %}" class="btn btn-info me-2">View Reservations</a>
-                <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
+    <style>
+        body {
+            overflow-x: hidden;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 60px;
+            background: #212529;
+            color: #fff;
+            z-index: 1040;
+            transition: width 0.2s, box-shadow 0.2s;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar .nav {
+            width: 100%;
+            flex-direction: column;
+        }
+        .sidebar .nav-link {
+            color: #fff;
+            width: 100%;
+            text-align: left;
+            padding: 1.2rem 0 1.2rem 1.5rem;
+            border: none;
+            background: none;
+            font-size: 1.5rem;
+            transition: background 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: #343a40;
+            color: #ffc107;
+        }
+        .sidebar .nav-label {
+            display: none;
+            font-size: 1rem;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .sidebar.expanded {
+            width: 220px;
+            box-shadow: 2px 0 16px rgba(0,0,0,0.15);
+        }
+        .sidebar.expanded .nav-link {
+            text-align: left;
+            padding-left: 2rem;
+            font-size: 1.2rem;
+        }
+        .sidebar.expanded .nav-label {
+            display: inline;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.15);
+            z-index: 1039;
+        }
+        .sidebar.expanded ~ .sidebar-overlay {
+            display: block;
+        }
+        @media (max-width: 991.98px) {
+            .sidebar {
+                width: 50px;
+            }
+            .sidebar.expanded {
+                width: 180px;
+            }
+        }
+        main {
+            margin-left: 60px !important;
+            margin-right: 30px !important;
+            transition: margin-left 0.2s, margin-right 0.2s;
+            max-width: calc(100vw - 90px);
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        @media (max-width: 991.98px) {
+            main {
+                margin-left: 50px !important;
+                margin-right: 25px !important;
+                max-width: calc(100vw - 75px);
+            }
+        }
+    </style>
+    <nav class="sidebar" id="sidebarMenu">
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'reservations_list' %}" title="View Reservations">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-label">View Reservations</span>
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'rooms_list' %}" title="Rooms (Housekeeping)">
+                    <i class="bi bi-door-closed"></i>
+                    <span class="nav-label">Rooms</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="container-fluid py-4 px-md-4">
+        <div class="dashboard-content-wrapper" style="width:100%;max-width:100vw;overflow-x:hidden;box-sizing:border-box;">
+            <div class="dashboard-header d-flex align-items-center flex-wrap gap-2">
+                <h1 class="dashboard-title mb-0 flex-grow-1"> BIRDNEST KINTAMANI</h1>
+                <div class="d-flex flex-wrap gap-2 justify-content-end ms-auto w-md-auto align-items-center">
+                    <a href="{% url 'create_reservation' %}" class="btn btn-primary">New Reservation</a>
+                    <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
+                </div>
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="card stat-card text-center p-3">
+                        <div class="fs-6 text-muted">Daily Occupancy</div>
+                        <div class="fs-2 fw-bold">{{ daily_occupancy|floatformat:1 }}%</div>
+                        <div class="text-muted">Target: {{ target_occupancy }}%</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center p-3">
+                        <div class="fs-6 text-muted">Monthly Occupancy</div>
+                        <div class="fs-2 fw-bold">{{ monthly_occupancy|floatformat:1 }}%</div>
+                        <div class="text-muted">{{ month_name }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stat-card text-center p-3">
+                        <div class="fs-6 text-muted">Total Reservations</div>
+                        <div class="fs-2 fw-bold">{{ all_reservations|length }}</div>
+                        <div class="text-muted">in database</div>
+                    </div>
+                </div>
+            </div>
+    
+            <h3 class="section-title">Rooms</h3>
+            <div class="room-cards">
+                {% for room in rooms %}
+                <div class="card room-card">
+                    <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% elif room.status == 'vacant_dirty' %}bg-warning text-dark{% else %}available{% endif %}">
+                        {% if room.status == 'occupied' %}
+                            <i class="bi bi-person-fill"></i> Occupied
+                        {% elif room.status == 'vacant_dirty' %}
+                            <i class="bi bi-exclamation-triangle-fill"></i> Vacant Dirty
+                        {% else %}
+                            <i class="bi bi-check-circle-fill"></i> Available
+                        {% endif %}
+                    </div>
+                    <div class="room-content">
+                        <div class="room-number">Room {{ room.room_number }}</div>
+                        {% if room.status == 'occupied' %}
+                            {% for reservation in checked_in_reservations %}
+                                {% if reservation.room == room %}
+                                    <div class="room-guest">
+                                        <i class="bi bi-person"></i> {{ reservation.guest.name }}
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+    
+            <h3 class="section-title">Reservations</h3>
+            <div class="status-cards">
+                <div class="status-card in-house">
+                    <i class="bi bi-house-door-fill fs-1"></i>
+                    <div class="number">{{ checked_in_reservations|length }}</div>
+                    <div class="label">In House</div>
+                </div>
+                <div class="status-card expected-arrival">
+                    <i class="bi bi-box-arrow-in-right fs-1"></i>
+                    <div class="number">{{ expected_arrivals|length }}</div>
+                    <div class="label">Expected Arrival</div>
+                </div>
+                <div class="status-card expected-departure">
+                    <i class="bi bi-box-arrow-right fs-1"></i>
+                    <div class="number">{{ expected_departures|length }}</div>
+                    <div class="label">Expected Departure</div>
+                </div>
+                <div class="status-card confirmed">
+                    <i class="bi bi-check-circle fs-1"></i>
+                    <div class="number">{{ confirmed_reservations|length }}</div>
+                    <div class="label">Confirmed</div>
+                </div>
+                <div class="status-card pending">
+                    <i class="bi bi-hourglass fs-1"></i>
+                    <div class="number">{{ pending_reservations|length }}</div>
+                    <div class="label">Pending</div>
+                </div>
+                <div class="status-card no-show">
+                    <i class="bi bi-x-circle fs-1"></i>
+                    <div class="number">{{ no_show_reservations|length }}</div>
+                    <div class="label">No Show</div>
+                </div>
+                <div class="status-card canceled">
+                    <i class="bi bi-slash-circle fs-1"></i>
+                    <div class="number">{{ canceled_reservations|length }}</div>
+                    <div class="label">Canceled</div>
+                </div>
             </div>
         </div>
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="card stat-card text-center p-3">
-                    <div class="fs-6 text-muted">Daily Occupancy</div>
-                    <div class="fs-2 fw-bold">{{ daily_occupancy|floatformat:1 }}%</div>
-                    <div class="text-muted">Target: {{ target_occupancy }}%</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card stat-card text-center p-3">
-                    <div class="fs-6 text-muted">Monthly Occupancy</div>
-                    <div class="fs-2 fw-bold">{{ monthly_occupancy|floatformat:1 }}%</div>
-                    <div class="text-muted">{{ month_name }}</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card stat-card text-center p-3">
-                    <div class="fs-6 text-muted">Total Reservations</div>
-                    <div class="fs-2 fw-bold">{{ all_reservations|length }}</div>
-                    <div class="text-muted">in database</div>
-                </div>
-            </div>
-        </div>
-
-        <h3 class="section-title">Rooms</h3>
-        <div class="room-cards">
-            {% for room in rooms %}
-            <div class="card room-card">
-                <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% else %}available{% endif %}">
-                    {% if room.status == 'occupied' %}
-                        <i class="bi bi-person-fill"></i> Occupied
-                    {% else %}
-                        <i class="bi bi-check-circle-fill"></i> Available
-                    {% endif %}
-                </div>
-                <div class="room-content">
-                    <div class="room-number">Room {{ room.room_number }}</div>
-                    {% if room.status == 'occupied' %}
-                        {% for reservation in checked_in_reservations %}
-                            {% if reservation.room == room %}
-                                <div class="room-guest">
-                                    <i class="bi bi-person"></i> {{ reservation.guest.name }}
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <h3 class="section-title">Reservations</h3>
-        <div class="status-cards">
-            <div class="status-card in-house">
-                <i class="bi bi-house-door-fill fs-1"></i>
-                <div class="number">{{ checked_in_reservations|length }}</div>
-                <div class="label">In House</div>
-            </div>
-            <div class="status-card expected-arrival">
-                <i class="bi bi-box-arrow-in-right fs-1"></i>
-                <div class="number">{{ expected_arrivals|length }}</div>
-                <div class="label">Expected Arrival</div>
-            </div>
-            <div class="status-card expected-departure">
-                <i class="bi bi-box-arrow-right fs-1"></i>
-                <div class="number">{{ expected_departures|length }}</div>
-                <div class="label">Expected Departure</div>
-            </div>
-            <div class="status-card confirmed">
-                <i class="bi bi-check-circle fs-1"></i>
-                <div class="number">{{ confirmed_reservations|length }}</div>
-                <div class="label">Confirmed</div>
-            </div>
-            <div class="status-card pending">
-                <i class="bi bi-hourglass fs-1"></i>
-                <div class="number">{{ pending_reservations|length }}</div>
-                <div class="label">Pending</div>
-            </div>
-            <div class="status-card no-show">
-                <i class="bi bi-x-circle fs-1"></i>
-                <div class="number">{{ no_show_reservations|length }}</div>
-                <div class="label">No Show</div>
-            </div>
-            <div class="status-card canceled">
-                <i class="bi bi-slash-circle fs-1"></i>
-                <div class="number">{{ canceled_reservations|length }}</div>
-                <div class="label">Canceled</div>
-            </div>
-        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                var sidebar = document.getElementById('sidebarMenu');
+                var overlay = document.getElementById('sidebarOverlay');
+                sidebar.addEventListener('mouseenter', function() {
+                    sidebar.classList.add('expanded');
+                    overlay.style.display = 'block';
+                });
+                sidebar.addEventListener('mouseleave', function(e) {
+                    if (!sidebar.contains(e.relatedTarget)) {
+                        sidebar.classList.remove('expanded');
+                        overlay.style.display = 'none';
+                    }
+                });
+                overlay.addEventListener('mouseenter', function() {
+                    sidebar.classList.remove('expanded');
+                    overlay.style.display = 'none';
+                });
+            });
+        </script>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var sidebar = document.getElementById('sidebarMenu');
+            var overlay = document.getElementById('sidebarOverlay');
+            sidebar.addEventListener('mouseenter', function() {
+                sidebar.classList.add('expanded');
+                overlay.style.display = 'block';
+            });
+            sidebar.addEventListener('mouseleave', function(e) {
+                if (!sidebar.contains(e.relatedTarget)) {
+                    sidebar.classList.remove('expanded');
+                    overlay.style.display = 'none';
+                }
+            });
+            overlay.addEventListener('mouseenter', function() {
+                sidebar.classList.remove('expanded');
+                overlay.style.display = 'none';
+            });
+        });
+    </script>
 </body>
 </html>
