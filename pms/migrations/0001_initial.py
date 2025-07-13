@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('room_number', models.CharField(max_length=10)),
                 ('room_type', models.CharField(max_length=50)),
                 ('rate', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('status', models.CharField(default='available', max_length=20)),
+                ('status', models.CharField(default='vacant_clean', max_length=20)),
             ],
         ),
         migrations.CreateModel(

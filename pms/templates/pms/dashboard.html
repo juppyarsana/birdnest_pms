@@ -20,7 +20,7 @@
         .room-card:hover { transform: translateY(-5px); }
         .room-status-bar { width: 100%; padding: 0.5rem; text-align: center; color: white; font-weight: 500; }
         .room-status-bar.occupied { background-color: #dc3545; }
-        .room-status-bar.available { background-color: #198754; }
+        .room-status-bar.vacant_clean { background-color: #198754; }
         .room-content { padding: 1rem; }
         .room-number { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
         .room-guest { font-weight: 500; color: #0d6efd; }
@@ -209,13 +209,15 @@
             <div class="room-cards">
                 {% for room in rooms %}
                 <div class="card room-card">
-                    <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% elif room.status == 'vacant_dirty' %}bg-warning text-dark{% else %}available{% endif %}">
+                    <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% elif room.status == 'vacant_dirty' %}bg-warning text-dark{% elif room.status == 'vacant_clean' %}vacant_clean{% else %}bg-secondary text-white{% endif %}">
                         {% if room.status == 'occupied' %}
                             <i class="bi bi-person-fill"></i> Occupied
                         {% elif room.status == 'vacant_dirty' %}
                             <i class="bi bi-exclamation-triangle-fill"></i> Vacant Dirty
+                        {% elif room.status == 'vacant_clean' %}
+                            <i class="bi bi-check-circle-fill"></i> Vacant Clean
                         {% else %}
-                            <i class="bi bi-check-circle-fill"></i> Available
+                            <i class="bi bi-dash-circle-fill"></i> {{ room.get_status_display }}
                         {% endif %}
                     </div>
                     <div class="room-content">

@@ -1,32 +1,172 @@
+{% load humanize %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create Reservation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; overflow-x: hidden; }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 60px;
+            background: #212529;
+            color: #fff;
+            z-index: 1040;
+            transition: width 0.2s, box-shadow 0.2s;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar .nav {
+            width: 100%;
+            flex-direction: column;
+        }
+        .sidebar .nav-link {
+            color: #fff;
+            width: 100%;
+            text-align: left;
+            padding: 1.2rem 0 1.2rem 1.5rem;
+            border: none;
+            background: none;
+            font-size: 1.5rem;
+            transition: background 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: #343a40;
+            color: #ffc107;
+        }
+        .sidebar .nav-label {
+            display: none;
+            font-size: 1rem;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .sidebar.expanded {
+            width: 220px;
+            box-shadow: 2px 0 16px rgba(0,0,0,0.15);
+        }
+        .sidebar.expanded .nav-link {
+            text-align: left;
+            padding-left: 2rem;
+            font-size: 1.2rem;
+        }
+        .sidebar.expanded .nav-label {
+            display: inline;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.15);
+            z-index: 1039;
+        }
+        .sidebar.expanded ~ .sidebar-overlay {
+            display: block;
+        }
+        @media (max-width: 991.98px) {
+            .sidebar {
+                width: 50px;
+            }
+            .sidebar.expanded {
+                width: 180px;
+            }
+        }
+        main {
+            margin-left: 60px !important;
+            margin-right: 30px !important;
+            transition: margin-left 0.2s, margin-right 0.2s;
+            max-width: calc(100vw - 90px);
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        @media (max-width: 991.98px) {
+            main {
+                margin-left: 50px !important;
+                margin-right: 25px !important;
+                max-width: calc(100vw - 75px);
+            }
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <h1>Create Reservation</h1>
-        {% if form.errors %}
-            <div class="alert alert-danger">
-                <ul>
-                    {% for field in form %}
-                        {% for error in field.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    {% endfor %}
-                    {% for error in form.non_field_errors %}
-                        <li>{{ error }}</li>
-                    {% endfor %}
-                </ul>
+    <nav class="sidebar" id="sidebarMenu">
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'reservations_list' %}" title="View Reservations">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-label">View Reservations</span>
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'rooms_list' %}" title="Rooms (Housekeeping)">
+                    <i class="bi bi-door-closed"></i>
+                    <span class="nav-label">Rooms</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="container-fluid py-4 px-md-4">
+        <div class="dashboard-content-wrapper" style="width:100%;max-width:100vw;overflow-x:hidden;box-sizing:border-box;">
+            <div class="dashboard-header d-flex align-items-center flex-wrap gap-2 mb-4">
+                <h1 class="dashboard-title mb-0 flex-grow-1">Create Reservation</h1>
             </div>
-        {% endif %}
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="btn btn-primary">Save Reservation</button>
-            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-6 col-md-8 col-12">
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <ul>
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    <form method="post" class="card p-4 shadow-sm border-0" id="reservation-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_check_in" class="form-label">Check-in Date</label>
+                            {{ form.check_in }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_check_out" class="form-label">Check-out Date</label>
+                            {{ form.check_out }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_room" class="form-label">Room</label>
+                            {{ form.room }}
+                            <div id="room-availability-info" class="form-text text-success"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_guest" class="form-label">Guest Name</label>
+                            {{ form.guest }}
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end mt-3">
+                            <button type="submit" class="btn btn-primary">Save Reservation</button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                    <script>
+                    // Placeholder for dynamic room filtering logic
+                    // On change of check-in/check-out, fetch vacant clean rooms and update the room dropdown
+                    </script>
+                </div>
+            </div>
+        </div>
+    </main>
 </body>
 </html>

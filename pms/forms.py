@@ -133,7 +133,7 @@ class ReservationForm(forms.ModelForm):
                     check_out__gt=today,
                     status__in=['confirmed', 'expected_arrival', 'expected_departure']
                 ).exclude(id=reservation.id).exists()
-                reservation.room.status = 'occupied' if has_other_active else 'available'
+                reservation.room.status = 'occupied' if has_other_active else 'vacant_clean'
             reservation.room.save()
         return reservation
 

@@ -53,7 +53,7 @@ class Room(models.Model):
     room_number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=20, choices=ROOM_TYPES)
     rate = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='vacant_clean')
 
     def __str__(self):
         return f"Room {self.room_number}"
@@ -67,11 +67,14 @@ class Room(models.Model):
         if date is None:
             date = date_class.today()
         
-        # If the room is marked as vacant_dirty, do not auto-update to available
+        # If the room is marked as vacant_dirty, do not auto-update
         if self.status == 'vacant_dirty':
             self.save()
             return
-        
+        # If the room is marked as out_of_order or maintenance, do not auto-update
+        if self.status in ['out_of_order', 'maintenance']:
+            self.save()
+            return
         # Check if there are any active reservations for this room on the given date
         # Exclude checked_out, canceled, and no_show reservations
         is_occupied = Reservation.objects.filter(
@@ -80,14 +83,19 @@ class Room(models.Model):
             Q(check_out__gt=date) &  # Use > instead of >= for check_out
             Q(status__in=['confirmed', 'checked_in', 'expected_arrival', 'expected_departure'])
         ).exists()
-
-        self.status = 'occupied' if is_occupied else 'available'
+        if is_occupied:
+            self.status = 'occupied'
+        else:
+            # If previously vacant_dirty, do not set to vacant_clean automatically
+            if self.status == 'vacant_dirty':
+                pass
+            else:
+                self.status = 'vacant_clean'
         self.save()
 
     def is_available(self, check_in, check_out):
         """Check if room is available for the given date range."""
         from django.db.models import Q
-        
         # A room is available if there are no overlapping active reservations
         overlapping = Reservation.objects.filter(
             Q(room=self) &
@@ -95,8 +103,8 @@ class Room(models.Model):
             Q(check_out__gt=check_in) &  # New booking ends after existing booking starts
             Q(status__in=['confirmed', 'checked_in', 'expected_arrival', 'expected_departure'])
         ).exists()
-        
-        return not overlapping
+        # Room must also be vacant_clean to be bookable
+        return not overlapping and self.status == 'vacant_clean'
 
 class Guest(models.Model):
     name = models.CharField(max_length=100)

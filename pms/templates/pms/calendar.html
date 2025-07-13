@@ -9,6 +9,18 @@
 {% block content %}
 <div class="container mt-4">
     <h1>Booking Calendar (5 Rooms)</h1>
+    <div class="mb-3 reservation-status-legend">
+        <strong>Reservation Status Legend:</strong>
+        <span class="badge" style="background-color: #808080; color: #fff;">Pending</span>
+        <span class="badge" style="background-color: #28a745; color: #fff;">Confirmed</span>
+        <span class="badge" style="background-color: #007bff; color: #fff;">Expected Arrival</span>
+        <span class="badge" style="background-color: #20c997; color: #fff;">Checked In</span>
+        <span class="badge" style="background-color: #6610f2; color: #fff;">In House</span>
+        <span class="badge" style="background-color: #ffc107; color: #212529;">Expected Departure</span>
+        <span class="badge" style="background-color: #6c757d; color: #fff;">Checked Out</span>
+        <span class="badge" style="background-color: #dc3545; color: #fff;">Canceled</span>
+        <span class="badge" style="background-color: #343a40; color: #fff;">No-Show</span>
+    </div>
     <p>Click a date to create a reservation or click an existing reservation to edit.</p>
     <a href="{% url 'create_reservation' %}" class="btn btn-primary mb-3">New Reservation</a>
     <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3">Back to Dashboard</a>

@@ -33,6 +33,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='room',
             name='status',
-            field=models.CharField(choices=[('available', 'Available'), ('occupied', 'Occupied')], default='available', max_length=20),
+            field=models.CharField(choices=[('vacant_clean', 'Vacant Clean'), ('occupied', 'Occupied')], default='vacant_clean', max_length=20),
         ),
     ]
