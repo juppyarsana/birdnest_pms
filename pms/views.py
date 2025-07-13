@@ -93,7 +93,7 @@ def checkin_reservation(request, reservation_id):
             if form.is_valid():
                 print("Debug: Form is valid, saving guest info")
                 form.save()
-                reservation.status = 'checked_in'
+                reservation.status = 'in_house'
                 reservation.check_in_time = current_time
                 reservation.save()
                 # Update room status after check-in
@@ -147,11 +147,11 @@ def dashboard(request):
     reservations = Reservation.objects.filter(
         check_in__lte=today,
         check_out__gt=today,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'checked_in']
+        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house']
     )
     daily_occupancy = (len(reservations) / 5) * 100
 
-    # Monthly occupancy for current month (confirmed/arrival/departure)
+    # Monthly occupancy for current month (confirmed/arrival/departure/in_house)
     year = today.year
     month = today.month
     days_in_month = monthrange(year, month)[1]
@@ -162,7 +162,7 @@ def dashboard(request):
     monthly_reservations = Reservation.objects.filter(
         check_in__lt=month_end,
         check_out__gt=month_start,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure']
+        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house']
     )
     for res in monthly_reservations:
         start = max(res.check_in, month_start)
@@ -173,7 +173,7 @@ def dashboard(request):
     # Filter reservations by status
     pending_reservations = Reservation.objects.filter(status='pending')
     expected_arrivals = Reservation.objects.filter(status='expected_arrival')
-    checked_in_reservations = Reservation.objects.filter(status='checked_in')
+    checked_in_reservations = Reservation.objects.filter(status='in_house')
     expected_departures = Reservation.objects.filter(status='expected_departure')
     canceled_reservations = Reservation.objects.filter(status='canceled')
     no_show_reservations = Reservation.objects.filter(status='no_show')
@@ -266,7 +266,7 @@ def checkout_reservation(request, reservation_id):
     """Check out a guest"""
     reservation = get_object_or_404(Reservation, id=reservation_id)
     if reservation.status in ['checked_in', 'expected_departure']:
-        reservation.status = 'checked_out'
+        reservation.status = 'in_house'
         reservation.save()
         # Update room status with today's date
         today = date.today()
@@ -279,12 +279,19 @@ def checkout_reservation(request, reservation_id):
 def cancel_reservation(request, reservation_id):
     """Cancel a reservation"""
     reservation = get_object_or_404(Reservation, id=reservation_id)
-    if request.method == 'POST' and reservation.status not in ['completed', 'cancelled', 'no_show']:
-        reservation.status = 'cancelled'
+    if request.method == 'POST' and reservation.status not in ['completed', 'canceled', 'no_show']:
+        reason = request.POST.get('cancellation_reason', '').strip()
+        reservation.status = 'canceled'
+        reservation.cancellation_reason = reason
         reservation.save()
-        # Update room status
+        # Set room status to vacant_dirty so it can be cleaned before rebooking
+        reservation.room.status = 'vacant_dirty'
+        reservation.room.save()
         reservation.room.update_status()
-    return redirect('reservations_list')
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'status': 'canceled', 'reason': reason})
+        return redirect('reservations_list')
+    return render(request, 'pms/cancel_reservation.html', {'reservation': reservation})
 
 def edit_reservation(request, reservation_id):
     """Edit a reservation"""

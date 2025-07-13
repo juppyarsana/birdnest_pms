@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4 text-danger">Cancel Reservation</h2>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="cancellation_reason" class="form-label">Cancellation Reason</label>
+                    <textarea class="form-control" id="cancellation_reason" name="cancellation_reason" rows="3" required placeholder="Please provide a reason for cancellation..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                <a href="{% url 'reservations_list' %}" class="btn btn-secondary ms-2">Back</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

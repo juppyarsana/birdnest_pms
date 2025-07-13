@@ -19,16 +19,23 @@
                     <h3 class="h4 mb-3">Guest Information</h3>
                     <p><strong>Name:</strong> {{ reservation.guest.name }}</p>
                     <p><strong>Email:</strong> {{ reservation.guest.email }}</p>
-                    <p><strong>Phone:</strong> {{ reservation.guest.phone_number }}</p>
-                    <p><strong>ID Type:</strong> {{ reservation.guest.get_id_type_display }}</p>
+                    <p><strong>Phone:</strong> {{ reservation.guest.phone }}</p>
+                    <p><strong>ID Type:</strong> {{ reservation.guest.id_type }}</p>
                     <p><strong>ID Number:</strong> {{ reservation.guest.id_number }}</p>
+                    <p><strong>Date of Birth:</strong> {{ reservation.guest.date_of_birth|date:"M d, Y" }}</p>
+                    <p><strong>Address:</strong> {{ reservation.guest.address }}</p>
+                    <p><strong>Emergency Contact Name:</strong> {{ reservation.guest.emergency_contact_name }}</p>
+                    <p><strong>Emergency Contact Phone:</strong> {{ reservation.guest.emergency_contact_phone }}</p>
                 </div>
                 <div class="col-md-6">
                     <h3 class="h4 mb-3">Reservation Information</h3>
                     <p><strong>Reservation ID:</strong> {{ reservation.id }}</p>
                     <p><strong>Room:</strong> {{ reservation.room.room_number }}</p>
                     <p><strong>Check-in:</strong> {{ reservation.check_in|date:"M d, Y" }}</p>
+                    <p><strong>Check-in Time:</strong> {{ reservation.check_in_time|default:"-" }}</p>
                     <p><strong>Check-out:</strong> {{ reservation.check_out|date:"M d, Y" }}</p>
+                    <p><strong>Number of Guests:</strong> {{ reservation.num_guests }}</p>
+                    <p><strong>Terms Accepted:</strong> {{ reservation.terms_accepted|yesno:"Yes,No" }}</p>
                     <p><strong>Status:</strong> 
                         {% if reservation.status == 'pending' %}
                             <span class="badge bg-warning text-dark">Pending</span>
@@ -36,18 +43,25 @@
                             <span class="badge bg-info">Confirmed</span>
                         {% elif reservation.status == 'expected_arrival' %}
                             <span class="badge bg-primary">Expected Arrival</span>
-                        {% elif reservation.status == 'checked_in' %}
+                        {% elif reservation.status == 'in_house' %}
                             <span class="badge bg-success">Checked In</span>
                         {% elif reservation.status == 'completed' %}
                             <span class="badge bg-secondary">Completed</span>
-                        {% elif reservation.status == 'cancelled' %}
-                            <span class="badge bg-danger">Cancelled</span>
+                        {% elif reservation.status == 'canceled' %}
+                            <span class="badge bg-danger">Canceled</span>
                         {% elif reservation.status == 'no_show' %}
                             <span class="badge bg-dark">No Show</span>
                         {% else %}
                             <span class="badge bg-secondary">{{ reservation.status|title }}</span>
                         {% endif %}
                     </p>
+                    {% if reservation.cancellation_reason %}
+                    <div class="mb-2">
+                        <strong>Cancellation Reason:</strong>
+                        <span>{{ reservation.cancellation_reason }}</span>
+                    </div>
+                    {% endif %}
+                    <p><strong>Created At:</strong> {{ reservation.created_at|date:"M d, Y H:i" }}</p>
                 </div>
             </div>
 
@@ -72,13 +86,13 @@
                     </a>
                 {% endif %}
 
-                {% if reservation.status == 'checked_in' %}
+                {% if reservation.status == 'in_house' %}
                     <a href="{% url 'checkout_reservation' reservation.id %}" class="btn btn-info">
                         <i class="bi bi-box-arrow-right"></i> Check Out
                     </a>
                 {% endif %}
 
-                {% if reservation.status != 'cancelled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
+                {% if reservation.status != 'canceled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
                     <button class="btn btn-danger" onclick="confirmCancel('{{ reservation.id }}')">
                         <i class="bi bi-x-circle"></i> Cancel
                     </button>

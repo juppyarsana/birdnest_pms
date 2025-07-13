@@ -81,7 +81,7 @@ class Room(models.Model):
             Q(room=self) &
             Q(check_in__lte=date) &
             Q(check_out__gt=date) &  # Use > instead of >= for check_out
-            Q(status__in=['confirmed', 'checked_in', 'expected_arrival', 'expected_departure'])
+            Q(status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure'])
         ).exists()
         if is_occupied:
             self.status = 'occupied'
@@ -101,7 +101,7 @@ class Room(models.Model):
             Q(room=self) &
             Q(check_in__lt=check_out) &  # New booking starts before existing booking ends
             Q(check_out__gt=check_in) &  # New booking ends after existing booking starts
-            Q(status__in=['confirmed', 'checked_in', 'expected_arrival', 'expected_departure'])
+            Q(status__in=['confirmed', 'in_house', 'expected_arrival'])
         ).exists()
         # Room must also be vacant_clean to be bookable
         return not overlapping and self.status == 'vacant_clean'
@@ -125,7 +125,6 @@ class Reservation(models.Model):
         ('pending', 'Pending'),
         ('confirmed', 'Confirmed'),
         ('expected_arrival', 'Expected Arrival'),
-        ('checked_in', 'Checked In'),
         ('in_house', 'In House'),
         ('expected_departure', 'Expected Departure'),
         ('checked_out', 'Checked Out'),
@@ -148,6 +147,8 @@ class Reservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, blank=True, default='')
     payment_notes = models.TextField(blank=True, default='')  # New field
+    created_at = models.DateTimeField(auto_now_add=True)  # Reservation creation timestamp
+    cancellation_reason = models.TextField(blank=True, default='')  # Reason for cancellation
 
     def __str__(self):
         return f"{self.guest.name} - {self.room.room_number} ({self.status})"
@@ -179,8 +180,8 @@ class Reservation(models.Model):
             self.save()
             return
         
-        # Handle expected_departure: If today is check-out date and status is checked_in
-        if self.status == 'checked_in' and self.check_out == today:
+        # Handle expected_departure: If today is check-out date and status is in_house
+        if self.status == 'in_house' and self.check_out == today:
             print(f"Debug: Marking as expected departure")
             self.status = 'expected_departure'
             self.save()
@@ -189,25 +190,23 @@ class Reservation(models.Model):
         print(f"Debug: No status update needed")
 
     def has_overlap(self):
-        """Check if there are any overlapping reservations for the same room.
-        A room can be booked on another reservation's check-out date."""
+        """Check if there are any overlapping active reservations for the same room."""
+        active_statuses = ['confirmed', 'in_house', 'expected_arrival']
         overlapping = Reservation.objects.filter(
             room=self.room,
-            check_in__lt=self.check_out,  # Changed from check_in__lte to check_in__lt
-            check_out__gt=self.check_in   # Changed from check_out__gte to check_out__gt
-        ).exclude(pk=self.pk)  # Exclude current reservation when updating
-        
+            check_in__lt=self.check_out,
+            check_out__gt=self.check_in,
+            status__in=active_statuses
+        ).exclude(pk=self.pk)
         return overlapping.exists()
 
     def clean(self):
         """Validate the reservation."""
         from django.core.exceptions import ValidationError
-        
         # Ensure check_out is after check_in
         if self.check_out and self.check_in and self.check_out <= self.check_in:
             raise ValidationError('Check-out date must be after check-in date')
-        
-        # Check for overlapping reservations
+        # Check for overlapping active reservations
         if self.has_overlap():
             raise ValidationError('This room is already reserved for these dates')
         

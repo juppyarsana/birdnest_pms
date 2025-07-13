@@ -76,7 +76,7 @@
                                     Status
                                     {% if current_sort == 'status' %}
                                         <i class="bi bi-arrow-{% if current_direction == 'desc' %}down{% else %}up{% endif %}-short"></i>
-                                    {% else %}
+                                    {% elif reservation.status == 'in_house' %}
                                         <i class="bi bi-arrow-down-up text-muted opacity-50"></i>
                                     {% endif %}
                                 </a>
@@ -91,8 +91,8 @@
                                     {% endif %}
                                 </a>
                             </th>
-                            <th class="px-2">Notes</th>
-                            <th class="px-2">Actions</th>
+                            <th class="px-2">Created At</th>
+                            <th class="px-2 text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -123,27 +123,24 @@
                                 {% endif %}
                             </td>
                             <td class="px-2">{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
-                            <td class="px-2"><div class="payment-notes">{{ reservation.payment_notes|default:"None" }}</div></td>
-                            <td class="px-2">
-                                <div class="d-flex gap-1 align-items-center">
+                            <td class="px-2">{{ reservation.created_at|date:"M d, Y H:i" }}</td>
+                            <td class="px-2 text-end">
+                                <div class="d-flex gap-1 align-items-center justify-content-end">
                                     {% if reservation.status == 'pending' %}
                                         <a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-sm btn-success d-inline-flex align-items-center" title="Confirm">
                                             <i class="bi bi-check-circle"></i>
                                         </a>
                                     {% endif %}
-
                                     {% if reservation.status == 'expected_arrival' %}
                                         <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary d-inline-flex align-items-center" onclick="handleCheckin(event, '{% url 'checkin_reservation' reservation.id %}')" title="Check In" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Check-in is only allowed during the allowed time window. Please try again later.">
                                             <i class="bi bi-box-arrow-in-right"></i>
                                         </a>
                                     {% endif %}
-
-                                    {% if reservation.status == 'checked_in' %}
+                                    {% if reservation.status == 'in_house' %}
                                         <button class="btn btn-sm btn-info d-inline-flex align-items-center" title="Check Out" onclick="confirmCheckoutModal('{{ reservation.id }}', '{% url 'checkout_reservation' reservation.id %}')">
                                             <i class="bi bi-box-arrow-right"></i>
                                         </button>
                                     {% endif %}
-
                                     {% if reservation.status != 'cancelled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
                                         <button class="btn btn-sm btn-danger d-inline-flex align-items-center" onclick="confirmCancel('{{ reservation.id }}')" title="Cancel">
                                             <i class="bi bi-x-circle"></i>
@@ -213,6 +210,10 @@
                     <i class="bi bi-exclamation-triangle fs-1"></i>
                 </div>
                 <p class="text-center mb-0">Are you sure you want to cancel this reservation? This action cannot be undone.</p>
+                <div class="mb-3 mt-3">
+                    <label for="cancellation_reason_modal" class="form-label">Cancellation Reason</label>
+                    <textarea class="form-control" id="cancellation_reason_modal" name="cancellation_reason" rows="3" required placeholder="Please provide a reason for cancellation..."></textarea>
+                </div>
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
@@ -251,29 +252,72 @@
 
 {% block extra_js %}
 <script>
-function confirmCancel(reservationId) {
-    const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
-    const form = document.getElementById('cancelForm');
-    form.action = `/reservations/${reservationId}/cancel/`;
-    modal.show();
-}
+document.addEventListener('DOMContentLoaded', function() {
+    function confirmCancel(reservationId) {
+        const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
+        window.location.href = `/reservations/${reservationId}/cancel/`;
+    }
+    window.confirmCancel = confirmCancel;
 
-function handleCheckin(event, url) {
-    event.preventDefault();
-    window.location.href = url;
-}
+    // Ensure textarea value is submitted with the form
+    const cancelForm = document.getElementById('cancelForm');
+    if (cancelForm) {
+        cancelForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const reason = document.getElementById('cancellation_reason_modal').value.trim();
+            if (!reason) {
+                document.getElementById('cancellation_reason_modal').focus();
+                return false;
+            }
+            // Create a hidden input if not already present
+            let hiddenReason = cancelForm.querySelector('input[name="cancellation_reason"]');
+            if (!hiddenReason) {
+                hiddenReason = document.createElement('input');
+                hiddenReason.type = 'hidden';
+                hiddenReason.name = 'cancellation_reason';
+                cancelForm.appendChild(hiddenReason);
+            }
+            hiddenReason.value = reason;
+            // AJAX submit
+            fetch(cancelForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': cancelForm.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams(new FormData(cancelForm)).toString(),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('cancelModal'));
+                    modal.hide();
+                    // Optionally, update the row or reload the page
+                    window.location.reload();
+                }
+            });
+        });
+    }
 
-function confirmCheckoutModal(reservationId, url) {
-    const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
-    const form = document.getElementById('checkoutForm');
-    form.action = url;
-    modal.show();
-}
+    window.handleCheckin = function(event, url) {
+        event.preventDefault();
+        window.location.href = url;
+    };
 
-// Initialize Bootstrap tooltips
-var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-    new bootstrap.Tooltip(tooltipTriggerEl);
+    window.confirmCheckoutModal = function(reservationId, url) {
+        const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+        const form = document.getElementById('checkoutForm');
+        form.action = url;
+        modal.show();
+    };
+
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 </script>
 {% endblock %}

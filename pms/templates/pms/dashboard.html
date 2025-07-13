@@ -223,7 +223,7 @@
                     <div class="room-content">
                         <div class="room-number">Room {{ room.room_number }}</div>
                         {% if room.status == 'occupied' %}
-                            {% for reservation in checked_in_reservations %}
+                            {% for reservation in checked_in_reservations %}  {# Now represents in_house reservations #}
                                 {% if reservation.room == room %}
                                     <div class="room-guest">
                                         <i class="bi bi-person"></i> {{ reservation.guest.name }}
@@ -239,10 +239,10 @@
             <h3 class="section-title">Reservations</h3>
             <div class="status-cards">
                 <div class="status-card in-house">
-                    <i class="bi bi-house-door-fill fs-1"></i>
-                    <div class="number">{{ checked_in_reservations|length }}</div>
-                    <div class="label">In House</div>
-                </div>
+    <i class="bi bi-house-door-fill fs-1"></i>
+    <div class="number">{{ checked_in_reservations|length }}</div>
+    <div class="label">In House</div>
+</div>
                 <div class="status-card expected-arrival">
                     <i class="bi bi-box-arrow-in-right fs-1"></i>
                     <div class="number">{{ expected_arrivals|length }}</div>

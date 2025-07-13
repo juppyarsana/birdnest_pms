@@ -80,17 +80,16 @@ class ReservationForm(forms.ModelForm):
                 raise ValidationError('Room is not available for these dates')
                 
             # Still check for existing reservations excluding current one if editing
+            # Unified overlap check: only active statuses
+            active_statuses = ['confirmed', 'in_house', 'expected_arrival']
             overlapping = Reservation.objects.filter(
                 room=room,
                 check_in__lt=check_out,
                 check_out__gt=check_in,
-                status__in=['confirmed', 'checked_in', 'expected_arrival', 'expected_departure']
+                status__in=active_statuses
             )
-            
-            # If editing, exclude the current reservation
             if self.instance.pk:
                 overlapping = overlapping.exclude(pk=self.instance.pk)
-            
             if overlapping.exists():
                 raise ValidationError('This room is already reserved for these dates')
         check_out = cleaned_data.get('check_out')
@@ -105,7 +104,7 @@ class ReservationForm(forms.ModelForm):
                 room=room,
                 check_in__lt=check_out,
                 check_out__gt=check_in,
-                status__in=['confirmed', 'expected_arrival', 'expected_departure']
+                status__in=['confirmed', 'expected_arrival']
             ).exclude(id=self.instance.id)
 
             if overlapping.exists():
