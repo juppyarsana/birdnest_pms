@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+import os
 """
 Django settings for hotel_pms project.
 
@@ -25,7 +28,7 @@ SECRET_KEY = 'django-insecure-zb6q9n-n66+g#&dahlil0xwsw5@60i&a&w_=%_3h_&lqrj&fno
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if os.getenv('DJANGO_ALLOWED_HOSTS') else []
 
 
 # Application definition
