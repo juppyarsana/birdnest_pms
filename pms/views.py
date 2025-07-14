@@ -265,8 +265,8 @@ def reservation_detail(request, reservation_id):
 def checkout_reservation(request, reservation_id):
     """Check out a guest"""
     reservation = get_object_or_404(Reservation, id=reservation_id)
-    if reservation.status in ['checked_in', 'expected_departure']:
-        reservation.status = 'in_house'
+    if reservation.status in ['in_house', 'expected_departure']:
+        reservation.status = 'checked_out'
         reservation.save()
         # Update room status with today's date
         today = date.today()

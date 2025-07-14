@@ -12,10 +12,10 @@
                 <div class="card-body">
                     <p>Status: <strong>{{ room.get_status_display }}</strong></p>
                     {% if room.status == 'vacant_dirty' %}
-                    <form method="post" style="display:inline;">
+                    <form method="post" style="display:inline;" class="vacant-clean-form">
                         {% csrf_token %}
                         <input type="hidden" name="room_id" value="{{ room.id }}">
-                        <button type="submit" class="btn btn-success">Mark as Vacant Clean</button>
+                        <button type="button" class="btn btn-success" onclick="showCleanModal(this)">Mark as Vacant Clean</button>
                     </form>
                     {% elif room.status == 'vacant_clean' %}
                         <span class="badge bg-success">Ready</span>
@@ -30,4 +30,43 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Clean Confirmation Modal -->
+<div class="modal fade" id="cleanModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Confirm Room Cleaning</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body py-4">
+        <div class="text-center text-success mb-3">
+          <i class="bi bi-bucket fs-1"></i>
+        </div>
+        <p class="text-center mb-0">Are you sure this room has been cleaned and is ready for the next guest?</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="confirmCleanBtn">Yes, Mark as Clean</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showCleanModal(btn) {
+    window.cleanForm = btn.closest('form');
+    var modal = new bootstrap.Modal(document.getElementById('cleanModal'));
+    modal.show();
+}
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmCleanBtn').onclick = function() {
+        if (window.cleanForm) {
+            window.cleanForm.submit();
+        }
+    };
+});
+</script>
 {% endblock %}

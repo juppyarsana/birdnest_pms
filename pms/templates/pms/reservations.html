@@ -110,7 +110,7 @@
                                     <span class="badge rounded-pill bg-info">Confirmed</span>
                                 {% elif reservation.status == 'expected_arrival' %}
                                     <span class="badge rounded-pill bg-primary">Expected</span>
-                                {% elif reservation.status == 'checked_in' %}
+                                {% elif reservation.status == 'in_house' %}
                                     <span class="badge rounded-pill bg-success">In</span>
                                 {% elif reservation.status == 'completed' %}
                                     <span class="badge rounded-pill bg-secondary">Done</span>
@@ -310,6 +310,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const modal = new bootstrap.Modal(document.getElementById('checkoutModal'));
         const form = document.getElementById('checkoutForm');
         form.action = url;
+        form.onsubmit = function() {
+            setTimeout(function() { window.location.reload(); }, 500);
+        };
         modal.show();
     };
 

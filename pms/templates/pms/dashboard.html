@@ -223,7 +223,7 @@
                     <div class="room-content">
                         <div class="room-number">Room {{ room.room_number }}</div>
                         {% if room.status == 'occupied' %}
-                            {% for reservation in checked_in_reservations %}  {# Now represents in_house reservations #}
+                            {% for reservation in checked_in_reservations %}  {# in_house reservations #}
                                 {% if reservation.room == room %}
                                     <div class="room-guest">
                                         <i class="bi bi-person"></i> {{ reservation.guest.name }}
