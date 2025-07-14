@@ -7,19 +7,122 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
     {% block extra_css %}{% endblock %}
+    <style>
+        body { background: #f8f9fa; overflow-x: hidden; }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: 60px;
+            background: #212529;
+            color: #fff;
+            z-index: 1040;
+            transition: width 0.2s, box-shadow 0.2s;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar .nav { width: 100%; flex-direction: column; }
+        .sidebar .nav-link {
+            color: #fff;
+            width: 100%;
+            text-align: left;
+            padding: 1.2rem 0 1.2rem 1.5rem;
+            border: none;
+            background: none;
+            font-size: 1.5rem;
+            transition: background 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: #343a40;
+            color: #ffc107;
+        }
+        .sidebar .nav-label { display: none; font-size: 1rem; margin-left: 10px; vertical-align: middle; }
+        .sidebar.expanded { width: 220px; box-shadow: 2px 0 16px rgba(0,0,0,0.15); }
+        .sidebar.expanded .nav-link { text-align: left; padding-left: 2rem; font-size: 1.2rem; }
+        .sidebar.expanded .nav-label { display: inline; }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.15);
+            z-index: 1039;
+        }
+        .sidebar.expanded ~ .sidebar-overlay { display: block; }
+        @media (max-width: 991.98px) {
+            .sidebar { width: 50px; }
+            .sidebar.expanded { width: 180px; }
+        }
+        main {
+            margin-left: 60px !important;
+            margin-right: 30px !important;
+            transition: margin-left 0.2s, margin-right 0.2s;
+            max-width: calc(100vw - 90px);
+            overflow-x: hidden;
+            box-sizing: border-box;
+        }
+        @media (max-width: 991.98px) {
+            main {
+                margin-left: 50px !important;
+                margin-right: 25px !important;
+                max-width: calc(100vw - 75px);
+            }
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">Hotel PMS</a>
-        </div>
+    <nav class="sidebar" id="sidebarMenu">
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'dashboard' %}" title="Dashboard">
+                    <i class="bi bi-speedometer2"></i>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'reservations_list' %}" title="View Reservations">
+                    <i class="bi bi-list"></i>
+                    <span class="nav-label">View Reservations</span>
+                </a>
+            </li>
+            <li class="nav-item mb-2">
+                <a class="nav-link" href="{% url 'rooms_list' %}" title="Rooms (Housekeeping)">
+                    <i class="bi bi-door-closed"></i>
+                    <span class="nav-label">Rooms</span>
+                </a>
+            </li>
+        </ul>
     </nav>
-    <div class="container">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <main class="container-fluid py-4 px-md-4">
         {% block content %}{% endblock %}
-    </div>
-    
+    </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var sidebar = document.getElementById('sidebarMenu');
+            var overlay = document.getElementById('sidebarOverlay');
+            sidebar.addEventListener('mouseenter', function() {
+                sidebar.classList.add('expanded');
+                overlay.style.display = 'block';
+            });
+            sidebar.addEventListener('mouseleave', function(e) {
+                if (!sidebar.contains(e.relatedTarget)) {
+                    sidebar.classList.remove('expanded');
+                    overlay.style.display = 'none';
+                }
+            });
+            overlay.addEventListener('mouseenter', function() {
+                sidebar.classList.remove('expanded');
+                overlay.style.display = 'none';
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
