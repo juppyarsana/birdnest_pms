@@ -61,6 +61,7 @@
         .status-card.pending { background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: white; }
         .status-card.no-show { background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: white; }
         .status-card.canceled { background: linear-gradient(135deg, #795548 0%, #5D4037 100%); color: white; }
+        .status-card.checked-out { background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); color: white; }
     </style>
 </head>
 <body>
@@ -182,21 +183,28 @@
                 </div>
             </div>
             <div class="row g-3 mb-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card stat-card text-center p-3">
                         <div class="fs-6 text-muted">Daily Occupancy</div>
                         <div class="fs-2 fw-bold">{{ daily_occupancy|floatformat:1 }}%</div>
                         <div class="text-muted">Target: {{ target_occupancy }}%</div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="card stat-card text-center p-3">
+                        <div class="fs-6 text-muted">Weekly Occupancy</div>
+                        <div class="fs-2 fw-bold">{{ weekly_occupancy|floatformat:1 }}%</div>
+                        <div class="text-muted">This Week</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="card stat-card text-center p-3">
                         <div class="fs-6 text-muted">Monthly Occupancy</div>
                         <div class="fs-2 fw-bold">{{ monthly_occupancy|floatformat:1 }}%</div>
                         <div class="text-muted">{{ month_name }}</div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card stat-card text-center p-3">
                         <div class="fs-6 text-muted">Total Reservations</div>
                         <div class="fs-2 fw-bold">{{ all_reservations|length }}</div>
@@ -237,41 +245,66 @@
             </div>
     
             <h3 class="section-title">Reservations</h3>
-            <div class="status-cards">
-                <div class="status-card in-house">
-    <i class="bi bi-house-door-fill fs-1"></i>
-    <div class="number">{{ checked_in_reservations|length }}</div>
-    <div class="label">In House</div>
-</div>
-                <div class="status-card expected-arrival">
-                    <i class="bi bi-box-arrow-in-right fs-1"></i>
-                    <div class="number">{{ expected_arrivals|length }}</div>
-                    <div class="label">Expected Arrival</div>
+            <div class="container-fluid px-0">
+                <div class="row mb-3">
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card in-house">
+                            <i class="bi bi-house-door-fill fs-1"></i>
+                            <div class="number">{{ checked_in_reservations|length }}</div>
+                            <div class="label">In House</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card expected-arrival">
+                            <i class="bi bi-box-arrow-in-right fs-1"></i>
+                            <div class="number">{{ expected_arrivals|length }}</div>
+                            <div class="label">Expected Arrival</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card expected-departure">
+                            <i class="bi bi-box-arrow-right fs-1"></i>
+                            <div class="number">{{ expected_departures|length }}</div>
+                            <div class="label">Expected Departure</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card confirmed">
+                            <i class="bi bi-check-circle fs-1"></i>
+                            <div class="number">{{ confirmed_reservations|length }}</div>
+                            <div class="label">Confirmed</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="status-card expected-departure">
-                    <i class="bi bi-box-arrow-right fs-1"></i>
-                    <div class="number">{{ expected_departures|length }}</div>
-                    <div class="label">Expected Departure</div>
-                </div>
-                <div class="status-card confirmed">
-                    <i class="bi bi-check-circle fs-1"></i>
-                    <div class="number">{{ confirmed_reservations|length }}</div>
-                    <div class="label">Confirmed</div>
-                </div>
-                <div class="status-card pending">
-                    <i class="bi bi-hourglass fs-1"></i>
-                    <div class="number">{{ pending_reservations|length }}</div>
-                    <div class="label">Pending</div>
-                </div>
-                <div class="status-card no-show">
-                    <i class="bi bi-x-circle fs-1"></i>
-                    <div class="number">{{ no_show_reservations|length }}</div>
-                    <div class="label">No Show</div>
-                </div>
-                <div class="status-card canceled">
-                    <i class="bi bi-slash-circle fs-1"></i>
-                    <div class="number">{{ canceled_reservations|length }}</div>
-                    <div class="label">Canceled</div>
+                <div class="row mb-3">
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card pending">
+                            <i class="bi bi-hourglass fs-1"></i>
+                            <div class="number">{{ pending_reservations|length }}</div>
+                            <div class="label">Pending</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card no-show">
+                            <i class="bi bi-x-circle fs-1"></i>
+                            <div class="number">{{ no_show_reservations|length }}</div>
+                            <div class="label">No Show</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card canceled">
+                            <i class="bi bi-slash-circle fs-1"></i>
+                            <div class="number">{{ canceled_reservations|length }}</div>
+                            <div class="label">Canceled</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="status-card checked-out">
+                            <i class="bi bi-box-arrow-up-right fs-1"></i>
+                            <div class="number">{{ checked_out_reservations|length }}</div>
+                            <div class="label">Checked Out</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

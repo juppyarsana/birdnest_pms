@@ -143,15 +143,32 @@ def dashboard(request):
         for room in rooms:
             room.update_status(today)
 
-    # Current reservations (active today, confirmed/arrival/departure)
+    # Current reservations (active today, confirmed/arrival/in_house only)
     reservations = Reservation.objects.filter(
         check_in__lte=today,
         check_out__gt=today,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house']
+        status__in=['confirmed', 'expected_arrival', 'in_house']
     )
     daily_occupancy = (len(reservations) / 5) * 100
 
-    # Monthly occupancy for current month (confirmed/arrival/departure/in_house)
+    # Weekly occupancy for current week (confirmed/arrival/departure/in_house/checked_out)
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=7)
+    days_in_week = 7
+    total_room_nights_week = 5 * days_in_week
+    booked_room_nights_week = 0
+    weekly_reservations = Reservation.objects.filter(
+        check_in__lt=week_end,
+        check_out__gt=week_start,
+        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+    )
+    for res in weekly_reservations:
+        start = max(res.check_in, week_start)
+        end = min(res.check_out, week_end)
+        booked_room_nights_week += (end - start).days
+    weekly_occupancy = (booked_room_nights_week / total_room_nights_week) * 100 if total_room_nights_week > 0 else 0
+
+    # Monthly occupancy for current month (confirmed/arrival/departure/in_house/checked_out)
     year = today.year
     month = today.month
     days_in_month = monthrange(year, month)[1]
@@ -162,7 +179,7 @@ def dashboard(request):
     monthly_reservations = Reservation.objects.filter(
         check_in__lt=month_end,
         check_out__gt=month_start,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house']
+        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
     )
     for res in monthly_reservations:
         start = max(res.check_in, month_start)
@@ -177,6 +194,7 @@ def dashboard(request):
     expected_departures = Reservation.objects.filter(status='expected_departure')
     canceled_reservations = Reservation.objects.filter(status='canceled')
     no_show_reservations = Reservation.objects.filter(status='no_show')
+    checked_out_reservations = Reservation.objects.filter(status='checked_out')
     all_reservations = Reservation.objects.all()
 
     return render(request, 'pms/dashboard.html', {
@@ -188,7 +206,9 @@ def dashboard(request):
         'expected_departures': expected_departures,
         'canceled_reservations': canceled_reservations,
         'no_show_reservations': no_show_reservations,
+        'checked_out_reservations': checked_out_reservations,
         'daily_occupancy': daily_occupancy,
+        'weekly_occupancy': weekly_occupancy,
         'monthly_occupancy': monthly_occupancy,
         'target_occupancy': 80,
         'month_name': today.strftime('%B %Y'),
@@ -241,19 +261,21 @@ def calendar_data(request):
     events = []
     for reservation in reservations:
         colors = {
-            'pending': '#808080',  # Gray
-            'confirmed': '#28a745',  # Green
-            'expected_arrival': '#007bff',  # Blue
-            'expected_departure': '#ffc107',  # Yellow
-            'canceled': '#dc3545',  # Red
-            'no_show': '#6c757d',  # Dark gray
+            'pending': '#FF9800',  # Orange (Pending)
+            'confirmed': '#9C27B0',  # Purple (Confirmed)
+            'expected_arrival': '#4CAF50',  # Green (Expected Arrival)
+            'in_house': '#673AB7',  # Deep Purple (In House)
+            'expected_departure': '#2196F3',  # Blue (Expected Departure)
+            'checked_out': '#00bcd4',  # Cyan (Checked Out)
+            'canceled': '#795548',  # Brown (Canceled)
+            'no_show': '#F44336',  # Red (No Show)
         }
         events.append({
             'id': reservation.id,
             'title': f"{reservation.guest.name} - {reservation.room.room_number} ({reservation.status})",
             'start': reservation.check_in.isoformat(),
             'end': reservation.check_out.isoformat(),
-            'color': colors.get(reservation.status, '#28a745'),
+            'color': colors.get(reservation.status, '#9C27B0'),
         })
     return JsonResponse(events, safe=False)
 
