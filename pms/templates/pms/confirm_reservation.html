@@ -4,10 +4,31 @@
 {% block content %}
 <div class="container py-4">
     <h2 class="mb-4">Confirm Reservation</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Reservation Details</h5>
+            <p><strong>Guest:</strong> {{ reservation.guest }}</p>
+            <p><strong>Room:</strong> {{ reservation.room.room_number }}</p>
+            <p><strong>Check-in:</strong> {{ reservation.check_in|date:"M d, Y" }}</p>
+            <p><strong>Check-out:</strong> {{ reservation.check_out|date:"M d, Y" }}</p>
+            <p><strong>Status:</strong> {{ reservation.get_status_display }}</p>
+        </div>
+    </div>
     <form method="post">
         {% csrf_token %}
         <div class="mb-3">
-            <label class="form-label">Are you sure you want to confirm this reservation?</label>
+            {{ form.payment_method.label_tag }}
+            {{ form.payment_method }}
+            {% if form.payment_method.errors %}
+                <div class="text-danger small">{{ form.payment_method.errors }}</div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            {{ form.payment_notes.label_tag }}
+            {{ form.payment_notes }}
+            {% if form.payment_notes.errors %}
+                <div class="text-danger small">{{ form.payment_notes.errors }}</div>
+            {% endif %}
         </div>
         <button type="submit" class="btn btn-success">Confirm</button>
         <a href="{% url 'reservations_list' %}" class="btn btn-secondary">Cancel</a>

@@ -5,14 +5,6 @@
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h2 fw-bold text-primary">Reservations</h1>
-        <div class="d-flex gap-2">
-            <a href="{% url 'create_reservation' %}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
-                <i class="bi bi-plus-circle"></i> New Reservation
-            </a>
-            <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
-                <i class="bi bi-arrow-left"></i> Back to Dashboard
-            </a>
-        </div>
     </div>
 
     <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
@@ -197,6 +189,31 @@
     </div>
 </div>
 
+<!-- Confirm Reservation Modal -->
+<div class="modal fade" id="confirmReservationModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Confirm Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div class="text-center text-success mb-3">
+                    <i class="bi bi-check-circle fs-1"></i>
+                </div>
+                <p class="text-center mb-0">Are you sure you want to confirm this reservation?</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <form id="confirmReservationForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Confirm</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Cancel Confirmation Modal -->
 <div class="modal fade" id="cancelModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -316,6 +333,16 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.show();
     };
 
+    window.confirmReservationModal = function(reservationId, url) {
+        const modal = new bootstrap.Modal(document.getElementById('confirmReservationModal'));
+        const form = document.getElementById('confirmReservationForm');
+        form.action = url;
+        form.onsubmit = function() {
+            setTimeout(function() { window.location.reload(); }, 500);
+        };
+        modal.show();
+    };
+
     // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.forEach(function (tooltipTriggerEl) {
@@ -324,3 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+delete window.confirmReservationModal;
+delete window.confirmReservationModal;
+</html>

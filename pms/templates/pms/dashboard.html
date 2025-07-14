@@ -61,11 +61,8 @@
 {% block content %}
 <div class="dashboard-content-wrapper" style="width:100%;max-width:100vw;overflow-x:hidden;box-sizing:border-box;">
     <div class="dashboard-header d-flex align-items-center flex-wrap gap-2">
-        <h1 class="dashboard-title mb-0 flex-grow-1"> BIRDNEST KINTAMANI</h1>
-        <div class="d-flex flex-wrap gap-2 justify-content-end ms-auto w-md-auto align-items-center">
-            <a href="{% url 'create_reservation' %}" class="btn btn-primary">New Reservation</a>
-            <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
-        </div>
+        <!-- Title removed from here -->
+        <!-- Buttons removed from here -->
     </div>
     <div class="row g-3 mb-4">
         <div class="col-md-3">
@@ -195,3 +192,9 @@
 </div>
 {% endblock %}
 {% block extra_js %}{% endblock %}
+{% block header_actions %}
+<div class="d-flex flex-wrap gap-2 justify-content-end ms-auto w-md-auto align-items-center">
+    <a href="{% url 'create_reservation' %}" class="btn btn-primary">New Reservation</a>
+    <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
+</div>
+{% endblock %}
