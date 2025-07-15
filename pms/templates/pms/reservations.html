@@ -128,7 +128,7 @@
                                             <i class="bi bi-box-arrow-in-right"></i>
                                         </a>
                                     {% endif %}
-                                    {% if reservation.status == 'in_house' %}
+                                    {% if reservation.status == 'in_house' or reservation.status == 'expected_departure' %}
                                         <button class="btn btn-sm btn-info d-inline-flex align-items-center" title="Check Out" onclick="confirmCheckoutModal('{{ reservation.id }}', '{% url 'checkout_reservation' reservation.id %}')">
                                             <i class="bi bi-box-arrow-right"></i>
                                         </button>
