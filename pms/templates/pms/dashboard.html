@@ -193,8 +193,6 @@
 {% endblock %}
 {% block extra_js %}{% endblock %}
 {% block header_actions %}
-<div class="d-flex flex-wrap gap-2 justify-content-end ms-auto w-md-auto align-items-center">
-    <a href="{% url 'create_reservation' %}" class="btn btn-primary">New Reservation</a>
-    <a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
-</div>
+<a href="{% url 'create_reservation' %}" class="btn btn-primary me-2">New Reservation</a>
+<a href="{% url 'calendar' %}" class="btn btn-outline-secondary">View Calendar</a>
 {% endblock %}

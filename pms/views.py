@@ -309,7 +309,45 @@ def calendar_data(request):
 def reservation_detail(request, reservation_id):
     """View to display detailed information about a specific reservation"""
     reservation = get_object_or_404(Reservation, id=reservation_id)
-    return render(request, 'pms/reservation_detail.html', {'reservation': reservation})
+    
+    # Check if edit mode is requested via URL parameter
+    edit_mode = request.GET.get('edit', 'false').lower() == 'true'
+    
+    if request.method == 'POST':
+        # Handle in-place editing
+        form = ReservationForm(request.POST, instance=reservation, edit=True)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Reservation updated successfully!')
+            return redirect('reservation_detail', reservation_id=reservation.id)
+        else:
+            # Add form errors to messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field.title()}: {error}")
+    
+    # Get available rooms for the room selection dropdown
+    # Include current room and other available rooms
+    available_rooms = Room.objects.filter(
+        status__in=['vacant_clean', 'occupied']
+    ).order_by('room_number')
+    
+    # If editing, we need to check room availability for the date range
+    # but exclude the current reservation from the check
+    if reservation.status in ['pending', 'confirmed']:
+        # Get rooms that are either the current room or available for the dates
+        from django.db.models import Q
+        available_rooms = Room.objects.filter(
+            Q(id=reservation.room.id) |  # Current room
+            Q(status='vacant_clean')  # Available rooms
+        ).order_by('room_number')
+    
+    context = {
+        'reservation': reservation,
+        'available_rooms': available_rooms,
+        'auto_edit': edit_mode,
+    }
+    return render(request, 'pms/reservation_detail.html', context)
 
 def checkout_reservation(request, reservation_id):
     """Check out a guest"""
@@ -400,9 +438,114 @@ def guests(request):
             messages.error(request, "Name is required.")
         from django.shortcuts import redirect
         return redirect('guests')
-    # Handle GET request: render guests.html with guest list
+    
+    # Handle GET request: render guests.html with guest list and metrics
+    from django.db.models import Count
+    
     guests = Guest.objects.all().order_by('-id')
-    return render(request, 'pms/guests.html', {'guests': guests})
+    
+    # Calculate metrics
+    today = date.today()
+    current_month = today.month
+    current_year = today.year
+    
+    # 1. Total guests
+    total_guests = guests.count()
+    
+    # 2. Birthday this month
+    birthday_this_month = guests.filter(
+        date_of_birth__month=current_month
+    ).count()
+    
+    # 3. Recurring guests (guests with more than 1 reservation)
+    recurring_guests = guests.annotate(
+        reservation_count=Count('reservation')
+    ).filter(reservation_count__gt=1).count()
+    
+    # 4. Long stay guests (guests who have reservations more than 1 day)
+    from django.db.models import F, ExpressionWrapper, IntegerField
+    from django.db.models.functions import Extract
+    
+    long_stay_guests = Guest.objects.filter(
+        reservation__in=Reservation.objects.annotate(
+            stay_duration=ExpressionWrapper(
+                F('check_out') - F('check_in'),
+                output_field=IntegerField()
+            )
+        ).filter(stay_duration__gt=1)
+    ).distinct().count()
+    
+    context = {
+        'guests': guests,
+        'total_guests': total_guests,
+        'birthday_this_month': birthday_this_month,
+        'recurring_guests': recurring_guests,
+        'long_stay_guests': long_stay_guests,
+    }
+    
+    return render(request, 'pms/guests.html', context)
+
+def guest_detail(request, guest_id):
+    """View to display detailed information about a specific guest"""
+    from .forms import GuestForm
+    from django.contrib import messages
+    
+    guest = get_object_or_404(Guest, id=guest_id)
+    
+    # Handle POST request for editing guest information
+    if request.method == 'POST':
+        form = GuestForm(request.POST, instance=guest)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Guest information updated successfully!')
+            return redirect('guest_detail', guest_id=guest.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+            # Return to edit mode if there are errors
+            edit_mode = True
+    else:
+        form = GuestForm(instance=guest)
+        # Check if edit mode is requested via URL parameter
+        edit_mode = request.GET.get('edit', 'false').lower() == 'true'
+    
+    # Get guest's reservation history with nights calculation
+    reservations = Reservation.objects.filter(guest=guest).order_by('-check_in')
+    
+    # Add nights calculation to each reservation
+    for reservation in reservations:
+        reservation.nights = (reservation.check_out - reservation.check_in).days
+    
+    # Calculate guest statistics
+    total_reservations = reservations.count()
+    completed_stays = reservations.filter(status='completed').count()
+    
+    # Calculate total nights stayed
+    total_nights = 0
+    for reservation in reservations.filter(status__in=['completed', 'checked_out']):
+        nights = (reservation.check_out - reservation.check_in).days
+        total_nights += nights
+    
+    # Get upcoming reservations
+    upcoming_reservations = reservations.filter(
+        status__in=['pending', 'confirmed', 'expected_arrival', 'in_house'],
+        check_in__gte=date.today()
+    )
+    
+    # Get current reservation (if any)
+    current_reservation = reservations.filter(status='in_house').first()
+    
+    context = {
+        'guest': guest,
+        'form': form,
+        'reservations': reservations,
+        'total_reservations': total_reservations,
+        'completed_stays': completed_stays,
+        'total_nights': total_nights,
+        'upcoming_reservations': upcoming_reservations,
+        'current_reservation': current_reservation,
+        'auto_edit': edit_mode,
+    }
+    return render(request, 'pms/guest_detail.html', context)
 
 def guest_list_json(request):
     guests = Guest.objects.all().order_by('-id')

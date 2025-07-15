@@ -7,8 +7,23 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Booking Calendar (5 Rooms)</h1>
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Booking Calendar</h1>
+            <p class="mb-0 text-muted">View and manage reservations across all 5 rooms</p>
+        </div>
+        <div>
+            <a href="{% url 'create_reservation' %}" class="btn btn-primary me-2">
+                <i class="bi bi-plus-circle"></i> New Reservation
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                <i class="bi bi-house"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+    
     <div class="mb-3 reservation-status-legend">
         <strong>Reservation Status Legend:</strong>
         <span class="badge" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: #fff;">Pending</span>
@@ -21,8 +36,6 @@
         <span class="badge" style="background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: #fff;">No Show</span>
     </div>
     <p>Click a date to create a reservation or click an existing reservation to edit.</p>
-    <a href="{% url 'create_reservation' %}" class="btn btn-primary mb-3">New Reservation</a>
-    <a href="{% url 'dashboard' %}" class="btn btn-secondary mb-3">Back to Dashboard</a>
     <div id="calendar"></div>
 </div>
 {% endblock %}

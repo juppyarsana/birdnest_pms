@@ -3,9 +3,18 @@
 
 {% block content %}
 <div class="container-fluid py-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2 fw-bold text-primary">Reservations</h1>
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Reservation Management</h1>
+            <p class="mb-0 text-muted">Manage hotel reservations and bookings</p>
         </div>
+        <div>
+            <a href="{% url 'create_reservation' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add New Reservation
+            </a>
+        </div>
+    </div>
         
         <!-- Status Filter Section -->
         <div class="card shadow-sm border-0 rounded-3 mb-4 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
@@ -213,10 +222,10 @@
                                         {% endif %}
                                         
                                         {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
-                                        <a href="{% url 'edit_reservation' reservation.id %}" class="btn btn-sm btn-warning d-inline-flex align-items-center" title="Edit">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        {% endif %}
+                        <a href="{% url 'reservation_detail' reservation.id %}?edit=true" class="btn btn-sm btn-warning d-inline-flex align-items-center" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% endif %}
 
                                         <a href="{% url 'reservation_detail' reservation.id %}" class="btn btn-sm btn-info d-inline-flex align-items-center" title="View Details">
                                             <i class="bi bi-eye"></i>
@@ -330,9 +339,9 @@
     .checkin-link { text-decoration: none; display: inline-block; }
     .table > :not(caption) > * > * { background-color: transparent; }
     .table tbody tr:hover { background-color: rgba(0,0,0,.02); }
-    .btn { transition: all 0.2s; padding: 0.25rem 0.5rem; }
-    .btn:hover { transform: translateY(-1px); }
-    .btn:active { transform: translateY(0); }
+    .table .btn { transition: all 0.2s; padding: 0.25rem 0.5rem; }
+    .table .btn:hover { transform: translateY(-1px); }
+    .table .btn:active { transform: translateY(0); }
     th a:hover { color: var(--bs-primary) !important; }
     th a:hover i { opacity: 1 !important; }
     .table td, .table th { font-size: 0.875rem; }

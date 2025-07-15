@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container py-4">
-    <h2 class="mb-4">Rooms - Housekeeping</h2>
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Room Management</h1>
+            <p class="mb-0 text-muted">Monitor and manage room status for housekeeping operations</p>
+        </div>
+    </div>
     <div class="row">
         {% for room in rooms %}
         <div class="col-md-4 mb-3">

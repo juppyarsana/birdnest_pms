@@ -26,7 +26,7 @@
                     {% elif reservation.status == 'expected_arrival' %}
                         <span class="badge bg-primary fs-6 px-3 py-2">Expected Arrival</span>
                     {% elif reservation.status == 'in_house' %}
-                        <span class="badge bg-success fs-6 px-3 py-2">Checked In</span>
+                        <span class="badge bg-success fs-6 px-3 py-2">In House</span>
                     {% elif reservation.status == 'completed' %}
                         <span class="badge bg-secondary fs-6 px-3 py-2">Completed</span>
                     {% elif reservation.status == 'canceled' %}
@@ -139,33 +139,93 @@
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Room Number</span>
-                                <strong class="text-primary">{{ reservation.room.room_number }}</strong>
+                                <div class="edit-field">
+                                    <span class="view-mode"><strong class="text-primary">{{ reservation.room.room_number }}</strong></span>
+                                    <select name="room" class="form-select edit-mode" style="display: none;">
+                                        {% for room in available_rooms %}
+                                        <option value="{{ room.id }}" {% if room.id == reservation.room.id %}selected{% endif %}>
+                                            Room {{ room.room_number }} ({{ room.get_room_type_display }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Check-in Date</span>
-                                <span>{{ reservation.check_in|date:"M d, Y" }}</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">{{ reservation.check_in|date:"M d, Y" }}</span>
+                                    <input type="date" name="check_in" value="{{ reservation.check_in|date:'Y-m-d' }}" class="form-control edit-mode" style="display: none;">
+                                </div>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Check-in Time</span>
-                                <span>{{ reservation.check_in_time|default:"Not specified" }}</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">{{ reservation.check_in_time|default:"Not specified" }}</span>
+                                    <input type="time" name="check_in_time" value="{{ reservation.check_in_time|time:'H:i' }}" class="form-control edit-mode" style="display: none;">
+                                </div>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Check-out Date</span>
-                                <span>{{ reservation.check_out|date:"M d, Y" }}</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">{{ reservation.check_out|date:"M d, Y" }}</span>
+                                    <input type="date" name="check_out" value="{{ reservation.check_out|date:'Y-m-d' }}" class="form-control edit-mode" style="display: none;">
+                                </div>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Number of Guests</span>
-                                <span>{{ reservation.num_guests }}</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">{{ reservation.num_guests }}</span>
+                                    <input type="number" name="num_guests" value="{{ reservation.num_guests }}" min="1" max="10" class="form-control edit-mode" style="display: none;">
+                                </div>
                             </div>
                         </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Status</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">
+                                        {% if reservation.status == 'pending' %}
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        {% elif reservation.status == 'confirmed' %}
+                                            <span class="badge bg-info">Confirmed</span>
+                                        {% elif reservation.status == 'expected_arrival' %}
+                                            <span class="badge bg-primary">Expected Arrival</span>
+                                        {% elif reservation.status == 'in_house' %}
+                                            <span class="badge bg-success">In House</span>
+                                        {% elif reservation.status == 'expected_departure' %}
+                                            <span class="badge bg-warning">Expected Departure</span>
+                                        {% elif reservation.status == 'checked_out' %}
+                                            <span class="badge bg-secondary">Checked Out</span>
+                                        {% elif reservation.status == 'canceled' %}
+                                            <span class="badge bg-danger">Canceled</span>
+                                        {% elif reservation.status == 'no_show' %}
+                                            <span class="badge bg-dark">No Show</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ reservation.status|title }}</span>
+                                        {% endif %}
+                                    </span>
+                                    <select name="status" class="form-select edit-mode" style="display: none;">
+                                        <option value="pending" {% if reservation.status == 'pending' %}selected{% endif %}>Pending</option>
+                                        <option value="confirmed" {% if reservation.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                        <option value="expected_arrival" {% if reservation.status == 'expected_arrival' %}selected{% endif %}>Expected Arrival</option>
+                                        <option value="in_house" {% if reservation.status == 'in_house' %}selected{% endif %}>In House</option>
+                                        <option value="expected_departure" {% if reservation.status == 'expected_departure' %}selected{% endif %}>Expected Departure</option>
+                                        <option value="checked_out" {% if reservation.status == 'checked_out' %}selected{% endif %}>Checked Out</option>
+                                        <option value="canceled" {% if reservation.status == 'canceled' %}selected{% endif %}>Canceled</option>
+                                        <option value="no_show" {% if reservation.status == 'no_show' %}selected{% endif %}>No Show</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Terms Accepted</span>
@@ -174,6 +234,7 @@
                                 </span>
                             </div>
                         </div>
+
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Created</span>
@@ -193,16 +254,28 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
+
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Payment Method</span>
-                                <span>{{ reservation.get_payment_method_display|default:"Not Specified" }}</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">{{ reservation.get_payment_method_display|default:"Not Specified" }}</span>
+                                    <select name="payment_method" class="form-select edit-mode" style="display: none;">
+                                        <option value="" {% if not reservation.payment_method %}selected{% endif %}>Not Specified</option>
+                                        <option value="bank_transfer" {% if reservation.payment_method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
+                                        <option value="cash" {% if reservation.payment_method == 'cash' %}selected{% endif %}>Cash</option>
+                                        <option value="credit_card" {% if reservation.payment_method == 'credit_card' %}selected{% endif %}>Credit Card</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-start">
                                 <span class="text-muted">Payment Notes</span>
-                                <span class="text-end">{{ reservation.payment_notes|default:"None" }}</span>
+                                <div class="edit-field">
+                                    <span class="view-mode text-end">{{ reservation.payment_notes|default:"None" }}</span>
+                                    <textarea name="payment_notes" class="form-control edit-mode" rows="3" style="display: none;">{{ reservation.payment_notes }}</textarea>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -211,8 +284,43 @@
         </div>
     </div>
 
+    <!-- Edit Form (Hidden by default) -->
+    <form id="editForm" method="POST" action="{% url 'edit_reservation' reservation.id %}" style="display: none;">
+        {% csrf_token %}
+        <!-- Form inputs will be moved here by JavaScript when in edit mode -->
+        <input type="hidden" name="room" id="form_room">
+        <input type="hidden" name="check_in" id="form_check_in">
+        <input type="hidden" name="check_in_time" id="form_check_in_time">
+        <input type="hidden" name="check_out" id="form_check_out">
+        <input type="hidden" name="num_guests" id="form_num_guests">
+        <input type="hidden" name="status" id="form_status">
+        <input type="hidden" name="payment_method" id="form_payment_method">
+        <input type="hidden" name="payment_notes" id="form_payment_notes">
+    </form>
+
+    <!-- Edit Mode Action Buttons -->
+    <div id="editActions" class="card border-0 shadow-sm mb-4" style="display: none;">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-floppy me-2"></i>Save Changes
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" form="editForm" class="btn btn-success">
+                    <i class="bi bi-check-lg"></i> Save Changes
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="cancelEdit()">
+                    <i class="bi bi-x-lg"></i> Cancel
+                </button>
+            </div>
+            <div class="edit-actions-hint">
+                <i class="bi bi-info-circle"></i> 
+                Press <kbd>Ctrl+S</kbd> to save or <kbd>Esc</kbd> to cancel
+            </div>
+        </div>
+    </div>
+
     <!-- Action Buttons -->
-    <div class="card border-0 shadow-sm">
+    <div id="viewActions" class="card border-0 shadow-sm">
         <div class="card-body">
             <h5 class="card-title mb-3">
                 <i class="bi bi-gear me-2"></i>Actions
@@ -221,6 +329,12 @@
                 <a href="{% url 'reservations_list' %}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Reservations
                 </a>
+                
+                {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
+                    <button id="editToggle" class="btn btn-warning" onclick="toggleEditMode()">
+                        <i class="bi bi-pencil"></i> <span id="editButtonText">Edit</span>
+                    </button>
+                {% endif %}
                 
                 {% if reservation.status == 'pending' %}
                     <a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-success">
@@ -246,11 +360,7 @@
                     </button>
                 {% endif %}
                 
-                {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
-                <a href="{% url 'edit_reservation' reservation.id %}" class="btn btn-warning">
-                    <i class="bi bi-pencil"></i> Edit
-                </a>
-                {% endif %}
+
             </div>
         </div>
     </div>
@@ -284,16 +394,202 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
 <style>
     .badge { font-size: 0.875rem; }
+    
+    /* Edit mode styling */
+    .edit-field {
+        min-width: 200px;
+        text-align: right;
+    }
+    
+    .edit-mode {
+        max-width: 250px;
+        margin-left: auto;
+    }
+    
+    .edit-mode.form-control,
+    .edit-mode.form-select {
+        font-size: 0.9rem;
+        padding: 0.375rem 0.5rem;
+    }
+    
+    /* Smooth transitions */
+    .edit-field * {
+        transition: all 0.3s ease;
+    }
+    
+    /* Edit mode indicators */
+    .card-header {
+        position: relative;
+    }
+    
+    .edit-mode-active .card-header::after {
+        content: '✏️ Editing';
+        position: absolute;
+        top: 50%;
+        right: 15px;
+        transform: translateY(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        color: white;
+    }
+    
+    /* Loading state */
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    /* Keyboard shortcut hints */
+    .edit-actions-hint {
+        font-size: 0.75rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+let isEditMode = false;
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    const editButton = document.getElementById('editToggle');
+    const editButtonText = document.getElementById('editButtonText');
+    const viewActions = document.getElementById('viewActions');
+    const editActions = document.getElementById('editActions');
+    const viewModeElements = document.querySelectorAll('.view-mode');
+    const editModeElements = document.querySelectorAll('.edit-mode');
+    const container = document.querySelector('.container');
+    const cards = document.querySelectorAll('.card');
+    
+    if (isEditMode) {
+        // Switch to edit mode
+        editButton.className = 'btn btn-success';
+        editButtonText.textContent = 'View Mode';
+        editButton.innerHTML = '<i class="bi bi-eye"></i> ' + editButtonText.outerHTML;
+        
+        viewActions.style.display = 'none';
+        editActions.style.display = 'block';
+        
+        viewModeElements.forEach(el => el.style.display = 'none');
+        editModeElements.forEach(el => el.style.display = 'block');
+        
+        // Add visual indicators
+        container.classList.add('edit-mode-active');
+        cards.forEach(card => {
+            if (card.querySelector('.edit-mode')) {
+                card.classList.add('edit-mode-active');
+            }
+        });
+        
+        // Focus on first editable field
+        const firstEditField = document.querySelector('.edit-mode:not([style*="display: none"])');
+        if (firstEditField) {
+            setTimeout(() => firstEditField.focus(), 100);
+        }
+        
+        // Scroll to top for better UX
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+        // Switch to view mode
+        editButton.className = 'btn btn-warning';
+        editButtonText.textContent = 'Edit';
+        editButton.innerHTML = '<i class="bi bi-pencil"></i> ' + editButtonText.outerHTML;
+        
+        viewActions.style.display = 'block';
+        editActions.style.display = 'none';
+        
+        viewModeElements.forEach(el => el.style.display = 'block');
+        editModeElements.forEach(el => el.style.display = 'none');
+        
+        // Remove visual indicators
+        container.classList.remove('edit-mode-active');
+        cards.forEach(card => card.classList.remove('edit-mode-active'));
+    }
+}
+
+function cancelEdit() {
+    // Reset form to original values
+    const form = document.getElementById('editForm');
+    form.reset();
+    
+    // Switch back to view mode
+    if (isEditMode) {
+        toggleEditMode();
+    }
+}
+
 function confirmCancel(reservationId) {
     const modal = new bootstrap.Modal(document.getElementById('cancelModal'));
     const form = document.getElementById('cancelForm');
     form.action = `/reservations/${reservationId}/cancel/`;
     modal.show();
 }
+
+// Sync visible edit fields with hidden form fields
+function syncFormFields() {
+    // Get values from visible edit fields and copy to hidden form fields
+    const roomSelect = document.querySelector('select[name="room"].edit-mode');
+    const checkInInput = document.querySelector('input[name="check_in"].edit-mode');
+    const checkInTimeInput = document.querySelector('input[name="check_in_time"].edit-mode');
+    const checkOutInput = document.querySelector('input[name="check_out"].edit-mode');
+    const numGuestsInput = document.querySelector('input[name="num_guests"].edit-mode');
+    const statusSelect = document.querySelector('select[name="status"].edit-mode');
+    const paymentMethodSelect = document.querySelector('select[name="payment_method"].edit-mode');
+    const paymentNotesTextarea = document.querySelector('textarea[name="payment_notes"].edit-mode');
+    
+    if (roomSelect) document.getElementById('form_room').value = roomSelect.value;
+    if (checkInInput) document.getElementById('form_check_in').value = checkInInput.value;
+    if (checkInTimeInput) document.getElementById('form_check_in_time').value = checkInTimeInput.value;
+    if (checkOutInput) document.getElementById('form_check_out').value = checkOutInput.value;
+    if (numGuestsInput) document.getElementById('form_num_guests').value = numGuestsInput.value;
+    if (statusSelect) document.getElementById('form_status').value = statusSelect.value;
+    if (paymentMethodSelect) document.getElementById('form_payment_method').value = paymentMethodSelect.value;
+    if (paymentNotesTextarea) document.getElementById('form_payment_notes').value = paymentNotesTextarea.value;
+}
+
+// Add form validation
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    // Sync all field values before validation
+    syncFormFields();
+    
+    const checkIn = new Date(document.getElementById('form_check_in').value);
+    const checkOut = new Date(document.getElementById('form_check_out').value);
+    
+    if (checkOut <= checkIn) {
+        e.preventDefault();
+        alert('Check-out date must be after check-in date.');
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('button[type="submit"][form="editForm"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+    submitBtn.disabled = true;
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // ESC to cancel edit
+    if (e.key === 'Escape' && isEditMode) {
+        cancelEdit();
+    }
+    // Ctrl+S to save (prevent default browser save)
+    if (e.ctrlKey && e.key === 's' && isEditMode) {
+        e.preventDefault();
+        document.getElementById('editForm').submit();
+    }
+});
+
+// Auto-activate edit mode if requested via URL parameter
+{% if auto_edit %}
+document.addEventListener('DOMContentLoaded', function() {
+    toggleEditMode();
+});
+{% endif %}
 </script>
 {% endblock %}

@@ -114,26 +114,50 @@ class ReservationForm(forms.ModelForm):
 
         return cleaned_data
 
-    def save(self, commit=True):
-        reservation = super().save(commit=False)
-        if not self.is_edit:
-            reservation.status = 'pending'
-            reservation.payment_method = ''
-        if commit:
-            reservation.save()
-            today = date.today()
-            if reservation.status in ['confirmed', 'expected_arrival', 'expected_departure'] and reservation.check_in <= today < reservation.check_out:
-                reservation.room.status = 'occupied'
-            else:
-                has_other_active = Reservation.objects.filter(
-                    room=reservation.room,
-                    check_in__lte=today,
-                    check_out__gt=today,
-                    status__in=['confirmed', 'expected_arrival', 'expected_departure']
-                ).exclude(id=reservation.id).exists()
-                reservation.room.status = 'occupied' if has_other_active else 'vacant_clean'
-            reservation.room.save()
-        return reservation
+class GuestForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make all fields optional except name
+        for field in self.fields.values():
+            field.required = False
+        self.fields['name'].required = True
+
+    class Meta:
+        model = Guest
+        fields = [
+            'name', 'email', 'phone', 'id_type', 'id_number', 'date_of_birth',
+            'address', 'emergency_contact_name', 'emergency_contact_phone'
+        ]
+        widgets = {
+            'date_of_birth': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'id_type': forms.Select(choices=[
+                ('', 'Select ID Type'),
+                ('passport', 'Passport'),
+                ('license', "Driver's License"),
+                ('national_id', 'National ID'),
+                ('other', 'Other')
+            ], attrs={'class': 'form-select'}),
+            'id_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            # Check for duplicate email, excluding current instance
+            existing = Guest.objects.filter(email=email)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            if existing.exists():
+                raise ValidationError('A guest with this email already exists.')
+        return email
+
+
 
 class ConfirmReservationForm(forms.ModelForm):
     class Meta:

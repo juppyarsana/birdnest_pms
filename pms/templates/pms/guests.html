@@ -1,77 +1,269 @@
 {% extends "base.html" %}
 {% block title %}Guests{% endblock %}
-{% block extra_css %}{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <h2 class="mb-4">Guests</h2>
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="post" class="row g-3">
-                {% csrf_token %}
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="name" placeholder="Name" required>
-                </div>
-                <div class="col-md-4">
-                    <input type="email" class="form-control" name="email" placeholder="Email" required>
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="phone" placeholder="Phone">
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="id_type" placeholder="ID Type">
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="id_number" placeholder="ID Number">
-                </div>
-                <div class="col-md-4">
-                    <input type="date" class="form-control" name="date_of_birth" placeholder="Date of Birth">
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="address" placeholder="Address">
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="emergency_contact_name" placeholder="Emergency Contact Name">
-                </div>
-                <div class="col-md-4">
-                    <input type="text" class="form-control" name="emergency_contact_phone" placeholder="Emergency Contact Phone">
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Add Guest</button>
-                </div>
-            </form>
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Guest Management</h1>
+            <p class="mb-0 text-muted">Manage guest information and profiles</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGuestModal">
+                <i class="bi bi-person-plus"></i> Add New Guest
+            </button>
         </div>
     </div>
-    <div class="card">
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-primary shadow h-100 py-2 metric-card" data-filter="all" style="cursor: pointer;">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Guests</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_guests }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-users fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2 metric-card" data-filter="birthday" style="cursor: pointer;">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Birthday This Month</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ birthday_this_month }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-birthday-cake fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2 metric-card" data-filter="recurring" style="cursor: pointer;">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Recurring Guests</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ recurring_guests }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-redo fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-warning shadow h-100 py-2 metric-card" data-filter="longstay" style="cursor: pointer;">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Long Stay Guests</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ long_stay_guests }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    </div>
+
+    <!-- Guest List Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Guest Directory</h6>
+            <div class="dropdown no-arrow">
+                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical fa-sm fa-fw text-gray-400"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" aria-labelledby="dropdownMenuLink">
+                    <div class="dropdown-header">Actions:</div>
+                    <a class="dropdown-item" href="#" onclick="exportGuests()"><i class="bi bi-download"></i> Export List</a>
+                    <a class="dropdown-item" href="#" onclick="printGuests()"><i class="bi bi-printer"></i> Print List</a>
+                </div>
+            </div>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Guest List</h5>
+            <!-- Search and Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="searchGuests" placeholder="Search guests by name, email, or phone...">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="filterByIdType">
+                            <option value="">All ID Types</option>
+                            <option value="passport">Passport</option>
+                            <option value="license">Driver's License</option>
+                            <option value="national_id">National ID</option>
+                        </select>
+                        <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guest Table -->
             <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
+                <table class="table table-hover" id="guestsTable">
+                    <thead class="table-light">
                         <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>ID Type</th>
-                            <th>ID Number</th>
-                            <th>Date of Birth</th>
-                            <th>Address</th>
-                            <th>Emergency Contact</th>
+                            <th class="border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-person me-2"></i>Name
+                                </div>
+                            </th>
+                            <th class="border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-envelope me-2"></i>Contact
+                                </div>
+                            </th>
+                            <th class="border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-card-text me-2"></i>Identification
+                                </div>
+                            </th>
+                            <th class="border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-calendar me-2"></i>Date of Birth
+                                </div>
+                            </th>
+                            <th class="border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-geo-alt me-2"></i>Address
+                                </div>
+                            </th>
+                            <th class="border-0">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-telephone me-2"></i>Emergency Contact
+                                </div>
+                            </th>
+                            <th class="border-0 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for guest in guests %}
-                        <tr>
-                            <td>{{ guest.name }}</td>
-                            <td>{{ guest.email }}</td>
-                            <td>{{ guest.phone }}</td>
-                            <td>{{ guest.id_type }}</td>
-                            <td>{{ guest.id_number }}</td>
-                            <td>{{ guest.date_of_birth|date:"M d, Y" }}</td>
-                            <td>{{ guest.address }}</td>
-                            <td>{{ guest.emergency_contact_name }}<br>{{ guest.emergency_contact_phone }}</td>
+                        <tr class="guest-row" 
+                            data-birthday-month="{% if guest.date_of_birth %}{{ guest.date_of_birth.month }}{% else %}0{% endif %}"
+                            data-reservation-count="{{ guest.reservation_set.count }}"
+                            data-has-long-stay="{% if guest.reservation_set.all %}{% for reservation in guest.reservation_set.all %}{% if reservation.check_out|timeuntil:reservation.check_in > '1 day' %}true{% endif %}{% endfor %}{% else %}false{% endif %}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                                        <span class="text-white fw-bold">{{ guest.name|first|upper }}</span>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">
+                                            <a href="{% url 'guest_detail' guest.id %}" class="text-decoration-none text-primary">{{ guest.name }}</a>
+                                        </div>
+                                        <small class="text-muted">Guest ID: #{{ guest.id }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    {% if guest.email %}
+                                    <div class="mb-1">
+                                        <i class="bi bi-envelope text-muted me-1"></i>
+                                        <a href="mailto:{{ guest.email }}" class="text-decoration-none">{{ guest.email }}</a>
+                                    </div>
+                                    {% endif %}
+                                    {% if guest.phone %}
+                                    <div>
+                                        <i class="bi bi-telephone text-muted me-1"></i>
+                                        <a href="tel:{{ guest.phone }}" class="text-decoration-none">{{ guest.phone }}</a>
+                                    </div>
+                                    {% endif %}
+                                    {% if not guest.email and not guest.phone %}
+                                    <span class="text-muted">No contact info</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if guest.id_type and guest.id_number %}
+                                <div>
+                                    <span class="badge bg-secondary">{{ guest.id_type|title }}</span>
+                                    <div class="small text-muted mt-1">{{ guest.id_number }}</div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if guest.date_of_birth %}
+                                <div>
+                                    {{ guest.date_of_birth|date:"M d, Y" }}
+                                    <div class="small text-muted">Age: {{ guest.date_of_birth|timesince|slice:":2" }}</div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if guest.address %}
+                                <div class="text-truncate" style="max-width: 200px;" title="{{ guest.address }}">
+                                    {{ guest.address }}
+                                </div>
+                                {% else %}
+                                <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if guest.emergency_contact_name or guest.emergency_contact_phone %}
+                                <div>
+                                    {% if guest.emergency_contact_name %}
+                                    <div class="fw-bold">{{ guest.emergency_contact_name }}</div>
+                                    {% endif %}
+                                    {% if guest.emergency_contact_phone %}
+                                    <div class="small text-muted">
+                                        <a href="tel:{{ guest.emergency_contact_phone }}" class="text-decoration-none">{{ guest.emergency_contact_phone }}</a>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="viewGuest({{ guest.id }})" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="editGuest({{ guest.id }})" title="Edit Guest">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteGuest({{ guest.id }})" title="Delete Guest">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="8" class="text-center">No guests found.</td></tr>
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="bi bi-people fa-3x mb-3 d-block"></i>
+                                    <h5>No guests found</h5>
+                                    <p>Start by adding your first guest using the "Add New Guest" button above.</p>
+                                </div>
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -79,5 +271,422 @@
         </div>
     </div>
 </div>
+
+<!-- Add Guest Modal -->
+<div class="modal fade" id="addGuestModal" tabindex="-1" aria-labelledby="addGuestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addGuestModalLabel">
+                    <i class="bi bi-person-plus me-2"></i>Add New Guest
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" id="addGuestForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <!-- Personal Information -->
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-person me-2"></i>Personal Information
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" id="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="date_of_birth" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" name="date_of_birth" id="date_of_birth">
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-telephone me-2"></i>Contact Information
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" name="email" id="email">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone" id="phone">
+                        </div>
+                        <div class="col-12">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea class="form-control" name="address" id="address" rows="2"></textarea>
+                        </div>
+                        
+                        <!-- Identification -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-card-text me-2"></i>Identification
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_type" class="form-label">ID Type</label>
+                            <select class="form-select" name="id_type" id="id_type">
+                                <option value="">Select ID Type</option>
+                                <option value="passport">Passport</option>
+                                <option value="license">Driver's License</option>
+                                <option value="national_id">National ID</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="id_number" class="form-label">ID Number</label>
+                            <input type="text" class="form-control" name="id_number" id="id_number">
+                        </div>
+                        
+                        <!-- Emergency Contact -->
+                        <div class="col-12 mt-4">
+                            <h6 class="text-primary border-bottom pb-2 mb-3">
+                                <i class="bi bi-shield-exclamation me-2"></i>Emergency Contact
+                            </h6>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="emergency_contact_name" class="form-label">Contact Name</label>
+                            <input type="text" class="form-control" name="emergency_contact_name" id="emergency_contact_name">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="emergency_contact_phone" class="form-label">Contact Phone</label>
+                            <input type="tel" class="form-control" name="emergency_contact_phone" id="emergency_contact_phone">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-1"></i>Add Guest
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+ {% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+<style>
+    /* Custom card styling */
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+    
+    /* Text colors */
+    .text-gray-800 {
+        color: #5a5c69 !important;
+    }
+    .text-gray-300 {
+        color: #dddfeb !important;
+    }
+    
+    /* Avatar styling */
+    .avatar-sm {
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Table enhancements */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+    
+    /* Search and filter styling */
+    .input-group-text {
+        background-color: #f8f9fc;
+        border-color: #d1d3e2;
+    }
+    
+    /* Modal enhancements */
+    .modal-header {
+        background-color: #f8f9fc;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    /* Button group styling */
+    .btn-group .btn {
+        margin-right: 0;
+    }
+    
+    /* Statistics cards hover effect */
+    .card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+    }
+    
+    /* Empty state styling */
+    .fa-3x {
+        font-size: 3em;
+    }
+    
+    /* Form field consistency */
+     .form-control, .form-select {
+         height: 38px;
+         min-height: 38px;
+     }
+     
+     .form-control:focus, .form-select:focus {
+         border-color: #4e73df;
+         box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+     }
+     
+     /* Textarea specific height */
+     textarea.form-control {
+         height: auto;
+         min-height: 76px;
+     }
+     
+     /* Input group consistency */
+     .input-group .form-control {
+         height: 38px;
+     }
+     
+     /* Active filter card styling */
+    .metric-card.active-filter {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .metric-card.active-filter .text-primary,
+    .metric-card.active-filter .text-success,
+    .metric-card.active-filter .text-info,
+    .metric-card.active-filter .text-warning {
+        color: white !important;
+    }
+    
+    .metric-card.active-filter .text-gray-800 {
+        color: white !important;
+    }
+    
+    .metric-card.active-filter .text-gray-300 {
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    /* Responsive adjustments */
+     @media (max-width: 768px) {
+         .btn-group {
+             flex-direction: column;
+         }
+         .btn-group .btn {
+             margin-bottom: 0.25rem;
+         }
+     }
+</style>
 {% endblock %}
-{% block extra_js %}{% endblock %}
+
+{% block extra_js %}
+<script>
+// Enhanced search function to work with filters
+function searchGuests() {
+    const searchTerm = document.getElementById('searchGuests').value.toLowerCase();
+    const rows = document.querySelectorAll('.guest-row');
+    
+    rows.forEach(row => {
+        const name = row.querySelector('td:first-child .fw-bold').textContent.toLowerCase();
+        const email = row.querySelector('a[href^="mailto:"]')?.textContent.toLowerCase() || '';
+        const phone = row.querySelector('a[href^="tel:"]')?.textContent.toLowerCase() || '';
+        
+        const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm) || phone.includes(searchTerm);
+        
+        // Apply both search and filter
+        let shouldShow = matchesSearch;
+        if (shouldShow && currentFilter !== 'all') {
+            const currentMonth = new Date().getMonth() + 1;
+            switch(currentFilter) {
+                case 'birthday':
+                    const birthdayMonth = parseInt(row.getAttribute('data-birthday-month'));
+                    shouldShow = birthdayMonth === currentMonth;
+                    break;
+                case 'recurring':
+                    const reservationCount = parseInt(row.getAttribute('data-reservation-count'));
+                    shouldShow = reservationCount > 1;
+                    break;
+                case 'longstay':
+                    const hasLongStay = row.getAttribute('data-has-long-stay') === 'true';
+                    shouldShow = hasLongStay;
+                    break;
+            }
+        }
+        
+        row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    updateEmptyState();
+}
+
+// Filter by ID type
+function filterByIdType() {
+    const filterValue = document.getElementById('filterByIdType').value.toLowerCase();
+    const table = document.getElementById('guestsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        
+        // Skip empty state row
+        if (cells.length === 1) continue;
+        
+        if (filterValue === '') {
+            row.style.display = '';
+        } else {
+            const idTypeCell = cells[2]; // ID type column
+            const idTypeText = idTypeCell ? idTypeCell.textContent.toLowerCase() : '';
+            row.style.display = idTypeText.includes(filterValue) ? '' : 'none';
+        }
+    }
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('searchGuests').value = '';
+    document.getElementById('filterByIdType').value = '';
+    
+    const table = document.getElementById('guestsTable');
+    const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].style.display = '';
+    }
+}
+
+// Metric card filtering
+let currentFilter = 'all';
+
+function filterGuestTable(filter) {
+    currentFilter = filter;
+    const rows = document.querySelectorAll('.guest-row');
+    const currentMonth = new Date().getMonth() + 1; // JavaScript months are 0-indexed
+    
+    rows.forEach(row => {
+        let shouldShow = true;
+        
+        switch(filter) {
+            case 'all':
+                shouldShow = true;
+                break;
+            case 'birthday':
+                const birthdayMonth = parseInt(row.getAttribute('data-birthday-month'));
+                shouldShow = birthdayMonth === currentMonth;
+                break;
+            case 'recurring':
+                const reservationCount = parseInt(row.getAttribute('data-reservation-count'));
+                shouldShow = reservationCount > 1;
+                break;
+            case 'longstay':
+                const hasLongStay = row.getAttribute('data-has-long-stay') === 'true';
+                shouldShow = hasLongStay;
+                break;
+        }
+        
+        row.style.display = shouldShow ? '' : 'none';
+    });
+    
+    // Update search to work with current filter
+    const searchInput = document.getElementById('searchGuests');
+    if (searchInput.value) {
+        searchGuests();
+    }
+    
+    // Show/hide empty state
+    updateEmptyState();
+}
+
+function updateEmptyState() {
+    const visibleRows = document.querySelectorAll('.guest-row[style=""], .guest-row:not([style])');
+    const emptyRow = document.querySelector('tbody tr:last-child');
+    
+    if (visibleRows.length === 0 && emptyRow && emptyRow.querySelector('td[colspan]')) {
+        emptyRow.style.display = '';
+    } else if (emptyRow && emptyRow.querySelector('td[colspan]')) {
+        emptyRow.style.display = 'none';
+    }
+}
+
+// Guest actions
+function viewGuest(guestId) {
+    window.location.href = '/guests/' + guestId + '/';
+}
+
+function editGuest(guestId) {
+    // Implement edit guest functionality
+    alert('Edit guest functionality - Guest ID: ' + guestId);
+}
+
+function deleteGuest(guestId) {
+    if (confirm('Are you sure you want to delete this guest?')) {
+        // Implement delete guest functionality
+        alert('Delete guest functionality - Guest ID: ' + guestId);
+    }
+}
+
+// Export and print functions
+function exportGuests() {
+    alert('Export functionality will be implemented');
+}
+
+function printGuests() {
+    window.print();
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers to metric cards
+    document.querySelectorAll('.metric-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const filter = this.getAttribute('data-filter');
+            filterGuestTable(filter);
+            
+            // Update active card styling
+            document.querySelectorAll('.metric-card').forEach(c => c.classList.remove('active-filter'));
+            this.classList.add('active-filter');
+        });
+    });
+    
+    // Search input event listener
+    document.getElementById('searchGuests').addEventListener('input', searchGuests);
+    
+    // Filter select event listener
+    document.getElementById('filterByIdType').addEventListener('change', filterByIdType);
+    
+    // Form submission handling
+    document.getElementById('addGuestForm').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Adding Guest...';
+        submitBtn.disabled = true;
+        
+        // Note: Form will submit normally, this is just for UX
+    });
+    
+    // Reset form when modal is hidden
+    document.getElementById('addGuestModal').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('addGuestForm').reset();
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="bi bi-person-plus me-1"></i>Add Guest';
+        submitBtn.disabled = false;
+    });
+});
+</script>
+{% endblock %}
