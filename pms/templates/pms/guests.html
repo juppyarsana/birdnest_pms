@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Guests{% endblock %}
+{% block extra_css %}{% endblock %}
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">Guests</h2>
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="name" placeholder="Name" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="email" class="form-control" name="email" placeholder="Email" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="phone" placeholder="Phone">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="id_type" placeholder="ID Type">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="id_number" placeholder="ID Number">
+                </div>
+                <div class="col-md-4">
+                    <input type="date" class="form-control" name="date_of_birth" placeholder="Date of Birth">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="address" placeholder="Address">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="emergency_contact_name" placeholder="Emergency Contact Name">
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="emergency_contact_phone" placeholder="Emergency Contact Phone">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Add Guest</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Guest List</h5>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>ID Type</th>
+                            <th>ID Number</th>
+                            <th>Date of Birth</th>
+                            <th>Address</th>
+                            <th>Emergency Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for guest in guests %}
+                        <tr>
+                            <td>{{ guest.name }}</td>
+                            <td>{{ guest.email }}</td>
+                            <td>{{ guest.phone }}</td>
+                            <td>{{ guest.id_type }}</td>
+                            <td>{{ guest.id_number }}</td>
+                            <td>{{ guest.date_of_birth|date:"M d, Y" }}</td>
+                            <td>{{ guest.address }}</td>
+                            <td>{{ guest.emergency_contact_name }}<br>{{ guest.emergency_contact_phone }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="8" class="text-center">No guests found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}{% endblock %}

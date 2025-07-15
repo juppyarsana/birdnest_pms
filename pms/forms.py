@@ -9,7 +9,6 @@ class CheckInGuestForm(forms.ModelForm):
         # Make all fields optional except for required ones
         for field in self.fields.values():
             field.required = False
-        
         # Set required fields
         self.fields['name'].required = True
         self.fields['email'].required = True

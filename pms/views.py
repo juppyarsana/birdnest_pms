@@ -3,8 +3,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from datetime import datetime, date, time, timedelta
 from calendar import monthrange
-from .models import Room, Reservation, HotelSettings
+from .models import Room, Reservation, HotelSettings, Guest
 from .forms import ReservationForm, CheckInGuestForm, ConfirmReservationForm
+from django.views.decorators.http import require_GET
 
 def reservations_list(request):
     """View to display all reservations with appropriate actions"""
@@ -341,3 +342,52 @@ def rooms_list(request):
         return redirect('rooms_list')
     rooms = Room.objects.all()
     return render(request, 'pms/rooms.html', {'rooms': rooms})
+
+
+def guests(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        id_type = request.POST.get('id_type', '').strip()
+        id_number = request.POST.get('id_number', '').strip()
+        date_of_birth = request.POST.get('date_of_birth', '').strip()
+        address = request.POST.get('address', '').strip()
+        emergency_contact_name = request.POST.get('emergency_contact_name', '').strip()
+        emergency_contact_phone = request.POST.get('emergency_contact_phone', '').strip()
+        if name:
+            guest = Guest(
+                name=name,
+                email=email,
+                phone=phone,
+                id_type=id_type,
+                id_number=id_number,
+                address=address,
+                emergency_contact_name=emergency_contact_name,
+                emergency_contact_phone=emergency_contact_phone
+            )
+            if date_of_birth:
+                guest.date_of_birth = date_of_birth
+            try:
+                guest.save()
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True})
+            except Exception as e:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': str(e)})
+                from django.contrib import messages
+                messages.error(request, f"Could not add guest: {str(e)}")
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Name is required.'})
+            from django.contrib import messages
+            messages.error(request, "Name is required.")
+        from django.shortcuts import redirect
+        return redirect('guests')
+
+def guest_list_json(request):
+    guests = Guest.objects.all().order_by('-id')
+    data = [
+        {"id": g.id, "name": g.name} for g in guests
+    ]
+    return JsonResponse({"guests": data})

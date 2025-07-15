@@ -108,7 +108,7 @@ class Room(models.Model):
 
 class Guest(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True)
     id_type = models.CharField(max_length=50, blank=True)  # e.g., Passport, KTP, etc.
     id_number = models.CharField(max_length=50, blank=True)
