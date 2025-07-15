@@ -11,9 +11,13 @@ def reservations_list(request):
     """View to display all reservations with appropriate actions"""
     print("Debug: Accessing reservations list view")
     
-    # Get sort parameters from request
+    # Get sort and filter parameters from request
     sort_field = request.GET.get('sort', 'check_in')
-    sort_direction = request.GET.get('direction', 'asc')
+    sort_direction = request.GET.get('direction', 'desc')
+    status_filter = request.GET.get('status', '')
+    
+    # Get search parameter
+    search_query = request.GET.get('search', '').strip()
     
     # Update all reservation statuses before displaying
     reservations = Reservation.objects.all()
@@ -23,6 +27,22 @@ def reservations_list(request):
         old_status = reservation.status
         reservation.update_status()
         print(f"Debug: Reservation {reservation.id} status: {old_status} -> {reservation.status}")
+
+    # Apply status filter
+    if status_filter:
+        reservations = reservations.filter(status=status_filter)
+        print(f"Debug: Filtered by status '{status_filter}', found {len(reservations)} reservations")
+
+    # Apply search filter if provided
+    if search_query:
+        from django.db.models import Q
+        reservations = reservations.filter(
+            Q(guest__name__icontains=search_query) |
+            Q(guest__email__icontains=search_query) |
+            Q(room__room_number__icontains=search_query) |
+            Q(guest__phone__icontains=search_query)
+        )
+        print(f"Debug: Filtered by search '{search_query}', found {len(reservations)} reservations")
 
     # Define valid sort fields and their corresponding model fields
     valid_sort_fields = {
@@ -40,19 +60,25 @@ def reservations_list(request):
         sort_by = valid_sort_fields[sort_field]
         if sort_direction == 'desc':
             sort_by = f'-{sort_by}'
-        reservations = Reservation.objects.all().order_by(sort_by)
+        reservations = reservations.order_by(sort_by)
     else:
         # Default sort: check-in date closest to today
         today = date.today()
-        reservations = Reservation.objects.all().extra(
+        reservations = reservations.extra(
             select={'date_diff': "ABS(JULIANDAY(date(check_in)) - JULIANDAY(date('%s')))" % today},
             order_by=['date_diff']
         )
 
+    # Get all available statuses for filter dropdown (from model choices)
+    all_statuses = [choice[0] for choice in Reservation.STATUS_CHOICES]
+    
     context = {
         'reservations': reservations,
         'current_sort': sort_field,
-        'current_direction': sort_direction
+        'current_direction': sort_direction,
+        'current_status_filter': status_filter,
+        'current_search_query': search_query,
+        'all_statuses': all_statuses
     }
     print("Debug: Rendering reservations list template")
     return render(request, 'pms/reservations.html', context)
@@ -384,6 +410,9 @@ def guests(request):
             messages.error(request, "Name is required.")
         from django.shortcuts import redirect
         return redirect('guests')
+    # Handle GET request: render guests.html with guest list
+    guests = Guest.objects.all().order_by('-id')
+    return render(request, 'pms/guests.html', {'guests': guests})
 
 def guest_list_json(request):
     guests = Guest.objects.all().order_by('-id')
