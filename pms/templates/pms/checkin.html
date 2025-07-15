@@ -65,8 +65,8 @@
       <button type="submit" class="btn btn-success" id="checkinButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Check-in is only allowed during the allowed time window. Please try again later.">
         <i class="bi bi-check-circle"></i> Complete Check-In
       </button>
-      <a href="{% url 'reservations_list' %}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Back to Reservations
+      <a href="{% if request.GET.from == 'calendar' %}{% url 'calendar' %}{% elif request.GET.from == 'guest' %}{% url 'guest_detail' reservation.guest.id %}{% else %}{% url 'reservations_list' %}{% endif %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to {% if request.GET.from == 'calendar' %}Calendar{% elif request.GET.from == 'guest' %}Guest Details{% else %}Reservations{% endif %}
       </a>
     </div>
   </form>

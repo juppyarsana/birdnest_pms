@@ -11,7 +11,7 @@
                     <textarea class="form-control" id="cancellation_reason" name="cancellation_reason" rows="3" required placeholder="Please provide a reason for cancellation..."></textarea>
                 </div>
                 <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
-                <a href="{% url 'reservations_list' %}" class="btn btn-secondary ms-2">Back</a>
+                <a href="{% if request.GET.from == 'calendar' %}{% url 'calendar' %}{% elif request.GET.from == 'guest' %}{% url 'guest_detail' reservation.guest.id %}{% else %}{% url 'reservations_list' %}{% endif %}" class="btn btn-secondary ms-2">Back to {% if request.GET.from == 'calendar' %}Calendar{% elif request.GET.from == 'guest' %}Guest Details{% else %}Reservations{% endif %}</a>
             </form>
         </div>
     </div>

@@ -43,6 +43,16 @@ class ReservationForm(forms.ModelForm):
         # 'edit' kwarg determines if this is for editing
         self.is_edit = kwargs.pop('edit', False)
         super().__init__(*args, **kwargs)
+        
+        # Apply Bootstrap classes to all fields
+        for field_name, field in self.fields.items():
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs.update({'class': 'form-select'})
+            elif isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.update({'class': 'form-control', 'rows': 3})
+            else:
+                field.widget.attrs.update({'class': 'form-control'})
+        
         if not self.is_edit:
             # Remove status, payment_method, and payment_notes fields for creation
             self.fields.pop('status')
@@ -56,11 +66,13 @@ class ReservationForm(forms.ModelForm):
         model = Reservation
         fields = ['guest', 'room', 'check_in', 'check_out', 'status', 'payment_method', 'payment_notes']
         widgets = {
-            'check_in': forms.DateInput(attrs={'type': 'date'}),
-            'check_out': forms.DateInput(attrs={'type': 'date'}),
-            'status': forms.Select(attrs={'class': 'form-control'}),
-            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'check_in': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'check_out': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'payment_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'guest': forms.Select(attrs={'class': 'form-select'}),
+            'room': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean(self):

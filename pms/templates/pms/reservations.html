@@ -173,7 +173,7 @@
                             {% for reservation in reservations %}
                             <tr class="border-bottom">
                                 <td class="px-2 fw-medium">{{ reservation.id }}</td>
-                                <td class="px-2">{{ reservation.guest.name }}</td>
+                                <td class="px-2"><a href="{% url 'guest_detail' reservation.guest.id %}?from=reservations" class="text-decoration-none text-primary">{{ reservation.guest.name }}</a></td>
                                 <td class="px-2">{{ reservation.room.room_number }}</td>
                                 <td class="px-2">{{ reservation.check_in|date:"M d, Y" }}</td>
                                 <td class="px-2">{{ reservation.check_out|date:"M d, Y" }}</td>
@@ -206,7 +206,7 @@
                                             </a>
                                         {% endif %}
                                         {% if reservation.status == 'expected_arrival' %}
-                                            <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-sm btn-primary d-inline-flex align-items-center" onclick="handleCheckin(event, '{% url 'checkin_reservation' reservation.id %}')" title="Check In" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Check-in is only allowed during the allowed time window. Please try again later.">
+                                            <a href="{% url 'checkin_reservation' reservation.id %}?from=reservations" class="btn btn-sm btn-primary d-inline-flex align-items-center" onclick="handleCheckin(event, '{% url 'checkin_reservation' reservation.id %}?from=reservations')" title="Check In" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Check-in is only allowed during the allowed time window. Please try again later.">
                                                 <i class="bi bi-box-arrow-in-right"></i>
                                             </a>
                                         {% endif %}
@@ -222,12 +222,12 @@
                                         {% endif %}
                                         
                                         {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
-                        <a href="{% url 'reservation_detail' reservation.id %}?edit=true" class="btn btn-sm btn-warning d-inline-flex align-items-center" title="Edit">
+                        <a href="{% url 'reservation_detail' reservation.id %}?edit=true&from=reservations" class="btn btn-sm btn-warning d-inline-flex align-items-center" title="Edit">
                             <i class="bi bi-pencil"></i>
                         </a>
                         {% endif %}
 
-                                        <a href="{% url 'reservation_detail' reservation.id %}" class="btn btn-sm btn-info d-inline-flex align-items-center" title="View Details">
+                                        <a href="{% url 'reservation_detail' reservation.id %}?from=reservations" class="btn btn-sm btn-info d-inline-flex align-items-center" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                     </div>

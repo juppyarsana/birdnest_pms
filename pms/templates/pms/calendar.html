@@ -4,6 +4,136 @@
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+<style>
+    /* Calendar Card Styling */
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+    }
+    
+    /* Gradient Background Animation */
+    .bg-gradient {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .bg-gradient::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        opacity: 0.9;
+        z-index: 1;
+    }
+    
+    .bg-gradient::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        animation: shimmer 3s ease-in-out infinite;
+        z-index: 2;
+    }
+    
+    .bg-gradient .card-body {
+        position: relative;
+        z-index: 3;
+    }
+    
+    @keyframes shimmer {
+        0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(0deg); }
+        50% { transform: translateX(0%) translateY(0%) rotate(180deg); }
+    }
+    
+    /* Badge Animation */
+    .badge {
+        transition: all 0.3s ease;
+    }
+    
+    .badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    /* Calendar Styling */
+    .fc {
+        font-family: inherit;
+    }
+    
+    .fc-toolbar {
+        margin-bottom: 1.5rem;
+    }
+    
+    .fc-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.5rem 1rem !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .fc-button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+    }
+    
+    .fc-daygrid-day {
+        transition: all 0.2s ease;
+    }
+    
+    .fc-daygrid-day:hover {
+        background-color: rgba(102, 126, 234, 0.1) !important;
+    }
+    
+    .fc-event {
+        border-radius: 6px !important;
+        border: none !important;
+        padding: 2px 6px !important;
+        font-size: 0.875rem !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .fc-event:hover {
+        transform: scale(1.02) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+    }
+    
+    /* Icon Animation */
+    .bi-palette-fill {
+        animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    /* Fade in animation */
+    .card {
+        animation: fadeInUp 0.5s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -24,19 +154,44 @@
         </div>
     </div>
     
-    <div class="mb-3 reservation-status-legend">
-        <strong>Reservation Status Legend:</strong>
-        <span class="badge" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: #fff;">Pending</span>
-        <span class="badge" style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); color: #fff;">Confirmed</span>
-        <span class="badge" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: #fff;">Expected Arrival</span>
-        <span class="badge" style="background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%); color: #fff;">In House</span>
-        <span class="badge" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: #fff;">Expected Departure</span>
-        <span class="badge" style="background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); color: #fff;">Checked Out</span>
-        <span class="badge" style="background: linear-gradient(135deg, #795548 0%, #5D4037 100%); color: #fff;">Canceled</span>
-        <span class="badge" style="background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: #fff;">No Show</span>
+    <!-- Status Legend Card -->
+    <div class="card shadow-sm border-0 rounded-3 mb-4 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-12">
+                    <h5 class="text-white mb-3 fw-bold">
+                        <i class="bi bi-palette-fill me-2"></i>Reservation Status Legend
+                    </h5>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: #fff; font-size: 0.875rem;">🟡 Pending</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); color: #fff; font-size: 0.875rem;">🔵 Confirmed</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: #fff; font-size: 0.875rem;">🟢 Expected Arrival</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%); color: #fff; font-size: 0.875rem;">✅ In House</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: #fff; font-size: 0.875rem;">🟠 Expected Departure</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); color: #fff; font-size: 0.875rem;">✔️ Checked Out</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #795548 0%, #5D4037 100%); color: #fff; font-size: 0.875rem;">❌ Canceled</span>
+                        <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: #fff; font-size: 0.875rem;">⚫ No Show</span>
+                    </div>
+                    <p class="text-white-50 mb-0 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Click a date to create a new reservation or click an existing reservation to view details
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-    <p>Click a date to create a reservation or click an existing reservation to edit.</p>
-    <div id="calendar"></div>
+    
+    <!-- Calendar Card -->
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-header bg-light py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="bi bi-calendar3 me-2"></i>Reservation Calendar
+            </h6>
+        </div>
+        <div class="card-body p-4">
+            <div id="calendar"></div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -49,8 +204,8 @@
             initialView: 'dayGridMonth',
             events: '/calendar/data/',
             eventClick: function(info) {
-                // Use the correct URL pattern for editing reservations
-                window.location.href = '/reservations/' + info.event.id + '/edit/';
+                // Redirect to reservation detail page with calendar context
+                window.location.href = '/reservations/' + info.event.id + '/?from=calendar';
             },
             dateClick: function(info) {
                 // Redirect to create reservation with selected date

@@ -326,8 +326,8 @@
                 <i class="bi bi-gear me-2"></i>Actions
             </h5>
             <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'reservations_list' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Reservations
+                <a href="{% if request.GET.from == 'calendar' %}{% url 'calendar' %}{% elif request.GET.from == 'reservations' %}{% url 'reservations_list' %}{% elif request.GET.from == 'guest' %}{% url 'guest_detail' reservation.guest.id %}{% else %}{% url 'reservations_list' %}{% endif %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to {% if request.GET.from == 'calendar' %}Calendar{% elif request.GET.from == 'reservations' %}Reservations{% elif request.GET.from == 'guest' %}Guest Details{% else %}Reservations{% endif %}
                 </a>
                 
                 {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
@@ -343,7 +343,7 @@
                 {% endif %}
 
                 {% if reservation.status == 'expected_arrival' %}
-                    <a href="{% url 'checkin_reservation' reservation.id %}" class="btn btn-primary">
+                    <a href="{% url 'checkin_reservation' reservation.id %}{% if request.GET.from %}?from={{ request.GET.from }}{% endif %}" class="btn btn-primary">
                         <i class="bi bi-box-arrow-in-right"></i> Check In
                     </a>
                 {% endif %}

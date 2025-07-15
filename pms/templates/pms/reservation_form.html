@@ -1,28 +1,457 @@
 {% extends "base.html" %}
 {% block title %}{% if editing %}Edit Reservation{% else %}New Reservation{% endif %}{% endblock %}
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+<!-- jQuery (required for Select2) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Select2 CSS for searchable dropdowns -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    /* Custom Select2 styling */
+    .select2-container--default .select2-selection--single {
+        border: 2px solid #e9ecef !important;
+        border-radius: 10px !important;
+        height: 48px !important;
+        padding: 0.75rem 1rem !important;
+        background: white !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 32px !important;
+        padding-left: 0 !important;
+        color: #495057 !important;
+        font-weight: 500 !important;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 46px !important;
+        right: 10px !important;
+    }
+    
+    .select2-dropdown {
+        border: 2px solid #667eea !important;
+        border-radius: 10px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+    }
+    
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+    
+    .select2-search--dropdown .select2-search__field {
+        border: 2px solid #e9ecef !important;
+        border-radius: 8px !important;
+        padding: 0.5rem !important;
+        margin: 0.5rem !important;
+        width: calc(100% - 1rem) !important;
+    }
+    
+    .select2-search--dropdown .select2-search__field:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+    }
+    
+    .select2-results__option {
+        padding: 0.75rem 1rem !important;
+        font-weight: 500 !important;
+    }
+    
+    .select2-container {
+        width: 100% !important;
+    }
+    
+    /* Custom Guest Search Styling */
+    .guest-search-container {
+        position: relative;
+    }
+    
+    .guest-search-input {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .guest-search-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        transform: translateY(-2px);
+    }
+    
+    .guest-search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 2px solid #e9ecef;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    .guest-search-results.show {
+        display: block;
+    }
+    
+    .guest-result-item {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f8f9fa;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .guest-result-item:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .guest-result-item.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .guest-result-item:last-child {
+        border-bottom: none;
+        border-radius: 0 0 8px 8px;
+    }
+    
+    .guest-result-name {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .guest-result-details {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .guest-search-no-results {
+        padding: 1rem;
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .guest-search-loading {
+        padding: 1rem;
+        text-align: center;
+        color: #667eea;
+    }
+    
+    .guest-search-input.has-selection {
+        background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+        border-color: #28a745;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%), 
+                    linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+        animation: shimmer 20s linear infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: none;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .form-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    
+    .form-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #667eea;
+    }
+    
+    .form-section h5 {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        transform: translateY(-2px);
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-success {
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid #28a745;
+    }
+    
+    .btn-outline-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.6s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .icon-accent {
+        color: #667eea;
+        font-size: 1.2em;
+    }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">{% if editing %}Edit Reservation{% else %}Create New Reservation{% endif %}</h2>
-        {% if not editing %}
-        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addGuestModal">
-            <i class="bi bi-person-plus"></i> Add Guest
-        </button>
-        {% endif %}
+    <!-- Page Header -->
+    <div class="page-header fade-in">
+        <div class="container position-relative">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-2">
+                        <i class="bi {% if editing %}bi-pencil-square{% else %}bi-plus-circle{% endif %} me-2"></i>
+                        {% if editing %}Edit Reservation{% else %}Create New Reservation{% endif %}
+                    </h1>
+                    <p class="mb-0 opacity-75">
+                        {% if editing %}
+                            Update reservation details and manage booking information
+                        {% else %}
+                            Create a new reservation for your guests
+                        {% endif %}
+                    </p>
+                </div>
+                {% if not editing %}
+                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addGuestModal">
+                    <i class="bi bi-person-plus me-2"></i>Add Guest
+                </button>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    <div class="card shadow-sm">
-        <div class="card-body">
+    
+    <!-- Reservation Form -->
+    <div class="form-card fade-in">
+        <div class="card-body p-4">
             <form method="post">
                 {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-12">
-                        {{ form.as_p }}
+                
+                <!-- Guest Information Section -->
+                <div class="form-section">
+                    <h5><i class="bi bi-person-circle icon-accent"></i>Guest Information</h5>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="guest-search" class="form-label">Guest</label>
+                            <div class="guest-search-container position-relative">
+                                <input type="text" 
+                                       id="guest-search" 
+                                       class="form-control guest-search-input" 
+                                       placeholder="Type guest name to search..." 
+                                       autocomplete="off">
+                                <div class="guest-search-results" id="guest-search-results"></div>
+                                <input type="hidden" name="guest" id="selected-guest-id" value="{{ form.guest.value|default:'' }}">
+                            </div>
+                            {% if form.guest.help_text %}
+                                <div class="form-text">{{ form.guest.help_text }}</div>
+                            {% endif %}
+                            {% if form.guest.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.guest.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
-                <div class="mt-4 d-flex justify-content-end gap-2">
-                    <button type="submit" class="btn btn-primary">Save</button>
-                    <a href="{% url 'reservations_list' %}" class="btn btn-secondary">Cancel</a>
+                
+                <!-- Room & Dates Section -->
+                <div class="form-section">
+                    <h5><i class="bi bi-door-open icon-accent"></i>Room & Dates</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.room.id_for_label }}" class="form-label">Room</label>
+                            {{ form.room }}
+                            {% if form.room.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.room.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.check_in.id_for_label }}" class="form-label">Check-in Date</label>
+                            {{ form.check_in }}
+                            {% if form.check_in.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.check_in.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.check_out.id_for_label }}" class="form-label">Check-out Date</label>
+                            {{ form.check_out }}
+                            {% if form.check_out.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.check_out.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if editing %}
+                <!-- Status & Payment Section (Only for editing) -->
+                <div class="form-section">
+                    <h5><i class="bi bi-credit-card icon-accent"></i>Status & Payment</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.status.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.payment_method.id_for_label }}" class="form-label">Payment Method</label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.payment_method.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.payment_notes.id_for_label }}" class="form-label">Payment Notes</label>
+                            {{ form.payment_notes }}
+                            {% if form.payment_notes.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.payment_notes.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Form Errors -->
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
+                        {% for error in form.non_field_errors %}
+                            <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-end gap-3 mt-4">
+                    <a href="{% url 'reservations_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi {% if editing %}bi-check-circle{% else %}bi-plus-circle{% endif %} me-2"></i>
+                        {% if editing %}Update Reservation{% else %}Create Reservation{% endif %}
+                    </button>
                 </div>
             </form>
         </div>
@@ -31,62 +460,325 @@
 {% if not editing %}
 <!-- Add Guest Modal -->
 <div class="modal fade" id="addGuestModal" tabindex="-1" aria-labelledby="addGuestModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="addGuestModalLabel">Add Guest</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="border-radius: 15px; border: none; box-shadow: 0 20px 40px rgba(0,0,0,0.15);">
+      <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 15px 15px 0 0;">
+        <h5 class="modal-title" id="addGuestModalLabel">
+          <i class="bi bi-person-plus me-2"></i>Add New Guest
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="addGuestForm" method="post" action="{% url 'guests' %}">
         {% csrf_token %}
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="guestName" class="form-label">Name</label>
-            <input type="text" class="form-control" id="guestName" name="name" required>
-          </div>
-          <div class="mb-3">
-            <label for="guestEmail" class="form-label">Email</label>
-            <input type="email" class="form-control" id="guestEmail" name="email">
-          </div>
-          <div class="mb-3">
-            <label for="guestPhone" class="form-label">Phone</label>
-            <input type="text" class="form-control" id="guestPhone" name="phone">
-          </div>
-          <div class="mb-3">
-            <label for="guestIdType" class="form-label">ID Type</label>
-            <input type="text" class="form-control" id="guestIdType" name="id_type">
-          </div>
-          <div class="mb-3">
-            <label for="guestIdNumber" class="form-label">ID Number</label>
-            <input type="text" class="form-control" id="guestIdNumber" name="id_number">
-          </div>
-          <div class="mb-3">
-            <label for="guestDOB" class="form-label">Date of Birth</label>
-            <input type="date" class="form-control" id="guestDOB" name="date_of_birth">
-          </div>
-          <div class="mb-3">
-            <label for="guestAddress" class="form-label">Address</label>
-            <input type="text" class="form-control" id="guestAddress" name="address">
-          </div>
-          <div class="mb-3">
-            <label for="guestEmergencyContactName" class="form-label">Emergency Contact Name</label>
-            <input type="text" class="form-control" id="guestEmergencyContactName" name="emergency_contact_name">
-          </div>
-          <div class="mb-3">
-            <label for="guestEmergencyContactPhone" class="form-label">Emergency Contact Phone</label>
-            <input type="text" class="form-control" id="guestEmergencyContactPhone" name="emergency_contact_phone">
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="guestName" class="form-label fw-bold">Name *</label>
+              <input type="text" class="form-control" id="guestName" name="name" required style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-md-6">
+              <label for="guestEmail" class="form-label fw-bold">Email</label>
+              <input type="email" class="form-control" id="guestEmail" name="email" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-md-6">
+              <label for="guestPhone" class="form-label fw-bold">Phone</label>
+              <input type="text" class="form-control" id="guestPhone" name="phone" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-md-6">
+              <label for="guestDOB" class="form-label fw-bold">Date of Birth</label>
+              <input type="date" class="form-control" id="guestDOB" name="date_of_birth" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-md-6">
+              <label for="guestIdType" class="form-label fw-bold">ID Type</label>
+              <input type="text" class="form-control" id="guestIdType" name="id_type" placeholder="e.g., Passport, KTP" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-md-6">
+              <label for="guestIdNumber" class="form-label fw-bold">ID Number</label>
+              <input type="text" class="form-control" id="guestIdNumber" name="id_number" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-12">
+              <label for="guestAddress" class="form-label fw-bold">Address</label>
+              <textarea class="form-control" id="guestAddress" name="address" rows="2" style="border-radius: 10px; border: 2px solid #e9ecef;"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label for="guestEmergencyContactName" class="form-label fw-bold">Emergency Contact Name</label>
+              <input type="text" class="form-control" id="guestEmergencyContactName" name="emergency_contact_name" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
+            <div class="col-md-6">
+              <label for="guestEmergencyContactPhone" class="form-label fw-bold">Emergency Contact Phone</label>
+              <input type="text" class="form-control" id="guestEmergencyContactPhone" name="emergency_contact_phone" style="border-radius: 10px; border: 2px solid #e9ecef;">
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success">Add Guest</button>
+        <div class="modal-footer" style="border-top: 1px solid #e9ecef; padding: 1.5rem;">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 25px; padding: 0.75rem 1.5rem; font-weight: 600;">
+            <i class="bi bi-x-circle me-2"></i>Cancel
+          </button>
+          <button type="submit" class="btn btn-success" style="border-radius: 25px; padding: 0.75rem 1.5rem; font-weight: 600; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none;">
+            <i class="bi bi-person-plus me-2"></i>Add Guest
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<!-- Select2 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
+let guestData = [];
+let selectedGuestIndex = -1;
+let currentSearchTerm = '';
+
+// Fetch guest data on page load
 document.addEventListener('DOMContentLoaded', function() {
+    loadGuestData();
+    initializeGuestSearch();
+    
+    // Initialize Select2 for room dropdown only
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('#id_room').select2({
+            placeholder: 'Select a room...',
+            allowClear: true,
+            width: '100%',
+            templateResult: function(room) {
+                if (!room.id) {
+                    return room.text;
+                }
+                var $room = $(
+                    '<div class="d-flex align-items-center">' +
+                        '<i class="bi bi-door-open me-2 text-success"></i>' +
+                        '<div>' +
+                            '<div class="fw-bold">' + room.text + '</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+                return $room;
+            },
+            templateSelection: function(room) {
+                if (!room.id) {
+                    return 'Select a room...';
+                }
+                return room.text;
+            },
+            escapeMarkup: function(markup) {
+                return markup;
+            }
+        });
+    }
+});
+
+function loadGuestData() {
+    fetch('/guests/json/')
+        .then(resp => resp.json())
+        .then(data => {
+            // Handle both direct array and object with guests property
+            guestData = data.guests || data;
+            console.log('Loaded guest data:', guestData);
+            
+            // Set initial guest if editing
+            const selectedGuestId = document.getElementById('selected-guest-id').value;
+            if (selectedGuestId) {
+                const selectedGuest = guestData.find(g => g.id == selectedGuestId);
+                if (selectedGuest) {
+                    const searchInput = document.getElementById('guest-search');
+                    searchInput.value = selectedGuest.name;
+                    searchInput.classList.add('has-selection');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load guest data:', error);
+        });
+}
+
+function initializeGuestSearch() {
+    const searchInput = document.getElementById('guest-search');
+    const resultsContainer = document.getElementById('guest-search-results');
+    
+    // Search input event
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.trim();
+        currentSearchTerm = searchTerm;
+        selectedGuestIndex = -1;
+        
+        if (searchTerm.length === 0) {
+            hideResults();
+            clearSelection();
+            return;
+        }
+        
+        if (searchTerm.length >= 1) {
+            performSearch(searchTerm);
+        }
+    });
+    
+    // Keyboard navigation
+    searchInput.addEventListener('keydown', function(e) {
+        const results = document.querySelectorAll('.guest-result-item');
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                selectedGuestIndex = Math.min(selectedGuestIndex + 1, results.length - 1);
+                updateSelection();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                selectedGuestIndex = Math.max(selectedGuestIndex - 1, -1);
+                updateSelection();
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (selectedGuestIndex >= 0 && results.length > 0) {
+                    const guestData = JSON.parse(results[selectedGuestIndex].dataset.guest);
+                    selectGuest(guestData);
+                }
+                break;
+            case 'Escape':
+                hideResults();
+                break;
+        }
+    });
+    
+    // Click outside to hide results
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.guest-search-container')) {
+            hideResults();
+        }
+    });
+    
+    // Focus event
+    searchInput.addEventListener('focus', function() {
+        if (currentSearchTerm.length >= 1) {
+            performSearch(currentSearchTerm);
+        }
+    });
+}
+
+function performSearch(searchTerm) {
+    console.log('Performing search for:', searchTerm);
+    console.log('Guest data available:', guestData.length, 'guests');
+    const results = fuzzySearch(guestData, searchTerm);
+    console.log('Search results:', results.length, 'matches');
+    displayResults(results);
+}
+
+function fuzzySearch(data, searchTerm) {
+    const term = searchTerm.toLowerCase();
+    
+    return data.filter(guest => {
+        const name = guest.name.toLowerCase();
+        const email = (guest.email || '').toLowerCase();
+        const phone = (guest.phone || '').toLowerCase();
+        
+        // Exact match gets highest priority
+        if (name.includes(term)) return true;
+        if (email.includes(term)) return true;
+        if (phone.includes(term)) return true;
+        
+        // Fuzzy matching - check if all characters of search term exist in order
+        let nameIndex = 0;
+        for (let i = 0; i < term.length; i++) {
+            nameIndex = name.indexOf(term[i], nameIndex);
+            if (nameIndex === -1) return false;
+            nameIndex++;
+        }
+        return true;
+    }).sort((a, b) => {
+        // Sort by relevance
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        const aStartsWith = aName.startsWith(term);
+        const bStartsWith = bName.startsWith(term);
+        
+        if (aStartsWith && !bStartsWith) return -1;
+        if (!aStartsWith && bStartsWith) return 1;
+        
+        return aName.localeCompare(bName);
+    });
+}
+
+function displayResults(results) {
+    const resultsContainer = document.getElementById('guest-search-results');
+    console.log('Displaying results, container found:', !!resultsContainer);
+    
+    if (results.length === 0) {
+        resultsContainer.innerHTML = '<div class="guest-search-no-results">No guests found. Try a different search term.</div>';
+    } else {
+        let html = '';
+        results.forEach((guest, index) => {
+            const email = guest.email ? ` • ${guest.email}` : '';
+            const phone = guest.phone ? ` • ${guest.phone}` : '';
+            html += `
+                <div class="guest-result-item" data-guest='${JSON.stringify(guest)}' data-index="${index}">
+                    <div>
+                        <div class="guest-result-name">${highlightMatch(guest.name, currentSearchTerm)}</div>
+                        <div class="guest-result-details">${email}${phone}</div>
+                    </div>
+                </div>
+            `;
+        });
+        resultsContainer.innerHTML = html;
+        console.log('Results HTML set, length:', html.length);
+        
+        // Add click handlers
+        document.querySelectorAll('.guest-result-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const guest = JSON.parse(this.dataset.guest);
+                selectGuest(guest);
+            });
+        });
+    }
+    
+    resultsContainer.classList.add('show');
+    console.log('Results container classes:', resultsContainer.className);
+    selectedGuestIndex = -1;
+}
+
+function highlightMatch(text, searchTerm) {
+    if (!searchTerm) return text;
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<strong>$1</strong>');
+}
+
+function updateSelection() {
+    document.querySelectorAll('.guest-result-item').forEach(item => {
+        item.classList.remove('selected');
+    });
+    if (selectedGuestIndex >= 0) {
+        const items = document.querySelectorAll('.guest-result-item');
+        if (items[selectedGuestIndex]) {
+            items[selectedGuestIndex].classList.add('selected');
+        }
+    }
+}
+
+function selectGuest(guest) {
+    const searchInput = document.getElementById('guest-search');
+    searchInput.value = guest.name;
+    searchInput.classList.add('has-selection');
+    document.getElementById('selected-guest-id').value = guest.id;
+    hideResults();
+}
+
+function clearSelection() {
+    document.getElementById('guest-search').classList.remove('has-selection');
+    document.getElementById('selected-guest-id').value = '';
+}
+
+function hideResults() {
+    document.getElementById('guest-search-results').classList.remove('show');
+}
+
+// Function to refresh guest dropdown (for modal integration)
+window.refreshGuestDropdown = function() {
+    loadGuestData();
+};
+    
+    // Initialize other form elements
     var addGuestBtn = document.querySelector('[data-bs-target="#addGuestModal"]');
     var addGuestModalEl = document.getElementById('addGuestModal');
     var addGuestModal = null;
@@ -120,21 +812,16 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     if (addGuestModal) addGuestModal.hide();
-                    // Refresh guest dropdown
-                    fetch('/guests/json/')
-                        .then(resp => resp.json())
-                        .then(json => {
-                            var guestSelect = document.querySelector('select[name="guest"]');
-                            if (guestSelect && json.guests) {
-                                guestSelect.innerHTML = '';
-                                json.guests.forEach(function(g) {
-                                    var opt = document.createElement('option');
-                                    opt.value = g.id;
-                                    opt.textContent = g.name;
-                                    guestSelect.appendChild(opt);
-                                });
-                            }
-                        });
+                    // Refresh guest dropdown using the new function
+                    if (window.refreshGuestDropdown) {
+                        window.refreshGuestDropdown();
+                    }
+                    // Clear the form
+                    addGuestForm.reset();
+                    // Show success message
+                    setTimeout(function() {
+                        alert('Guest added successfully!');
+                    }, 300);
                 } else {
                     if (addGuestModal) addGuestModal.hide();
                     setTimeout(function() { alert('Failed to add guest.'); }, 300);
@@ -157,7 +844,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-});
 </script>
 {% endif %}
 {% endblock %}
