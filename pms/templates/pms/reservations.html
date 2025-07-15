@@ -206,15 +206,17 @@
                                                 <i class="bi bi-box-arrow-right"></i>
                                             </button>
                                         {% endif %}
-                                        {% if reservation.status != 'cancelled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
+                                        {% if reservation.status == 'pending' or reservation.status == 'confirmed' or reservation.status == 'expected_arrival' %}
                                             <button class="btn btn-sm btn-danger d-inline-flex align-items-center" onclick="confirmCancel('{{ reservation.id }}')" title="Cancel">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         {% endif %}
                                         
+                                        {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
                                         <a href="{% url 'edit_reservation' reservation.id %}" class="btn btn-sm btn-warning d-inline-flex align-items-center" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
+                                        {% endif %}
 
                                         <a href="{% url 'reservation_detail' reservation.id %}" class="btn btn-sm btn-info d-inline-flex align-items-center" title="View Details">
                                             <i class="bi bi-eye"></i>

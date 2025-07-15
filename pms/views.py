@@ -262,10 +262,10 @@ def edit_reservation(request, reservation_id):
         form = ReservationForm(request.POST, instance=reservation, edit=True)
         if form.is_valid():
             form.save()
-            return redirect('dashboard')
+            return redirect('reservations_list')
     else:
         form = ReservationForm(instance=reservation, edit=True)
-    return render(request, 'pms/reservation_edit.html', {'form': form, 'reservation': reservation})
+    return render(request, 'pms/reservation_form.html', {'form': form, 'reservation': reservation, 'editing': True})
 
 def confirm_reservation(request, reservation_id):
     """Confirm a pending reservation"""
@@ -342,17 +342,7 @@ def cancel_reservation(request, reservation_id):
         return redirect('reservations_list')
     return render(request, 'pms/cancel_reservation.html', {'reservation': reservation})
 
-def edit_reservation(request, reservation_id):
-    """Edit a reservation"""
-    reservation = get_object_or_404(Reservation, id=reservation_id)
-    if request.method == 'POST':
-        form = ReservationForm(request.POST, instance=reservation)
-        if form.is_valid():
-            form.save()
-            return redirect('reservations_list')
-    else:
-        form = ReservationForm(instance=reservation)
-    return render(request, 'pms/reservation_form.html', {'form': form, 'editing': True})
+
 
 def rooms_list(request):
     """View for housekeeping to update room statuses"""

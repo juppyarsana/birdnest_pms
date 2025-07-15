@@ -3,77 +3,225 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2">Reservation Details</h1>
-        <div>
-            <a href="{% url 'reservations_list' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Reservations
-            </a>
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h1 class="h2 text-primary">Reservation Details</h1>
+        <p class="text-muted mb-0">Reservation ID: #{{ reservation.id }}</p>
+    </div>
+
+    <!-- Status Overview Card -->
+    <div class="card mb-4 border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="card-title mb-2">{{ reservation.guest.name }}</h5>
+                    <p class="text-muted mb-1">Room {{ reservation.room.room_number }} • {{ reservation.check_in|date:"M d" }} - {{ reservation.check_out|date:"M d, Y" }}</p>
+                    <small class="text-muted">{{ reservation.num_guests }} guest{{ reservation.num_guests|pluralize }}</small>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    {% if reservation.status == 'pending' %}
+                        <span class="badge bg-warning text-dark fs-6 px-3 py-2">Pending</span>
+                    {% elif reservation.status == 'confirmed' %}
+                        <span class="badge bg-info fs-6 px-3 py-2">Confirmed</span>
+                    {% elif reservation.status == 'expected_arrival' %}
+                        <span class="badge bg-primary fs-6 px-3 py-2">Expected Arrival</span>
+                    {% elif reservation.status == 'in_house' %}
+                        <span class="badge bg-success fs-6 px-3 py-2">Checked In</span>
+                    {% elif reservation.status == 'completed' %}
+                        <span class="badge bg-secondary fs-6 px-3 py-2">Completed</span>
+                    {% elif reservation.status == 'canceled' %}
+                        <span class="badge bg-danger fs-6 px-3 py-2">Canceled</span>
+                    {% elif reservation.status == 'no_show' %}
+                        <span class="badge bg-dark fs-6 px-3 py-2">No Show</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6 px-3 py-2">{{ reservation.status|title }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% if reservation.cancellation_reason %}
+            <div class="mt-3 p-3 bg-light rounded">
+                <strong class="text-danger">Cancellation Reason:</strong>
+                <span class="ms-2">{{ reservation.cancellation_reason }}</span>
+            </div>
+            {% endif %}
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <h3 class="h4 mb-3">Guest Information</h3>
-                    <p><strong>Name:</strong> {{ reservation.guest.name }}</p>
-                    <p><strong>Email:</strong> {{ reservation.guest.email }}</p>
-                    <p><strong>Phone:</strong> {{ reservation.guest.phone }}</p>
-                    <p><strong>ID Type:</strong> {{ reservation.guest.id_type }}</p>
-                    <p><strong>ID Number:</strong> {{ reservation.guest.id_number }}</p>
-                    <p><strong>Date of Birth:</strong> {{ reservation.guest.date_of_birth|date:"M d, Y" }}</p>
-                    <p><strong>Address:</strong> {{ reservation.guest.address }}</p>
-                    <p><strong>Emergency Contact Name:</strong> {{ reservation.guest.emergency_contact_name }}</p>
-                    <p><strong>Emergency Contact Phone:</strong> {{ reservation.guest.emergency_contact_phone }}</p>
+    <div class="row">
+        <!-- Guest Information -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-circle me-2"></i>Guest Information
+                    </h5>
                 </div>
-                <div class="col-md-6">
-                    <h3 class="h4 mb-3">Reservation Information</h3>
-                    <p><strong>Reservation ID:</strong> {{ reservation.id }}</p>
-                    <p><strong>Room:</strong> {{ reservation.room.room_number }}</p>
-                    <p><strong>Check-in:</strong> {{ reservation.check_in|date:"M d, Y" }}</p>
-                    <p><strong>Check-in Time:</strong> {{ reservation.check_in_time|default:"-" }}</p>
-                    <p><strong>Check-out:</strong> {{ reservation.check_out|date:"M d, Y" }}</p>
-                    <p><strong>Number of Guests:</strong> {{ reservation.num_guests }}</p>
-                    <p><strong>Terms Accepted:</strong> {{ reservation.terms_accepted|yesno:"Yes,No" }}</p>
-                    <p><strong>Status:</strong> 
-                        {% if reservation.status == 'pending' %}
-                            <span class="badge bg-warning text-dark">Pending</span>
-                        {% elif reservation.status == 'confirmed' %}
-                            <span class="badge bg-info">Confirmed</span>
-                        {% elif reservation.status == 'expected_arrival' %}
-                            <span class="badge bg-primary">Expected Arrival</span>
-                        {% elif reservation.status == 'in_house' %}
-                            <span class="badge bg-success">Checked In</span>
-                        {% elif reservation.status == 'completed' %}
-                            <span class="badge bg-secondary">Completed</span>
-                        {% elif reservation.status == 'canceled' %}
-                            <span class="badge bg-danger">Canceled</span>
-                        {% elif reservation.status == 'no_show' %}
-                            <span class="badge bg-dark">No Show</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ reservation.status|title }}</span>
-                        {% endif %}
-                    </p>
-                    {% if reservation.cancellation_reason %}
-                    <div class="mb-2">
-                        <strong>Cancellation Reason:</strong>
-                        <span>{{ reservation.cancellation_reason }}</span>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Full Name</span>
+                                <strong>{{ reservation.guest.name }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Email</span>
+                                <span>{{ reservation.guest.email }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Phone</span>
+                                <span>{{ reservation.guest.phone }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Date of Birth</span>
+                                <span>{{ reservation.guest.date_of_birth|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span class="text-muted">Address</span>
+                                <span class="text-end">{{ reservation.guest.address|default:"-" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <hr class="my-2">
+                            <h6 class="text-muted mb-2">Identification</h6>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">ID Type</span>
+                                <span>{{ reservation.guest.id_type }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">ID Number</span>
+                                <span>{{ reservation.guest.id_number }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <hr class="my-2">
+                            <h6 class="text-muted mb-2">Emergency Contact</h6>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Contact Name</span>
+                                <span>{{ reservation.guest.emergency_contact_name|default:"-" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Contact Phone</span>
+                                <span>{{ reservation.guest.emergency_contact_phone|default:"-" }}</span>
+                            </div>
+                        </div>
                     </div>
-                    {% endif %}
-                    <p><strong>Created At:</strong> {{ reservation.created_at|date:"M d, Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservation & Payment Information -->
+        <div class="col-lg-6 mb-4">
+            <!-- Reservation Details -->
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-calendar-check me-2"></i>Reservation Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Room Number</span>
+                                <strong class="text-primary">{{ reservation.room.room_number }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Check-in Date</span>
+                                <span>{{ reservation.check_in|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Check-in Time</span>
+                                <span>{{ reservation.check_in_time|default:"Not specified" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Check-out Date</span>
+                                <span>{{ reservation.check_out|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Number of Guests</span>
+                                <span>{{ reservation.num_guests }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Terms Accepted</span>
+                                <span class="{% if reservation.terms_accepted %}text-success{% else %}text-danger{% endif %}">
+                                    {{ reservation.terms_accepted|yesno:"Yes,No" }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Created</span>
+                                <span>{{ reservation.created_at|date:"M d, Y H:i" }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="row">
-                <div class="col-12">
-                    <h3 class="h4 mb-3">Payment Information</h3>
-                    <p><strong>Payment Method:</strong> {{ reservation.get_payment_method_display|default:"Not Specified" }}</p>
-                    <p><strong>Payment Notes:</strong> {{ reservation.payment_notes|default:"None" }}</p>
+            <!-- Payment Information -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-credit-card me-2"></i>Payment Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Payment Method</span>
+                                <span>{{ reservation.get_payment_method_display|default:"Not Specified" }}</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span class="text-muted">Payment Notes</span>
+                                <span class="text-end">{{ reservation.payment_notes|default:"None" }}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div class="mt-4 d-flex gap-2">
+    <!-- Action Buttons -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-gear me-2"></i>Actions
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'reservations_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Reservations
+                </a>
+                
                 {% if reservation.status == 'pending' %}
                     <a href="{% url 'confirm_reservation' reservation.id %}" class="btn btn-success">
                         <i class="bi bi-check-circle"></i> Confirm
@@ -92,15 +240,17 @@
                     </a>
                 {% endif %}
 
-                {% if reservation.status != 'canceled' and reservation.status != 'completed' and reservation.status != 'no_show' %}
+                {% if reservation.status == 'pending' or reservation.status == 'confirmed' or reservation.status == 'expected_arrival' %}
                     <button class="btn btn-danger" onclick="confirmCancel('{{ reservation.id }}')">
                         <i class="bi bi-x-circle"></i> Cancel
                     </button>
                 {% endif %}
                 
+                {% if reservation.status == 'pending' or reservation.status == 'confirmed' %}
                 <a href="{% url 'edit_reservation' reservation.id %}" class="btn btn-warning">
                     <i class="bi bi-pencil"></i> Edit
                 </a>
+                {% endif %}
             </div>
         </div>
     </div>

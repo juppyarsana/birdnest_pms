@@ -1,13 +1,15 @@
 {% extends "base.html" %}
-{% block title %}New Reservation{% endblock %}
+{% block title %}{% if editing %}Edit Reservation{% else %}New Reservation{% endif %}{% endblock %}
 {% block extra_css %}{% endblock %}
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Create New Reservation</h2>
+        <h2 class="mb-0">{% if editing %}Edit Reservation{% else %}Create New Reservation{% endif %}</h2>
+        {% if not editing %}
         <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addGuestModal">
             <i class="bi bi-person-plus"></i> Add Guest
         </button>
+        {% endif %}
     </div>
     <div class="card shadow-sm">
         <div class="card-body">
@@ -26,6 +28,7 @@
         </div>
     </div>
 </div>
+{% if not editing %}
 <!-- Add Guest Modal -->
 <div class="modal fade" id="addGuestModal" tabindex="-1" aria-labelledby="addGuestModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -156,4 +159,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+{% endif %}
 {% endblock %}
