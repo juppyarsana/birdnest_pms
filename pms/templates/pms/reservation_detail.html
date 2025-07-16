@@ -285,9 +285,10 @@
     </div>
 
     <!-- Edit Form (Hidden by default) -->
-    <form id="editForm" method="POST" action="{% url 'edit_reservation' reservation.id %}" style="display: none;">
+    <form id="editForm" method="POST" action="{% url 'reservation_detail' reservation.id %}" style="display: none;">
         {% csrf_token %}
         <!-- Form inputs will be moved here by JavaScript when in edit mode -->
+        <input type="hidden" name="guest" id="form_guest" value="{{ reservation.guest.id }}">
         <input type="hidden" name="room" id="form_room">
         <input type="hidden" name="check_in" id="form_check_in">
         <input type="hidden" name="check_in_time" id="form_check_in_time">
@@ -485,6 +486,12 @@ function toggleEditMode() {
             }
         });
         
+        // Sync form fields when entering edit mode
+        syncFormFields();
+        
+        // Add real-time field listeners
+        addFieldListeners();
+        
         // Focus on first editable field
         const firstEditField = document.querySelector('.edit-mode:not([style*="display: none"])');
         if (firstEditField) {
@@ -508,6 +515,9 @@ function toggleEditMode() {
         // Remove visual indicators
         container.classList.remove('edit-mode-active');
         cards.forEach(card => card.classList.remove('edit-mode-active'));
+        
+        // Clear any conflict warnings when exiting edit mode
+        clearConflictWarnings();
     }
 }
 
@@ -515,6 +525,9 @@ function cancelEdit() {
     // Reset form to original values
     const form = document.getElementById('editForm');
     form.reset();
+    
+    // Clear any conflict warnings
+    clearConflictWarnings();
     
     // Switch back to view mode
     if (isEditMode) {
@@ -531,6 +544,8 @@ function confirmCancel(reservationId) {
 
 // Sync visible edit fields with hidden form fields
 function syncFormFields() {
+    console.log('Syncing form fields...');
+    
     // Get values from visible edit fields and copy to hidden form fields
     const roomSelect = document.querySelector('select[name="room"].edit-mode');
     const checkInInput = document.querySelector('input[name="check_in"].edit-mode');
@@ -541,14 +556,41 @@ function syncFormFields() {
     const paymentMethodSelect = document.querySelector('select[name="payment_method"].edit-mode');
     const paymentNotesTextarea = document.querySelector('textarea[name="payment_notes"].edit-mode');
     
-    if (roomSelect) document.getElementById('form_room').value = roomSelect.value;
-    if (checkInInput) document.getElementById('form_check_in').value = checkInInput.value;
-    if (checkInTimeInput) document.getElementById('form_check_in_time').value = checkInTimeInput.value;
-    if (checkOutInput) document.getElementById('form_check_out').value = checkOutInput.value;
-    if (numGuestsInput) document.getElementById('form_num_guests').value = numGuestsInput.value;
-    if (statusSelect) document.getElementById('form_status').value = statusSelect.value;
-    if (paymentMethodSelect) document.getElementById('form_payment_method').value = paymentMethodSelect.value;
-    if (paymentNotesTextarea) document.getElementById('form_payment_notes').value = paymentNotesTextarea.value;
+    // Sync each field with logging
+    if (roomSelect) {
+        document.getElementById('form_room').value = roomSelect.value;
+        console.log('Room synced:', roomSelect.value);
+    }
+    if (checkInInput) {
+        document.getElementById('form_check_in').value = checkInInput.value;
+        console.log('Check-in synced:', checkInInput.value);
+    }
+    if (checkInTimeInput) {
+        document.getElementById('form_check_in_time').value = checkInTimeInput.value;
+        console.log('Check-in time synced:', checkInTimeInput.value);
+    }
+    if (checkOutInput) {
+        document.getElementById('form_check_out').value = checkOutInput.value;
+        console.log('Check-out synced:', checkOutInput.value);
+    }
+    if (numGuestsInput) {
+        document.getElementById('form_num_guests').value = numGuestsInput.value;
+        console.log('Num guests synced:', numGuestsInput.value);
+    }
+    if (statusSelect) {
+        document.getElementById('form_status').value = statusSelect.value;
+        console.log('Status synced:', statusSelect.value);
+    }
+    if (paymentMethodSelect) {
+        document.getElementById('form_payment_method').value = paymentMethodSelect.value;
+        console.log('Payment method synced:', paymentMethodSelect.value);
+    }
+    if (paymentNotesTextarea) {
+        document.getElementById('form_payment_notes').value = paymentNotesTextarea.value;
+        console.log('Payment notes synced:', paymentNotesTextarea.value);
+    }
+    
+    console.log('Form sync completed');
 }
 
 // Add form validation
@@ -567,9 +609,20 @@ document.getElementById('editForm').addEventListener('submit', function(e) {
     
     // Show loading state
     const submitBtn = document.querySelector('button[type="submit"][form="editForm"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
-    submitBtn.disabled = true;
+    if (submitBtn) {
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+        submitBtn.disabled = true;
+        
+        // Re-enable button after a timeout in case of errors
+        setTimeout(() => {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }, 10000);
+    }
+    
+    // Allow form to submit
+    return true;
 });
 
 // Keyboard shortcuts
@@ -585,10 +638,130 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Auto-activate edit mode if requested via URL parameter
+// Add real-time field synchronization
+function addFieldListeners() {
+    const editFields = document.querySelectorAll('.edit-mode');
+    editFields.forEach(field => {
+        field.addEventListener('change', syncFormFields);
+        field.addEventListener('input', syncFormFields);
+    });
+    
+    // Add conflict checking for room and date fields
+    const roomSelect = document.querySelector('select[name="room"].edit-mode');
+    const checkInInput = document.querySelector('input[name="check_in"].edit-mode');
+    const checkOutInput = document.querySelector('input[name="check_out"].edit-mode');
+    
+    if (roomSelect) {
+        roomSelect.addEventListener('change', checkReservationConflict);
+    }
+    if (checkInInput) {
+        checkInInput.addEventListener('change', checkReservationConflict);
+    }
+    if (checkOutInput) {
+        checkOutInput.addEventListener('change', checkReservationConflict);
+    }
+}
+
+// Function to check for reservation conflicts
+function checkReservationConflict() {
+    const roomSelect = document.querySelector('select[name="room"].edit-mode');
+    const checkInInput = document.querySelector('input[name="check_in"].edit-mode');
+    const checkOutInput = document.querySelector('input[name="check_out"].edit-mode');
+    
+    if (!roomSelect || !checkInInput || !checkOutInput) {
+        return;
+    }
+    
+    const roomId = roomSelect.value;
+    const checkIn = checkInInput.value;
+    const checkOut = checkOutInput.value;
+    
+    // Clear previous warnings
+    clearConflictWarnings();
+    
+    if (!roomId || !checkIn || !checkOut) {
+        return;
+    }
+    
+    // Make AJAX request to check for conflicts
+    const url = new URL('/api/check-conflict/', window.location.origin);
+    url.searchParams.append('room_id', roomId);
+    url.searchParams.append('check_in', checkIn);
+    url.searchParams.append('check_out', checkOut);
+    url.searchParams.append('current_reservation_id', '{{ reservation.id }}');
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.conflict) {
+                showConflictWarning(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error checking reservation conflict:', error);
+        });
+}
+
+// Function to show conflict warning
+function showConflictWarning(message) {
+    // Remove any existing warnings
+    clearConflictWarnings();
+    
+    // Create warning element
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'alert alert-warning mt-2 conflict-warning';
+    warningDiv.innerHTML = `
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Warning:</strong> ${message}
+    `;
+    
+    // Find the room and dates section to insert the warning
+    const roomCard = document.querySelector('.card').nextElementSibling;
+    if (roomCard) {
+        roomCard.insertBefore(warningDiv, roomCard.firstChild);
+    }
+    
+    // Disable the Save Changes button
+    const saveButton = document.querySelector('button[type="submit"][form="editForm"]');
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.classList.add('btn-secondary');
+        saveButton.classList.remove('btn-success');
+        saveButton.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Cannot Save - Conflict Detected';
+    }
+}
+
+// Function to clear conflict warnings
+function clearConflictWarnings() {
+    const warnings = document.querySelectorAll('.conflict-warning');
+    warnings.forEach(warning => warning.remove());
+    
+    // Re-enable the Save Changes button
+    const saveButton = document.querySelector('button[type="submit"][form="editForm"]');
+    if (saveButton && saveButton.disabled) {
+        saveButton.disabled = false;
+        saveButton.classList.remove('btn-secondary');
+        saveButton.classList.add('btn-success');
+        saveButton.innerHTML = '<i class="bi bi-check-lg"></i> Save Changes';
+    }
+}
+
+// Auto-activate edit mode if requested via URL parameter or if there are form errors
 {% if auto_edit %}
 document.addEventListener('DOMContentLoaded', function() {
     toggleEditMode();
+    addFieldListeners();
+    {% if form and form.errors %}
+    // Scroll to the first error message
+    const firstAlert = document.querySelector('.alert-danger');
+    if (firstAlert) {
+        firstAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    {% endif %}
+});
+{% else %}
+document.addEventListener('DOMContentLoaded', function() {
+    addFieldListeners();
 });
 {% endif %}
 </script>

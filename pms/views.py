@@ -343,6 +343,7 @@ def reservation_detail(request, reservation_id):
     
     # Check if edit mode is requested via URL parameter
     edit_mode = request.GET.get('edit', 'false').lower() == 'true'
+    form = None
     
     if request.method == 'POST':
         # Handle in-place editing
@@ -350,8 +351,14 @@ def reservation_detail(request, reservation_id):
         if form.is_valid():
             form.save()
             messages.success(request, 'Reservation updated successfully!')
+            # Preserve the 'from' parameter in redirect
+            from_param = request.GET.get('from', '')
+            if from_param:
+                return redirect(f"{request.path}?from={from_param}")
             return redirect('reservation_detail', reservation_id=reservation.id)
         else:
+            # Set edit mode to true when there are validation errors
+            edit_mode = True
             # Add form errors to messages
             for field, errors in form.errors.items():
                 for error in errors:
@@ -377,6 +384,7 @@ def reservation_detail(request, reservation_id):
         'reservation': reservation,
         'available_rooms': available_rooms,
         'auto_edit': edit_mode,
+        'form': form,  # Pass form to template for error display
     }
     return render(request, 'pms/reservation_detail.html', context)
 
@@ -584,3 +592,54 @@ def guest_list_json(request):
         {"id": g.id, "name": g.name} for g in guests
     ]
     return JsonResponse({"guests": data})
+
+def check_reservation_conflict(request):
+    """AJAX endpoint to check for reservation conflicts"""
+    if request.method == 'GET':
+        room_id = request.GET.get('room_id')
+        check_in = request.GET.get('check_in')
+        check_out = request.GET.get('check_out')
+        current_reservation_id = request.GET.get('current_reservation_id')
+        
+        if not all([room_id, check_in, check_out]):
+            return JsonResponse({'error': 'Missing required parameters'}, status=400)
+        
+        try:
+            from datetime import datetime
+            check_in_date = datetime.strptime(check_in, '%Y-%m-%d').date()
+            check_out_date = datetime.strptime(check_out, '%Y-%m-%d').date()
+            
+            if check_out_date <= check_in_date:
+                return JsonResponse({
+                    'conflict': True,
+                    'message': 'Check-out date must be after check-in date'
+                })
+            
+            # Check for overlapping reservations
+            active_statuses = ['confirmed', 'expected_arrival', 'in_house']
+            overlapping = Reservation.objects.filter(
+                room_id=room_id,
+                check_in__lt=check_out_date,
+                check_out__gt=check_in_date,
+                status__in=active_statuses
+            )
+            
+            # Exclude current reservation if editing
+            if current_reservation_id:
+                overlapping = overlapping.exclude(id=current_reservation_id)
+            
+            if overlapping.exists():
+                conflicting_reservation = overlapping.first()
+                return JsonResponse({
+                    'conflict': True,
+                    'message': f'Room is already reserved by {conflicting_reservation.guest.name} from {conflicting_reservation.check_in} to {conflicting_reservation.check_out}'
+                })
+            
+            return JsonResponse({'conflict': False})
+            
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
