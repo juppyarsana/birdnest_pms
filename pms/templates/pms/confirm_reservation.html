@@ -1,38 +1,268 @@
 {% extends "base.html" %}
 {% block title %}Confirm Reservation{% endblock %}
-{% block extra_css %}{% endblock %}
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%), 
+                    linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+        animation: shimmer 20s linear infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: none;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .form-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+    
+    .details-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        transform: translateY(-2px);
+    }
+    
+    .btn {
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-success:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
+    
+    .btn-success:disabled {
+        background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+        color: #fff;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    
+    .btn-success:disabled:hover {
+        transform: none;
+        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+    }
+    
+    .btn-secondary {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+    }
+    
+    .fade-in {
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .alert {
+        border-radius: 10px;
+        border: none;
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-warning {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        color: #856404;
+        border-left: 4px solid #ffc107;
+    }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container py-4">
-    <h2 class="mb-4">Confirm Reservation</h2>
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Reservation Details</h5>
-            <p><strong>Guest:</strong> {{ reservation.guest }}</p>
-            <p><strong>Room:</strong> {{ reservation.room.room_number }}</p>
-            <p><strong>Check-in:</strong> {{ reservation.check_in|date:"M d, Y" }}</p>
-            <p><strong>Check-out:</strong> {{ reservation.check_out|date:"M d, Y" }}</p>
-            <p><strong>Status:</strong> {{ reservation.get_status_display }}</p>
+    <!-- Page Header -->
+    <div class="page-header fade-in">
+        <div class="container position-relative">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-2">
+                        <i class="bi bi-check-circle me-2"></i>
+                        Confirm Reservation
+                    </h1>
+                    <p class="mb-0 opacity-75">
+                        Review and confirm the pending reservation
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
-    <form method="post">
-        {% csrf_token %}
-        <div class="mb-3">
-            {{ form.payment_method.label_tag }}
-            {{ form.payment_method }}
-            {% if form.payment_method.errors %}
-                <div class="text-danger small">{{ form.payment_method.errors }}</div>
-            {% endif %}
+    
+    <!-- Warning for conflicting reservations -->
+    {% if has_conflicts %}
+    <div class="alert alert-danger fade-in" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Cannot Confirm - Conflicts Detected</strong>
+        
+        {% if conflicting_reservations %}
+        <p class="mb-2 mt-2"><strong>Pending reservations for the same room and dates:</strong></p>
+        <ul class="mb-2">
+            {% for conflict in conflicting_reservations %}
+            <li>Reservation #{{ conflict.id }} - {{ conflict.guest.name }} ({{ conflict.check_in|date:"M d, Y" }} to {{ conflict.check_out|date:"M d, Y" }})</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        {% if active_conflicts %}
+        <p class="mb-2"><strong>Active reservations blocking confirmation:</strong></p>
+        <ul class="mb-2">
+            {% for conflict in active_conflicts %}
+            <li>Reservation #{{ conflict.id }} - {{ conflict.guest.name }} ({{ conflict.check_in|date:"M d, Y" }} to {{ conflict.check_out|date:"M d, Y" }}) - Status: {{ conflict.get_status_display }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+        <p class="mb-0"><small><i class="bi bi-info-circle me-1"></i>Please resolve these conflicts before confirming this reservation.</small></p>
+    </div>
+    {% elif conflicting_reservations %}
+    <div class="alert alert-warning fade-in" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Pending Conflicts Found</strong>
+        <p class="mb-2 mt-2">The following pending reservations exist for the same room and dates:</p>
+        <ul class="mb-2">
+            {% for conflict in conflicting_reservations %}
+            <li>Reservation #{{ conflict.id }} - {{ conflict.guest.name }} ({{ conflict.check_in|date:"M d, Y" }} to {{ conflict.check_out|date:"M d, Y" }})</li>
+            {% endfor %}
+        </ul>
+        <p class="mb-0"><small><i class="bi bi-info-circle me-1"></i>Please review these conflicts before confirming.</small></p>
+    </div>
+    {% endif %}
+    
+    <!-- Reservation Details -->
+    <div class="details-card fade-in">
+        <div class="card-body p-4">
+            <h5 class="card-title mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Reservation Details
+            </h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong><i class="bi bi-person me-2"></i>Guest:</strong> {{ reservation.guest }}</p>
+                    <p><strong><i class="bi bi-door-open me-2"></i>Room:</strong> {{ reservation.room.room_number }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong><i class="bi bi-calendar-check me-2"></i>Check-in:</strong> {{ reservation.check_in|date:"M d, Y" }}</p>
+                    <p><strong><i class="bi bi-calendar-x me-2"></i>Check-out:</strong> {{ reservation.check_out|date:"M d, Y" }}</p>
+                </div>
+            </div>
+            <p><strong><i class="bi bi-tag me-2"></i>Status:</strong> 
+                <span class="badge bg-warning">{{ reservation.get_status_display }}</span>
+            </p>
         </div>
-        <div class="mb-3">
-            {{ form.payment_notes.label_tag }}
-            {{ form.payment_notes }}
-            {% if form.payment_notes.errors %}
-                <div class="text-danger small">{{ form.payment_notes.errors }}</div>
-            {% endif %}
+    </div>
+    
+    <!-- Confirmation Form -->
+    <div class="form-card fade-in">
+        <div class="card-body p-4">
+            <h5 class="mb-4">
+                <i class="bi bi-credit-card me-2"></i>
+                Payment Information
+            </h5>
+            <form method="post">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.payment_method.id_for_label }}" class="form-label">
+                                <i class="bi bi-wallet me-2"></i>{{ form.payment_method.label }}
+                            </label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="text-danger small mt-1">{{ form.payment_method.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.payment_notes.id_for_label }}" class="form-label">
+                                <i class="bi bi-sticky me-2"></i>{{ form.payment_notes.label }}
+                            </label>
+                            {{ form.payment_notes }}
+                            {% if form.payment_notes.errors %}
+                                <div class="text-danger small mt-1">{{ form.payment_notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-3 mt-4">
+                    <button type="submit" class="btn btn-success" {% if has_conflicts %}disabled{% endif %}>
+                         <i class="bi bi-check-circle me-2"></i>{% if has_conflicts %}Cannot Confirm (Conflicts){% else %}Confirm Reservation{% endif %}
+                     </button>
+                    <a href="{% url 'reservations_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
         </div>
-        <button type="submit" class="btn btn-success">Confirm</button>
-        <a href="{% url 'reservations_list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+    </div>
 </div>
 {% endblock %}
 {% block extra_js %}{% endblock %}

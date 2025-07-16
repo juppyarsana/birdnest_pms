@@ -270,7 +270,27 @@ def edit_reservation(request, reservation_id):
 def confirm_reservation(request, reservation_id):
     """Confirm a pending reservation"""
     reservation = get_object_or_404(Reservation, id=reservation_id, status='pending')
-    if request.method == 'POST':
+    
+    # Check for conflicting pending reservations for the same room and overlapping dates
+    conflicting_reservations = Reservation.objects.filter(
+        room=reservation.room,
+        status='pending',
+        check_in__lt=reservation.check_out,
+        check_out__gt=reservation.check_in
+    ).exclude(id=reservation.id)
+    
+    # Check for active conflicts that would prevent confirmation
+    active_conflicts = Reservation.objects.filter(
+        room=reservation.room,
+        status__in=['confirmed', 'expected_arrival', 'in_house'],
+        check_in__lt=reservation.check_out,
+        check_out__gt=reservation.check_in
+    )
+    
+    # Determine if confirmation should be disabled
+    has_conflicts = conflicting_reservations.exists() or active_conflicts.exists()
+    
+    if request.method == 'POST' and not has_conflicts:
         form = ConfirmReservationForm(request.POST, instance=reservation)
         if form.is_valid():
             reservation = form.save()
@@ -278,10 +298,21 @@ def confirm_reservation(request, reservation_id):
             reservation.save()
             # Update room status after confirmation
             reservation.room.update_status()
+            messages.success(request, f'Reservation for {reservation.guest.name} has been confirmed successfully!')
             return redirect('dashboard')
+    elif request.method == 'POST' and has_conflicts:
+        messages.error(request, 'Cannot confirm reservation: There are conflicting reservations for this room and date range.')
+        form = ConfirmReservationForm(request.POST, instance=reservation)
     else:
         form = ConfirmReservationForm(instance=reservation)
-    return render(request, 'pms/confirm_reservation.html', {'reservation': reservation, 'form': form})
+    
+    return render(request, 'pms/confirm_reservation.html', {
+        'reservation': reservation, 
+        'form': form,
+        'conflicting_reservations': conflicting_reservations,
+        'active_conflicts': active_conflicts,
+        'has_conflicts': has_conflicts
+    })
 
 def calendar_data(request):
     reservations = Reservation.objects.all()
