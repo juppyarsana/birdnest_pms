@@ -137,6 +137,18 @@ class Reservation(models.Model):
         ('cash', 'Cash'),
         ('credit_card', 'Credit Card'),
     ]
+    AGENT_CHOICES = [
+        ('direct', 'Direct Booking'),
+        ('booking_com', 'Booking.com'),
+        ('expedia', 'Expedia'),
+        ('agoda', 'Agoda'),
+        ('airbnb', 'Airbnb'),
+        ('travel_agent', 'Travel Agent'),
+        ('corporate', 'Corporate'),
+        ('walk_in', 'Walk-in'),
+        ('phone', 'Phone Booking'),
+        ('other', 'Other'),
+    ]
     guest = models.ForeignKey(Guest, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     check_in = models.DateField()
@@ -147,6 +159,7 @@ class Reservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, blank=True, default='')
     payment_notes = models.TextField(blank=True, default='')  # New field
+    agent = models.CharField(max_length=20, choices=AGENT_CHOICES, default='direct', help_text='Source/agent where this reservation came from')
     created_at = models.DateTimeField(auto_now_add=True)  # Reservation creation timestamp
     cancellation_reason = models.TextField(blank=True, default='')  # Reason for cancellation
 

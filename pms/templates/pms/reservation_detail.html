@@ -228,6 +228,27 @@
 
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Agent/Source</span>
+                                <div class="edit-field">
+                                    <span class="view-mode">{{ reservation.get_agent_display }}</span>
+                                    <select name="agent" class="form-select edit-mode" style="display: none;">
+                                        <option value="direct" {% if reservation.agent == 'direct' %}selected{% endif %}>Direct Booking</option>
+                                        <option value="booking_com" {% if reservation.agent == 'booking_com' %}selected{% endif %}>Booking.com</option>
+                                        <option value="expedia" {% if reservation.agent == 'expedia' %}selected{% endif %}>Expedia</option>
+                                        <option value="agoda" {% if reservation.agent == 'agoda' %}selected{% endif %}>Agoda</option>
+                                        <option value="airbnb" {% if reservation.agent == 'airbnb' %}selected{% endif %}>Airbnb</option>
+                                        <option value="travel_agent" {% if reservation.agent == 'travel_agent' %}selected{% endif %}>Travel Agent</option>
+                                        <option value="corporate" {% if reservation.agent == 'corporate' %}selected{% endif %}>Corporate</option>
+                                        <option value="walk_in" {% if reservation.agent == 'walk_in' %}selected{% endif %}>Walk-in</option>
+                                        <option value="phone" {% if reservation.agent == 'phone' %}selected{% endif %}>Phone Booking</option>
+                                        <option value="other" {% if reservation.agent == 'other' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Terms Accepted</span>
                                 <span class="{% if reservation.terms_accepted %}text-success{% else %}text-danger{% endif %}">
                                     {{ reservation.terms_accepted|yesno:"Yes,No" }}
@@ -294,6 +315,7 @@
         <input type="hidden" name="check_in_time" id="form_check_in_time">
         <input type="hidden" name="check_out" id="form_check_out">
         <input type="hidden" name="num_guests" id="form_num_guests">
+        <input type="hidden" name="agent" id="form_agent">
         <input type="hidden" name="status" id="form_status">
         <input type="hidden" name="payment_method" id="form_payment_method">
         <input type="hidden" name="payment_notes" id="form_payment_notes">

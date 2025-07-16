@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load currency_filters %}
 {% block title %}{% if editing %}Edit Reservation{% else %}New Reservation{% endif %}{% endblock %}
 {% block extra_css %}
 <!-- jQuery (required for Select2) -->
@@ -323,53 +324,17 @@
             <form method="post">
                 {% csrf_token %}
                 
-                <!-- Guest Information Section -->
+                <!-- Step 1: Dates Selection -->
                 <div class="form-section">
-                    <h5><i class="bi bi-person-circle icon-accent"></i>Guest Information</h5>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label for="guest-search" class="form-label">Guest</label>
-                            <div class="guest-search-container position-relative">
-                                <input type="text" 
-                                       id="guest-search" 
-                                       class="form-control guest-search-input" 
-                                       placeholder="Type guest name to search..." 
-                                       autocomplete="off">
-                                <div class="guest-search-results" id="guest-search-results"></div>
-                                <input type="hidden" name="guest" id="selected-guest-id" value="{{ form.guest.value|default:'' }}">
-                            </div>
-                            {% if form.guest.help_text %}
-                                <div class="form-text">{{ form.guest.help_text }}</div>
-                            {% endif %}
-                            {% if form.guest.errors %}
-                                <div class="text-danger small mt-1">
-                                    {% for error in form.guest.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Room & Dates Section -->
-                <div class="form-section">
-                    <h5><i class="bi bi-door-open icon-accent"></i>Room & Dates</h5>
+                    <h5><i class="bi bi-calendar-check icon-accent"></i>Step 1: Select Dates</h5>
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label for="{{ form.room.id_for_label }}" class="form-label">Room</label>
-                            {{ form.room }}
-                            {% if form.room.errors %}
-                                <div class="text-danger small mt-1">
-                                    {% for error in form.room.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-4">
-                            <label for="{{ form.check_in.id_for_label }}" class="form-label">Check-in Date</label>
-                            {{ form.check_in }}
+                            <label for="check_in_date" class="form-label">Check-in Date *</label>
+                            <input type="date" 
+                                   id="check_in_date" 
+                                   name="check_in" 
+                                   class="form-control" 
+                                   required>
                             {% if form.check_in.errors %}
                                 <div class="text-danger small mt-1">
                                     {% for error in form.check_in.errors %}
@@ -379,8 +344,27 @@
                             {% endif %}
                         </div>
                         <div class="col-md-4">
-                            <label for="{{ form.check_out.id_for_label }}" class="form-label">Check-out Date</label>
-                            {{ form.check_out }}
+                            <label for="nights_select" class="form-label">Number of Nights *</label>
+                            <select id="nights_select" name="nights_select" class="form-select" required>
+                                <option value="">Select nights</option>
+                                <option value="1">1 Night</option>
+                                <option value="2">2 Nights</option>
+                                <option value="3">3 Nights</option>
+                                <option value="4">4 Nights</option>
+                                <option value="5">5 Nights</option>
+                                <option value="6">6 Nights</option>
+                                <option value="7">7 Nights</option>
+                                <option value="14">14 Nights</option>
+                                <option value="30">30 Nights</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="check_out_date" class="form-label">Check-out Date</label>
+                            <input type="date" 
+                                   id="check_out_date" 
+                                   name="check_out" 
+                                   class="form-control" 
+                                   readonly>
                             {% if form.check_out.errors %}
                                 <div class="text-danger small mt-1">
                                     {% for error in form.check_out.errors %}
@@ -390,6 +374,128 @@
                             {% endif %}
                         </div>
                     </div>
+                </div>
+                
+                <!-- Step 2: Room Selection -->
+                <div class="form-section" id="room-selection-section" style="display: none;">
+                    <h5><i class="bi bi-door-open icon-accent"></i>Step 2: Select Room</h5>
+                    <div id="room-loading" class="text-center py-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading available rooms...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Checking room availability...</p>
+                    </div>
+                    <div id="room-options" class="row g-3">
+                        <!-- Available rooms will be populated here -->
+                    </div>
+                    {% if form.room.errors %}
+                        <div class="text-danger small mt-1">
+                            {% for error in form.room.errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Step 3: Guest Information -->
+                <div class="form-section" id="guest-info-section" style="display: none;">
+                    <h5><i class="bi bi-person icon-accent"></i>Step 3: Guest Information</h5>
+                    
+                    <!-- Guest Selection Toggle -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <div class="btn-group w-100" role="group" aria-label="Guest selection type">
+                                <input type="radio" class="btn-check" name="guest-type" id="existing-guest" value="existing" autocomplete="off">
+                                <label class="btn btn-outline-primary" for="existing-guest">
+                                    <i class="bi bi-search me-2"></i>Select Existing Guest
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="guest-type" id="new-guest" value="new" autocomplete="off" checked>
+                                <label class="btn btn-outline-primary" for="new-guest">
+                                    <i class="bi bi-person-plus me-2"></i>Add New Guest
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Existing Guest Selection -->
+                    <div id="existing-guest-section" class="guest-section" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="guest-search" class="form-label">Search Existing Guest</label>
+                                <div class="guest-search-container">
+                                    <input type="text" 
+                                           id="guest-search" 
+                                           class="form-control guest-search-input" 
+                                           placeholder="Search by name, email, or phone..." 
+                                           autocomplete="off">
+                                    <div id="guest-search-results" class="guest-search-results"></div>
+                                </div>
+                            </div>
+                            <div class="col-12" id="selected-guest-info" style="display: none;">
+                                <div class="alert alert-success">
+                                    <h6 class="mb-2"><i class="bi bi-check-circle me-2"></i>Selected Guest:</h6>
+                                    <div id="selected-guest-details"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- New Guest Information -->
+                    <div id="new-guest-section" class="guest-section">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="guest_name" class="form-label">Guest Name *</label>
+                                <input type="text" 
+                                       id="guest_name" 
+                                       name="guest_name" 
+                                       class="form-control" 
+                                       placeholder="Enter guest full name" 
+                                       required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contact Information * <small class="text-muted">(Email OR Phone required)</small></label>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <input type="email" 
+                                               id="guest_email" 
+                                               name="guest_email" 
+                                               class="form-control contact-field" 
+                                               placeholder="Email address">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="tel" 
+                                               id="guest_phone" 
+                                               name="guest_phone" 
+                                               class="form-control contact-field" 
+                                               placeholder="Phone number">
+                                    </div>
+                                </div>
+                                <div id="contact-error" class="text-danger small mt-1" style="display: none;">
+                                    Please provide either email or phone number.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-4">
+                            <label for="{{ form.agent.id_for_label }}" class="form-label">Agent/Source</label>
+                            {{ form.agent }}
+                            {% if form.agent.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.agent.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <input type="hidden" name="guest" id="selected-guest-id" value="{{ form.guest.value|default:'' }}">
+                    <input type="hidden" name="room" id="selected-room-id" value="{{ form.room.value|default:'' }}">
+                    
+                    <!-- Nights selection for auto-calculation -->
+                    <input type="hidden" name="nights" id="nights_hidden" value="1">
                 </div>
                 
                 {% if editing %}
@@ -457,6 +563,290 @@
         </div>
     </div>
 </div>
+
+<!-- Select2 JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+// Simple checkout date calculation function
+function calculateCheckout() {
+    const checkInInput = document.getElementById('check_in_date');
+    const nightsSelect = document.getElementById('nights_select');
+    const checkOutInput = document.getElementById('check_out_date');
+    const nightsHidden = document.getElementById('nights_hidden');
+    const roomSection = document.getElementById('room-selection-section');
+    const guestSection = document.getElementById('guest-info-section');
+    
+    if (!checkInInput || !nightsSelect || !checkOutInput || !nightsHidden) {
+        return;
+    }
+    
+    const checkInDate = checkInInput.value;
+    const nights = parseInt(nightsSelect.value);
+    
+    // Reset if invalid input
+    if (!checkInDate || !nights || isNaN(nights) || nights <= 0) {
+        checkOutInput.value = '';
+        nightsHidden.value = '';
+        if (roomSection) roomSection.style.display = 'none';
+        if (guestSection) guestSection.style.display = 'none';
+        return;
+    }
+    
+    // Calculate checkout date
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkIn);
+    checkOut.setDate(checkIn.getDate() + nights);
+    
+    // Format date as YYYY-MM-DD
+    const year = checkOut.getFullYear();
+    const month = String(checkOut.getMonth() + 1).padStart(2, '0');
+    const day = String(checkOut.getDate()).padStart(2, '0');
+    const checkOutDateString = `${year}-${month}-${day}`;
+    
+    // Update form fields
+    checkOutInput.value = checkOutDateString;
+    nightsHidden.value = nights;
+    
+    // Show sections
+    if (roomSection) {
+        roomSection.style.display = 'block';
+    }
+    if (guestSection) {
+        guestSection.style.display = 'block';
+    }
+    
+    // Load available rooms
+    if (typeof loadAvailableRooms === 'function') {
+        loadAvailableRooms(checkInDate, checkOutDateString);
+    }
+}
+
+// Function to load available rooms
+function loadAvailableRooms(checkIn, checkOut) {
+    const roomLoading = document.getElementById('room-loading');
+    const roomOptions = document.getElementById('room-options');
+    
+    if (roomLoading) roomLoading.style.display = 'block';
+    if (roomOptions) roomOptions.innerHTML = '';
+    
+    // Fetch available rooms
+    fetch(`/api/check-available-rooms/?check_in=${checkIn}&check_out=${checkOut}`)
+        .then(response => response.json())
+        .then(data => {
+            roomLoading.style.display = 'none';
+            
+            if (data.available_rooms && data.available_rooms.length > 0) {
+                let html = '';
+                data.available_rooms.forEach(room => {
+                    html += `
+                        <div class="col-md-4">
+                            <div class="room-option card h-100" data-room-id="${room.id}" style="cursor: pointer; transition: all 0.3s ease;">
+                                <div class="card-body">
+                                    <h6 class="card-title">${room.room_number}</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">${room.room_type}</small><br>
+                                        <strong id="room-price-${room.id}">Rp ${Math.floor(room.price_per_night).toLocaleString('id-ID')}/night</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                roomOptions.innerHTML = html;
+                
+                // Add click handlers for room selection
+                document.querySelectorAll('.room-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // Remove previous selection
+                        document.querySelectorAll('.room-option').forEach(opt => {
+                            opt.style.borderColor = '';
+                            opt.style.backgroundColor = '';
+                        });
+                        
+                        // Highlight selected room
+                        this.style.borderColor = '#667eea';
+                        this.style.backgroundColor = '#f8f9ff';
+                        
+                        // Set hidden input
+                        document.getElementById('selected-room-id').value = this.dataset.roomId;
+                        
+                        // Show guest information section
+                        document.getElementById('guest-info-section').style.display = 'block';
+                    });
+                });
+            } else {
+                roomOptions.innerHTML = '<div class="col-12"><div class="alert alert-warning">No rooms available for the selected dates. Please choose different dates.</div></div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading rooms:', error);
+            roomLoading.style.display = 'none';
+            roomOptions.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error loading rooms. Please try again.</div></div>';
+        });
+}
+
+// Set minimum date on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const checkInInput = document.getElementById('check_in_date');
+    const nightsSelect = document.getElementById('nights_select');
+    
+    if (checkInInput) {
+        const today = new Date().toISOString().split('T')[0];
+        checkInInput.min = today;
+        
+        // Add event listeners for checkout calculation
+        checkInInput.addEventListener('change', calculateCheckout);
+        checkInInput.addEventListener('input', calculateCheckout);
+    }
+    
+    if (nightsSelect) {
+        nightsSelect.addEventListener('change', calculateCheckout);
+    }
+    
+    // Initialize guest type toggle
+    initializeGuestTypeToggle();
+    
+    // Initialize other components
+    try {
+        if (typeof loadGuestData === 'function') loadGuestData();
+        if (typeof initializeGuestSearch === 'function') initializeGuestSearch();
+        initializeContactValidation();
+    } catch (error) {
+        console.error('Error during initialization:', error);
+    }
+});
+
+// Guest type toggle functionality
+function initializeGuestTypeToggle() {
+    const existingGuestRadio = document.getElementById('existing-guest');
+    const newGuestRadio = document.getElementById('new-guest');
+    const existingGuestSection = document.getElementById('existing-guest-section');
+    const newGuestSection = document.getElementById('new-guest-section');
+    
+    function toggleGuestSections() {
+        if (existingGuestRadio.checked) {
+            existingGuestSection.style.display = 'block';
+            newGuestSection.style.display = 'none';
+            // Clear new guest form and remove required attribute
+            clearNewGuestForm();
+            // Remove required attribute from new guest fields when hidden
+            document.getElementById('guest_name').removeAttribute('required');
+        } else {
+            existingGuestSection.style.display = 'none';
+            newGuestSection.style.display = 'block';
+            // Clear existing guest selection and add required attribute back
+            clearExistingGuestSelection();
+            // Add required attribute back to new guest fields when visible
+            document.getElementById('guest_name').setAttribute('required', 'required');
+        }
+    }
+    
+    existingGuestRadio.addEventListener('change', toggleGuestSections);
+    newGuestRadio.addEventListener('change', toggleGuestSections);
+    
+    // Set initial state based on which radio is checked
+    toggleGuestSections();
+}
+
+function clearNewGuestForm() {
+    document.getElementById('guest_name').value = '';
+    document.getElementById('guest_email').value = '';
+    document.getElementById('guest_phone').value = '';
+}
+
+function clearExistingGuestSelection() {
+    const searchInput = document.getElementById('guest-search');
+    const selectedGuestInfo = document.getElementById('selected-guest-info');
+    
+    searchInput.value = '';
+    searchInput.classList.remove('has-selection');
+    selectedGuestInfo.style.display = 'none';
+    document.getElementById('selected-guest-id').value = '';
+    hideResults();
+}
+
+// Contact validation function
+function initializeContactValidation() {
+    const contactFields = document.querySelectorAll('.contact-field');
+    
+    function validateContact() {
+    // Check which guest type is selected
+    const existingGuestRadio = document.getElementById('existing-guest');
+    const newGuestRadio = document.getElementById('new-guest');
+    
+    // If existing guest is selected, check if a guest is actually selected
+    if (existingGuestRadio && existingGuestRadio.checked) {
+        const selectedGuestId = document.getElementById('selected-guest-id')?.value;
+        if (!selectedGuestId) {
+            // Show error for existing guest selection
+            const errorDiv = document.getElementById('contact-error');
+            if (errorDiv) {
+                errorDiv.textContent = 'Please select an existing guest.';
+                errorDiv.style.display = 'block';
+            }
+            return false;
+        } else {
+            // Hide error if guest is selected
+            const errorDiv = document.getElementById('contact-error');
+            if (errorDiv) errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    
+    // If new guest is selected, validate name, email/phone
+    if (newGuestRadio && newGuestRadio.checked) {
+        const name = document.getElementById('guest_name')?.value.trim() || '';
+        const email = document.getElementById('guest_email')?.value.trim() || '';
+        const phone = document.getElementById('guest_phone')?.value.trim() || '';
+        const errorDiv = document.getElementById('contact-error');
+        
+        // Validate name is required for new guests
+        if (!name) {
+            if (errorDiv) {
+                errorDiv.textContent = 'Guest name is required.';
+                errorDiv.style.display = 'block';
+            }
+            // Focus on the name field
+            document.getElementById('guest_name').focus();
+            return false;
+        }
+        
+        // Validate email or phone is provided
+        if (!email && !phone) {
+            if (errorDiv) {
+                errorDiv.textContent = 'Please provide either email or phone number.';
+                errorDiv.style.display = 'block';
+            }
+            return false;
+        } else {
+            if (errorDiv) errorDiv.style.display = 'none';
+            return true;
+        }
+    }
+    
+    return true; // Default to true if neither radio is checked
+}
+    
+    contactFields.forEach(field => {
+        field.addEventListener('blur', validateContact);
+        field.addEventListener('input', validateContact);
+    });
+    
+    // Form submission validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validateContact()) {
+                e.preventDefault();
+                const emailField = document.getElementById('guest_email');
+                if (emailField) emailField.focus();
+            }
+        });
+    }
+}
+</script>
+
 {% if not editing %}
 <!-- Add Guest Modal -->
 <div class="modal fade" id="addGuestModal" tabindex="-1" aria-labelledby="addGuestModalLabel" aria-hidden="true">
@@ -523,89 +913,72 @@
   </div>
 </div>
 
-<!-- Select2 JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
 <script>
+
+function createOrFindGuest(name, email, phone) {
+    // First, try to find existing guest
+    const existingGuest = guestData.find(guest => 
+        guest.name.toLowerCase() === name.toLowerCase() || 
+        (email && guest.email === email) ||
+        (phone && guest.phone === phone)
+    );
+    
+    if (existingGuest) {
+        document.getElementById('selected-guest-id').value = existingGuest.id;
+    } else {
+        // Create new guest via AJAX
+        const formData = new FormData();
+        formData.append('name', name);
+        if (email) formData.append('email', email);
+        if (phone) formData.append('phone', phone);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch('/guests/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.guest_id) {
+                document.getElementById('selected-guest-id').value = data.guest_id;
+            }
+        })
+        .catch(error => {
+            console.error('Error creating guest:', error);
+        });
+    }
+}
+
 let guestData = [];
 let selectedGuestIndex = -1;
 let currentSearchTerm = '';
 
 // Fetch guest data on page load
-document.addEventListener('DOMContentLoaded', function() {
+function initializeGuestSearch() {
     loadGuestData();
-    initializeGuestSearch();
-    
-    // Initialize Select2 for room dropdown only
-    if (typeof $ !== 'undefined' && $.fn.select2) {
-        $('#id_room').select2({
-            placeholder: 'Select a room...',
-            allowClear: true,
-            width: '100%',
-            templateResult: function(room) {
-                if (!room.id) {
-                    return room.text;
-                }
-                var $room = $(
-                    '<div class="d-flex align-items-center">' +
-                        '<i class="bi bi-door-open me-2 text-success"></i>' +
-                        '<div>' +
-                            '<div class="fw-bold">' + room.text + '</div>' +
-                        '</div>' +
-                    '</div>'
-                );
-                return $room;
-            },
-            templateSelection: function(room) {
-                if (!room.id) {
-                    return 'Select a room...';
-                }
-                return room.text;
-            },
-            escapeMarkup: function(markup) {
-                return markup;
-            }
-        });
-    }
-});
-
-function loadGuestData() {
-    fetch('/guests/json/')
-        .then(resp => resp.json())
-        .then(data => {
-            // Handle both direct array and object with guests property
-            guestData = data.guests || data;
-            console.log('Loaded guest data:', guestData);
-            
-            // Set initial guest if editing
-            const selectedGuestId = document.getElementById('selected-guest-id').value;
-            if (selectedGuestId) {
-                const selectedGuest = guestData.find(g => g.id == selectedGuestId);
-                if (selectedGuest) {
-                    const searchInput = document.getElementById('guest-search');
-                    searchInput.value = selectedGuest.name;
-                    searchInput.classList.add('has-selection');
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Failed to load guest data:', error);
-        });
+    initializeGuestSearchHandlers();
 }
 
-function initializeGuestSearch() {
+function initializeGuestSearchHandlers() {
     const searchInput = document.getElementById('guest-search');
     const resultsContainer = document.getElementById('guest-search-results');
     
-    // Search input event
+    if (!searchInput || !resultsContainer) {
+        console.log('Guest search elements not found');
+        return;
+    }
+    
+    console.log('Initializing guest search handlers');
+    
     searchInput.addEventListener('input', function() {
         const searchTerm = this.value.trim();
         currentSearchTerm = searchTerm;
-        selectedGuestIndex = -1;
         
         if (searchTerm.length === 0) {
             hideResults();
-            clearSelection();
             return;
         }
         
@@ -655,6 +1028,30 @@ function initializeGuestSearch() {
             performSearch(currentSearchTerm);
         }
     });
+}
+
+function loadGuestData() {
+    fetch('/guests/json/')
+        .then(resp => resp.json())
+        .then(data => {
+            // Handle both direct array and object with guests property
+            guestData = data.guests || data;
+            console.log('Loaded guest data:', guestData);
+            
+            // Set initial guest if editing
+            const selectedGuestId = document.getElementById('selected-guest-id').value;
+            if (selectedGuestId) {
+                const selectedGuest = guestData.find(g => g.id == selectedGuestId);
+                if (selectedGuest) {
+                    const searchInput = document.getElementById('guest-search');
+                    searchInput.value = selectedGuest.name;
+                    searchInput.classList.add('has-selection');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load guest data:', error);
+        });
 }
 
 function performSearch(searchTerm) {
@@ -758,15 +1155,25 @@ function updateSelection() {
 
 function selectGuest(guest) {
     const searchInput = document.getElementById('guest-search');
+    const selectedGuestInfo = document.getElementById('selected-guest-info');
+    const selectedGuestDetails = document.getElementById('selected-guest-details');
+    
+    // Update search input
     searchInput.value = guest.name;
     searchInput.classList.add('has-selection');
+    
+    // Show selected guest info
+    selectedGuestDetails.innerHTML = `
+        <strong>${guest.name}</strong><br>
+        ${guest.email ? `Email: ${guest.email}<br>` : ''}
+        ${guest.phone ? `Phone: ${guest.phone}` : ''}
+    `;
+    selectedGuestInfo.style.display = 'block';
+    
+    // Set the selected guest ID
     document.getElementById('selected-guest-id').value = guest.id;
+    
     hideResults();
-}
-
-function clearSelection() {
-    document.getElementById('guest-search').classList.remove('has-selection');
-    document.getElementById('selected-guest-id').value = '';
 }
 
 function hideResults() {

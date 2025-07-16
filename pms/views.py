@@ -104,31 +104,63 @@ def checkin_reservation(request, reservation_id):
         settings = HotelSettings.get_settings()
         current_time = datetime.now().time()
         
-        # Check if current time is within allowed check-in window
-        if not settings.is_check_in_allowed(current_time):
+        # Check room status and time window for warnings
+        room_ready = reservation.room.status == 'vacant_clean'
+        time_allowed = settings.is_check_in_allowed(current_time)
+        
+        # Add warning messages but don't redirect
+        if not room_ready:
+            print(f"Debug: Room {reservation.room.room_number} is not ready for check-in. Status: {reservation.room.status}")
+            messages.warning(
+                request,
+                f'⚠️ Room {reservation.room.room_number} is not ready for check-in. '
+                f'Current status: {reservation.room.get_status_display()}. '
+                f'Please ensure the room is cleaned and marked as "Vacant Clean" before proceeding with check-in.'
+            )
+        
+        if not time_allowed:
             print(f"Debug: Check-in not allowed at {current_time}")
             messages.warning(
                 request,
-                f'Check-in is only allowed between {settings.earliest_check_in_time.strftime("%I:%M %p")} '
+                f'⚠️ Check-in is only allowed between {settings.earliest_check_in_time.strftime("%I:%M %p")} '
                 f'and {settings.latest_check_in_time.strftime("%I:%M %p")}'
             )
-            return redirect('reservations_list')
         
         if request.method == 'POST':
-            print("Debug: Processing POST request")
-            form = CheckInGuestForm(request.POST, instance=guest)
-            if form.is_valid():
-                print("Debug: Form is valid, saving guest info")
-                form.save()
-                reservation.status = 'in_house'
-                reservation.check_in_time = current_time
-                reservation.save()
-                # Update room status after check-in
-                reservation.room.update_status()
-                messages.success(request, f'Successfully checked in {guest.name}')
-                return redirect('dashboard')
+            # Only process POST if both room is ready and time is allowed
+            if not room_ready:
+                messages.error(
+                    request,
+                    f'Cannot complete check-in: Room {reservation.room.room_number} is not ready. '
+                    f'Current status: {reservation.room.get_status_display()}. '
+                    f'Please ensure the room is cleaned first.'
+                )
+                # Re-render the form with error
+                form = CheckInGuestForm(request.POST, instance=guest)
+            elif not time_allowed:
+                messages.error(
+                    request,
+                    f'Cannot complete check-in: Check-in is only allowed between '
+                    f'{settings.earliest_check_in_time.strftime("%I:%M %p")} and '
+                    f'{settings.latest_check_in_time.strftime("%I:%M %p")}'
+                )
+                # Re-render the form with error
+                form = CheckInGuestForm(request.POST, instance=guest)
             else:
-                print(f"Debug: Form validation errors: {form.errors}")
+                print("Debug: Processing POST request")
+                form = CheckInGuestForm(request.POST, instance=guest)
+                if form.is_valid():
+                    print("Debug: Form is valid, saving guest info")
+                    form.save()
+                    reservation.status = 'in_house'
+                    reservation.check_in_time = current_time
+                    reservation.save()
+                    # Update room status after check-in
+                    reservation.room.update_status()
+                    messages.success(request, f'Successfully checked in {guest.name}')
+                    return redirect('dashboard')
+                else:
+                    print(f"Debug: Form validation errors: {form.errors}")
         else:
             print("Debug: Initializing GET request form")
             form = CheckInGuestForm(instance=guest)
@@ -137,7 +169,10 @@ def checkin_reservation(request, reservation_id):
             'reservation': reservation,
             'form': form,
             'earliest_check_in': settings.earliest_check_in_time.strftime('%I:%M %p'),
-            'latest_check_in': settings.latest_check_in_time.strftime('%I:%M %p')
+            'latest_check_in': settings.latest_check_in_time.strftime('%I:%M %p'),
+            'room_ready': room_ready,
+            'time_allowed': time_allowed,
+            'can_checkin': room_ready and time_allowed
         }
         print("Debug: Rendering check-in form")
         response = render(request, 'pms/checkin.html', context)
@@ -464,7 +499,7 @@ def guests(request):
             try:
                 guest.save()
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True})
+                    return JsonResponse({'success': True, 'guest_id': guest.id})
             except Exception as e:
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'error': str(e)})
@@ -589,7 +624,12 @@ def guest_detail(request, guest_id):
 def guest_list_json(request):
     guests = Guest.objects.all().order_by('-id')
     data = [
-        {"id": g.id, "name": g.name} for g in guests
+        {
+            "id": g.id, 
+            "name": g.name,
+            "email": g.email or "",
+            "phone": g.phone or ""
+        } for g in guests
     ]
     return JsonResponse({"guests": data})
 
@@ -636,6 +676,62 @@ def check_reservation_conflict(request):
                 })
             
             return JsonResponse({'conflict': False})
+            
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def check_available_rooms(request):
+    """AJAX endpoint to get available rooms for given dates"""
+    if request.method == 'GET':
+        check_in = request.GET.get('check_in')
+        check_out = request.GET.get('check_out')
+        
+        if not all([check_in, check_out]):
+            return JsonResponse({'error': 'Missing required parameters'}, status=400)
+        
+        try:
+            from datetime import datetime
+            check_in_date = datetime.strptime(check_in, '%Y-%m-%d').date()
+            check_out_date = datetime.strptime(check_out, '%Y-%m-%d').date()
+            
+            if check_out_date <= check_in_date:
+                return JsonResponse({
+                    'error': 'Check-out date must be after check-in date'
+                }, status=400)
+            
+            # Get all rooms
+            all_rooms = Room.objects.all()
+            
+            # Find rooms that have conflicting reservations
+            active_statuses = ['confirmed', 'expected_arrival', 'in_house']
+            conflicting_room_ids = Reservation.objects.filter(
+                check_in__lt=check_out_date,
+                check_out__gt=check_in_date,
+                status__in=active_statuses
+            ).values_list('room_id', flat=True)
+            
+            # Get available rooms (exclude conflicting ones)
+            available_rooms = all_rooms.exclude(id__in=conflicting_room_ids)
+            
+            # Format response data
+            rooms_data = []
+            for room in available_rooms:
+                rooms_data.append({
+                    'id': room.id,
+                    'room_number': room.room_number,
+                    'room_type': room.room_type,
+                    'price_per_night': float(room.rate),
+                    'status': room.status
+                })
+            
+            return JsonResponse({
+                'available_rooms': rooms_data,
+                'total_available': len(rooms_data)
+            })
             
         except ValueError:
             return JsonResponse({'error': 'Invalid date format'}, status=400)

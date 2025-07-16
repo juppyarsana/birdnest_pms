@@ -64,10 +64,11 @@ class ReservationForm(forms.ModelForm):
 
     class Meta:
         model = Reservation
-        fields = ['guest', 'room', 'check_in', 'check_out', 'status', 'payment_method', 'payment_notes']
+        fields = ['guest', 'room', 'check_in', 'check_out', 'agent', 'status', 'payment_method', 'payment_notes']
         widgets = {
             'check_in': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'check_out': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'agent': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
             'payment_method': forms.Select(attrs={'class': 'form-select'}),
             'payment_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -80,18 +81,16 @@ class ReservationForm(forms.ModelForm):
         room = cleaned_data.get('room')
         check_in = cleaned_data.get('check_in')
         check_out = cleaned_data.get('check_out')
+        status = cleaned_data.get('status') if self.is_edit else 'pending'
+        payment_method = cleaned_data.get('payment_method') if self.is_edit else ''
 
-        if room and check_in and check_out:
+        if check_in and check_out:
             # Ensure check_out is after check_in
             if check_out <= check_in:
                 raise ValidationError('Check-out date must be after check-in date')
 
+        if room and check_in and check_out:
             # Check for overlapping reservations
-            if not room.is_available(check_in, check_out):
-                raise ValidationError('Room is not available for these dates')
-                
-            # Still check for existing reservations excluding current one if editing
-            # Unified overlap check: only active statuses
             active_statuses = ['confirmed', 'in_house', 'expected_arrival']
             overlapping = Reservation.objects.filter(
                 room=room,
@@ -101,23 +100,6 @@ class ReservationForm(forms.ModelForm):
             )
             if self.instance.pk:
                 overlapping = overlapping.exclude(pk=self.instance.pk)
-            if overlapping.exists():
-                raise ValidationError('This room is already reserved for these dates')
-        check_out = cleaned_data.get('check_out')
-        status = cleaned_data.get('status') if self.is_edit else 'pending'
-        payment_method = cleaned_data.get('payment_method') if self.is_edit else ''
-
-        if check_in and check_out and room:
-            if check_out <= check_in:
-                raise ValidationError("Check-out date must be after check-in date.")
-
-            overlapping = Reservation.objects.filter(
-                room=room,
-                check_in__lt=check_out,
-                check_out__gt=check_in,
-                status__in=['confirmed', 'expected_arrival']
-            ).exclude(id=self.instance.id)
-
             if overlapping.exists():
                 raise ValidationError(f"Room {room.room_number} is already booked for the selected dates.")
 

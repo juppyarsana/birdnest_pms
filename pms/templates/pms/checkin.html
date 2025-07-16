@@ -18,6 +18,16 @@
     <i class="bi bi-info-circle"></i> Check-in is allowed between {{ earliest_check_in }} and {{ latest_check_in }}
   </div>
 
+  <!-- Room Status Alert -->
+  {% if not room_ready %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> 
+    <strong>Room Not Ready:</strong> Room {{ reservation.room.room_number }} is currently 
+    <strong>{{ reservation.room.get_status_display }}</strong>. 
+    The room must be cleaned and marked as "Vacant Clean" before check-in can be completed.
+  </div>
+  {% endif %}
+
   <form method="post" class="needs-validation" novalidate id="checkinForm">
     {% csrf_token %}
     <div class="row">
@@ -56,13 +66,22 @@
               <li class="list-group-item"><b>Check-out:</b> {{ reservation.check_out }}</li>
               <li class="list-group-item"><b>Status:</b> {{ reservation.get_status_display }}</li>
               <li class="list-group-item"><b>Num Guests:</b> {{ reservation.num_guests }}</li>
+              <li class="list-group-item">
+                <b>Room Status:</b> 
+                <span class="badge {% if room_ready %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                  {{ reservation.room.get_status_display }}
+                </span>
+              </li>
             </ul>
           </div>
         </div>
       </div>
     </div>
     <div class="mt-4">
-      <button type="submit" class="btn btn-success" id="checkinButton" data-bs-toggle="tooltip" data-bs-placement="top" title="Check-in is only allowed during the allowed time window. Please try again later.">
+      <button type="submit" class="btn btn-success" id="checkinButton" 
+              {% if not can_checkin %}disabled{% endif %}
+              data-bs-toggle="tooltip" data-bs-placement="top" 
+              title="{% if not room_ready %}Room must be cleaned first{% elif not time_allowed %}Check-in only allowed during specified hours{% else %}Complete check-in process{% endif %}">
         <i class="bi bi-check-circle"></i> Complete Check-In
       </button>
       <a href="{% if request.GET.from == 'calendar' %}{% url 'calendar' %}{% elif request.GET.from == 'guest' %}{% url 'guest_detail' reservation.guest.id %}{% else %}{% url 'reservations_list' %}{% endif %}" class="btn btn-secondary">
@@ -134,7 +153,20 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check time validity and update button state
   function updateButtonState() {
     const checkinButton = document.getElementById('checkinButton')
-    checkinButton.disabled = !checkTimeValidity()
+    const roomReady = {{ room_ready|yesno:"true,false" }}
+    const timeValid = checkTimeValidity()
+    
+    // Only enable if both room is ready and time is valid
+    checkinButton.disabled = !(roomReady && timeValid)
+    
+    // Update tooltip
+    let tooltipText = 'Complete check-in process'
+    if (!roomReady) {
+      tooltipText = 'Room must be cleaned first'
+    } else if (!timeValid) {
+      tooltipText = 'Check-in only allowed during specified hours'
+    }
+    checkinButton.setAttribute('title', tooltipText)
   }
 
   // Initialize Bootstrap tooltip
@@ -154,7 +186,12 @@ document.addEventListener('DOMContentLoaded', function() {
   checkinButton.addEventListener('click', function(event) {
     if (checkinButton.disabled) {
       event.preventDefault();
-      alert('Check-in is only allowed during the allowed time window. Please try again later.');
+      const roomReady = {{ room_ready|yesno:"true,false" }}
+      if (!roomReady) {
+        alert('Cannot check-in: Room must be cleaned and marked as "Vacant Clean" first.');
+      } else {
+        alert('Check-in is only allowed during the specified time window.');
+      }
     }
   });
 });

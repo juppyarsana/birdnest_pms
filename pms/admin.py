@@ -10,8 +10,8 @@ class RoomAdmin(admin.ModelAdmin):
     display_rate.short_description = 'Rate'
 
 class ReservationAdmin(admin.ModelAdmin):
-    list_display = ('guest', 'room', 'check_in', 'check_out', 'status')
-    list_filter = ('status', 'check_in', 'check_out')
+    list_display = ('guest', 'room', 'check_in', 'check_out', 'agent', 'status')
+    list_filter = ('status', 'agent', 'check_in', 'check_out')
     search_fields = ('guest__name', 'room__room_number')
 
     def get_queryset(self, request):
