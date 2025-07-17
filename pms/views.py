@@ -15,6 +15,7 @@ def reservations_list(request):
     sort_field = request.GET.get('sort', 'check_in')
     sort_direction = request.GET.get('direction', 'desc')
     status_filter = request.GET.get('status', '')
+    date_filter = request.GET.get('date_filter', '')  # New date filter
     
     # Get search parameter
     search_query = request.GET.get('search', '').strip()
@@ -32,6 +33,23 @@ def reservations_list(request):
     if status_filter:
         reservations = reservations.filter(status=status_filter)
         print(f"Debug: Filtered by status '{status_filter}', found {len(reservations)} reservations")
+
+    # Apply date filter
+    if date_filter == 'today':
+        today = date.today()
+        reservations = reservations.filter(
+            check_in__lte=today,
+            check_out__gt=today
+        )
+        print(f"Debug: Filtered by today's date, found {len(reservations)} reservations")
+    elif date_filter == 'checking_in_today':
+        today = date.today()
+        reservations = reservations.filter(check_in=today)
+        print(f"Debug: Filtered by check-in today, found {len(reservations)} reservations")
+    elif date_filter == 'checking_out_today':
+        today = date.today()
+        reservations = reservations.filter(check_out=today)
+        print(f"Debug: Filtered by check-out today, found {len(reservations)} reservations")
 
     # Apply search filter if provided
     if search_query:
@@ -77,6 +95,7 @@ def reservations_list(request):
         'current_sort': sort_field,
         'current_direction': sort_direction,
         'current_status_filter': status_filter,
+        'current_date_filter': date_filter,  # New context variable
         'current_search_query': search_query,
         'all_statuses': all_statuses
     }

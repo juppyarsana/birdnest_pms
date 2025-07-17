@@ -20,25 +20,34 @@
         <div class="card shadow-sm border-0 rounded-3 mb-4 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             <div class="card-body p-4">
                 <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <h5 class="text-white mb-2 fw-bold">
+                    <div class="col-md-5">
+                        <h5 class="text-white mb-2 fw-bold d-flex align-items-center">
                             <i class="bi bi-funnel-fill me-2"></i>Filter Reservations
                         </h5>
                         <p class="text-white-50 mb-0 small">Filter reservations by status to find what you're looking for</p>
                     </div>
-                    <div class="col-md-6">
-                        <form method="GET" class="d-flex gap-3 align-items-end" id="filterForm">
-                            <div class="flex-grow-1">
+                    <div class="col-md-7">
+                        <form method="GET" class="d-flex gap-2 align-items-end" id="filterForm" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                            <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                                <label for="dateFilter" class="form-label text-white small fw-medium mb-1">Date Filter</label>
+                                <select name="date_filter" id="dateFilter" class="form-select border-0 shadow-sm" style="background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); height: 48px; color: #333;">
+                                    <option value="" style="color: #666;">All Dates</option>
+                                    <option value="today" {% if current_date_filter == 'today' %}selected{% endif %}>📅 Active Today</option>
+                                    <option value="checking_in_today" {% if current_date_filter == 'checking_in_today' %}selected{% endif %}>🔑 Checking In Today</option>
+                                    <option value="checking_out_today" {% if current_date_filter == 'checking_out_today' %}selected{% endif %}>🚪 Checking Out Today</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1.5; min-width: 200px;">
                                 <label for="searchInput" class="form-label text-white small fw-medium mb-1">Search</label>
                                 <input type="text" name="search" id="searchInput" class="form-control border-0 shadow-sm" 
-                                       style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); height: 48px;" 
+                                       style="background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); height: 48px; color: #333;" 
                                        placeholder="Search by guest name, email, phone, or room..." 
                                        value="{{ current_search_query }}">
                             </div>
-                            <div class="flex-grow-1">
+                            <div style="flex: 1; min-width: 120px; max-width: 160px;">
                                 <label for="statusFilter" class="form-label text-white small fw-medium mb-1">Status</label>
-                                <select name="status" id="statusFilter" class="form-select border-0 shadow-sm" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); height: 48px;">
-                                    <option value="">All Statuses</option>
+                                <select name="status" id="statusFilter" class="form-select border-0 shadow-sm" style="background: rgba(255,255,255,0.98); backdrop-filter: blur(10px); height: 48px; color: #333;">
+                                    <option value="" style="color: #666;">All Statuses</option>
                                     {% for status in all_statuses %}
                                         <option value="{{ status }}" {% if current_status_filter == status %}selected{% endif %}>
                                             {% if status == 'pending' %}🟡 Pending
@@ -55,15 +64,15 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 20px;" title="Apply Filters">
-                                    <i class="bi bi-search"></i> Search
-                                </button>
-                                {% if current_status_filter or current_search_query %}
-                                    <a href="?sort={{ current_sort }}&direction={{ current_direction }}" class="btn btn-outline-light shadow-sm border-0 d-flex align-items-center" style="height: 48px; padding: 0 20px;" title="Clear All Filters">
+                            <div class="d-flex gap-2" style="flex-shrink: 0; min-width: {% if current_status_filter or current_search_query or current_date_filter %}180px{% else %}100px{% endif %};">
+                                {% if current_status_filter or current_search_query or current_date_filter %}
+                                    <a href="?sort={{ current_sort }}&direction={{ current_direction }}" class="btn btn-outline-light shadow-sm border-0 d-flex align-items-center" style="height: 48px; padding: 0 16px;" title="Clear All Filters">
                                         <i class="bi bi-x-circle"></i> Clear
                                     </a>
                                 {% endif %}
+                                <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Apply Filters">
+                                    <i class="bi bi-search"></i> Search
+                                </button>
                             </div>
                             <!-- Preserve sort parameters -->
                             <input type="hidden" name="sort" value="{{ current_sort }}">
@@ -71,16 +80,24 @@
                         </form>
                     </div>
                 </div>
-                {% if current_status_filter or current_search_query %}
+                {% if current_status_filter or current_search_query or current_date_filter %}
                     <div class="mt-3 pt-3 border-top border-white border-opacity-25">
-                        <div class="d-flex align-items-center text-white flex-wrap gap-3">
+                        <div class="d-flex align-items-center text-white gap-3">
                             <i class="bi bi-info-circle me-2"></i>
-                            <div class="d-flex flex-wrap gap-3 small">
+                            <div class="d-flex gap-3 small" style="flex-wrap: nowrap; overflow-x: auto;">
                                 {% if current_search_query %}
-                                    <span>Search: <strong class="text-warning">"{{ current_search_query }}"</strong></span>
+                                    <span style="white-space: nowrap;">Search: <strong class="text-warning">"{{ current_search_query }}"</strong></span>
+                                {% endif %}
+                                {% if current_date_filter %}
+                                    <span style="white-space: nowrap;">Date: <strong class="text-warning">
+                                        {% if current_date_filter == 'today' %}Active Today
+                                        {% elif current_date_filter == 'checking_in_today' %}Checking In Today
+                                        {% elif current_date_filter == 'checking_out_today' %}Checking Out Today
+                                        {% endif %}
+                                    </strong></span>
                                 {% endif %}
                                 {% if current_status_filter %}
-                                    <span>Status: <strong class="text-warning">{{ current_status_filter|title }}</strong></span>
+                                    <span style="white-space: nowrap;">Status: <strong class="text-warning">{{ current_status_filter|title }}</strong></span>
                                 {% endif %}
                             </div>
                         </div>
@@ -437,6 +454,31 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+#filterForm input::placeholder {
+    color: #666 !important;
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+#filterForm select option:first-child {
+    color: #666;
+    font-style: italic;
+}
+
+#filterForm .form-control,
+#filterForm .form-select {
+    background: rgba(255,255,255,0.98) !important;
+    color: #333 !important;
+    font-weight: 500;
+}
+
+#filterForm .form-control:focus,
+#filterForm .form-select:focus {
+    background: rgba(255,255,255,1) !important;
+    box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.25);
+}
+</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     function confirmCancel(reservationId) {
