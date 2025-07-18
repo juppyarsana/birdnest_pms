@@ -58,6 +58,7 @@ class Room(models.Model):
     def __str__(self):
         return f"Room {self.room_number}"
 
+    # Room status logic
     def update_status(self, date=None):
         """Update room status based on reservations.
         A room is occupied if there's an active reservation for the given date."""
@@ -76,20 +77,17 @@ class Room(models.Model):
             self.save()
             return
         # Check if there are any active reservations for this room on the given date
-        # Exclude checked_out, canceled, and no_show reservations
         is_occupied = Reservation.objects.filter(
             Q(room=self) &
             Q(check_in__lte=date) &
-            Q(check_out__gt=date) &  # Use > instead of >= for check_out
+            Q(check_out__gt=date) &
             Q(status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure'])
         ).exists()
+        
         if is_occupied:
             self.status = 'occupied'
         else:
-            # If previously vacant_dirty, do not set to vacant_clean automatically
-            if self.status == 'vacant_dirty':
-                pass
-            else:
+            if self.status != 'vacant_dirty':
                 self.status = 'vacant_clean'
         self.save()
 

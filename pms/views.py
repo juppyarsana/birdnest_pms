@@ -270,6 +270,7 @@ def dashboard(request):
 
     # Filter reservations by status
     pending_reservations = Reservation.objects.filter(status='pending')
+    confirmed_reservations = Reservation.objects.filter(status='confirmed')  # Add this line
     expected_arrivals = Reservation.objects.filter(status='expected_arrival')
     checked_in_reservations = Reservation.objects.filter(status='in_house')
     expected_departures = Reservation.objects.filter(status='expected_departure')
@@ -282,6 +283,7 @@ def dashboard(request):
         'rooms': rooms,
         'reservations': reservations,
         'pending_reservations': pending_reservations,
+        'confirmed_reservations': confirmed_reservations,  # Add this line
         'expected_arrivals': expected_arrivals,
         'checked_in_reservations': checked_in_reservations,
         'expected_departures': expected_departures,

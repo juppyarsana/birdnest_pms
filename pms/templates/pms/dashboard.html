@@ -17,7 +17,18 @@
     .room-status-bar.vacant_clean { background-color: #198754; }
     .room-content { padding: 1rem; }
     .room-number { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
-    .room-guest { font-weight: 500; color: #0d6efd; }
+    .room-guest {
+        font-weight: 500;
+        color: #0d6efd;
+        margin-bottom: 0.25rem;
+    }
+    .room-guest:last-child {
+        margin-bottom: 0;
+    }
+    .room-guest .small {
+        font-size: 0.75rem;
+        font-weight: 400;
+    }
     .room-cards::-webkit-scrollbar { height: 6px; }
     .room-cards::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
     .room-cards::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
@@ -112,15 +123,47 @@
             </div>
             <div class="room-content">
                 <div class="room-number">Room {{ room.room_number }}</div>
-                {% if room.status == 'occupied' %}
-                    {% for reservation in checked_in_reservations %}  {# in_house reservations #}
-                        {% if reservation.room == room %}
-                            <div class="room-guest">
-                                <i class="bi bi-person"></i> {{ reservation.guest.name }}
-                            </div>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
+                
+                {# Show guest information for all active reservation statuses #}
+                {% comment %} Check for in_house reservations {% endcomment %}
+                {% for reservation in checked_in_reservations %}
+                    {% if reservation.room == room %}
+                        <div class="room-guest">
+                            <i class="bi bi-person-fill"></i> {{ reservation.guest.name }}
+                            <div class="text-muted small">In House</div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+                {% comment %} Check for confirmed reservations {% endcomment %}
+                {% for reservation in confirmed_reservations %}
+                    {% if reservation.room == room %}
+                        <div class="room-guest">
+                            <i class="bi bi-check-circle"></i> {{ reservation.guest.name }}
+                            <div class="text-muted small">Confirmed</div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+                {% comment %} Check for expected arrival reservations {% endcomment %}
+                {% for reservation in expected_arrivals %}
+                    {% if reservation.room == room %}
+                        <div class="room-guest">
+                            <i class="bi bi-box-arrow-in-right"></i> {{ reservation.guest.name }}
+                            <div class="text-muted small">Expected Arrival</div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+                {% comment %} Check for expected departure reservations {% endcomment %}
+                {% for reservation in expected_departures %}
+                    {% if reservation.room == room %}
+                        <div class="room-guest">
+                            <i class="bi bi-box-arrow-right"></i> {{ reservation.guest.name }}
+                            <div class="text-muted small">Expected Departure</div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
         {% endfor %}
