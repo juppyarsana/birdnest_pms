@@ -371,6 +371,12 @@
                         <span class="small">Guests</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link d-flex flex-column align-items-center" href="{% url 'occupancy_report' %}">
+                        <i class="bi bi-graph-up fs-4"></i>
+                        <span class="small">Reports</span>
+                    </a>
+                </li>
             </ul>
         </nav>
         <main class="main-content" style="flex:1;min-width:0;padding:2rem 2.5rem 2rem 2.5rem;margin-left:70px;padding-top:104px;">
@@ -402,3 +408,45 @@
     {% block extra_js %}{% endblock %}
 </body>
 </html>
+<nav class="sidebar" id="sidebarMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link d-flex flex-column align-items-center" href="{% url 'dashboard' %}">
+                <i class="bi bi-house-door fs-4"></i>
+                <span class="small">Dashboard</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex flex-column align-items-center" href="{% url 'reservations_list' %}">
+                <i class="bi bi-journal-text fs-4"></i>
+                <span class="small">Reservations</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex flex-column align-items-center" href="{% url 'rooms_list' %}">
+                <i class="bi bi-door-closed fs-4"></i>
+                <span class="small">Rooms</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex flex-column align-items-center" href="{% url 'guests' %}">
+                <i class="bi bi-people fs-4"></i>
+                <span class="small">Guests</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link d-flex flex-column align-items-center" href="{% url 'occupancy_report' %}">
+                <i class="bi bi-graph-up fs-4"></i>
+                <span class="small">Reports</span>
+            </a>
+        </li>
+    </ul>
+</nav>
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-graph-up"></i> Reports
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+        <li><a class="dropdown-item" href="{% url 'occupancy_report' %}">Occupancy Report</a></li>
+        <!-- Add more report links here as you develop them -->
+    </ul>

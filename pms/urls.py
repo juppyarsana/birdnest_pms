@@ -6,7 +6,7 @@ from .views import (
     checkout_reservation, cancel_reservation, edit_reservation,
     reservations_list, reservation_detail, rooms_list,
     guests, guest_detail, guest_list_json, check_reservation_conflict,
-    check_available_rooms
+    check_available_rooms, occupancy_report
 )
 
 def calendar_view(request):
@@ -34,6 +34,7 @@ urlpatterns = [
     path('guests/json/', guest_list_json, name='guest_list_json'),
     path('api/check-conflict/', check_reservation_conflict, name='check_reservation_conflict'),
     path('api/check-available-rooms/', check_available_rooms, name='check_available_rooms'),
+    path('reports/occupancy/', occupancy_report, name='occupancy_report'),
 ]
 
 print("Debug: URL patterns loaded:")

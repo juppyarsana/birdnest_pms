@@ -224,48 +224,72 @@ def dashboard(request):
         for room in rooms:
             room.update_status(today)
 
-    # Current reservations (active today, confirmed/arrival/in_house only)
+    # Current reservations (active today) - Updated for consistency
+    actual_room_count = Room.objects.count()  # Use actual room count
+    occupied_rooms_today = 0
+    
+    for room in Room.objects.all():
+        is_occupied = Reservation.objects.filter(
+            room=room,
+            check_in__lte=today,
+            check_out__gt=today,  # Don't count check-out day
+            status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+        ).exists()
+        if is_occupied:
+            occupied_rooms_today += 1
+    
+    daily_occupancy = (occupied_rooms_today / actual_room_count) * 100 if actual_room_count > 0 else 0
+    
+    # Get reservations for display purposes
     reservations = Reservation.objects.filter(
         check_in__lte=today,
         check_out__gt=today,
         status__in=['confirmed', 'expected_arrival', 'in_house']
     )
-    daily_occupancy = (len(reservations) / 5) * 100
 
-    # Weekly occupancy for current week (confirmed/arrival/departure/in_house/checked_out)
+    # Weekly occupancy - Updated to match occupancy report logic
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=7)
     days_in_week = 7
-    total_room_nights_week = 5 * days_in_week
+    actual_room_count = Room.objects.count()
+    total_room_nights_week = actual_room_count * days_in_week
     booked_room_nights_week = 0
-    weekly_reservations = Reservation.objects.filter(
-        check_in__lt=week_end,
-        check_out__gt=week_start,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
-    )
-    for res in weekly_reservations:
-        start = max(res.check_in, week_start)
-        end = min(res.check_out, week_end)
-        booked_room_nights_week += (end - start).days
+    
+    # Calculate day-by-day for consistency
+    for current_date in [week_start + timedelta(days=i) for i in range(days_in_week)]:
+        for room in Room.objects.all():
+            is_occupied = Reservation.objects.filter(
+                room=room,
+                check_in__lte=current_date,
+                check_out__gt=current_date,  # Don't count check-out day
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+            ).exists()
+            if is_occupied:
+                booked_room_nights_week += 1
+    
     weekly_occupancy = (booked_room_nights_week / total_room_nights_week) * 100 if total_room_nights_week > 0 else 0
 
     # Monthly occupancy for current month (confirmed/arrival/departure/in_house/checked_out)
     year = today.year
     month = today.month
     days_in_month = monthrange(year, month)[1]
-    total_room_nights = 5 * days_in_month
+    actual_room_count = Room.objects.count()  # Get actual room count
+    total_room_nights = actual_room_count * days_in_month  # Use actual count instead of hardcoded 5
     booked_room_nights = 0
     month_start = date(year, month, 1)
     month_end = month_start + timedelta(days=days_in_month)
-    monthly_reservations = Reservation.objects.filter(
-        check_in__lt=month_end,
-        check_out__gt=month_start,
-        status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
-    )
-    for res in monthly_reservations:
-        start = max(res.check_in, month_start)
-        end = min(res.check_out, month_end)
-        booked_room_nights += (end - start).days
+    
+    # Monthly occupancy - Updated to match occupancy report logic
+    for current_date in [month_start + timedelta(days=i) for i in range(days_in_month)]:
+        for room in Room.objects.all():
+            is_occupied = Reservation.objects.filter(
+                room=room,
+                check_in__lte=current_date,
+                check_out__gt=current_date,  # Don't count check-out day
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+            ).exists()
+            if is_occupied:
+                booked_room_nights += 1
     monthly_occupancy = (booked_room_nights / total_room_nights) * 100 if total_room_nights > 0 else 0
 
     # Filter reservations by status
@@ -760,3 +784,663 @@ def check_available_rooms(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+def occupancy_report(request):
+    """View for generating detailed occupancy reports"""
+    # Get date range parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    room_type = request.GET.get('room_type', '')
+    
+    # Default to current month if no dates provided
+    today = date.today()
+    if not start_date_str:
+        # Default to first day of current month
+        start_date = date(today.year, today.month, 1)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        # Default to last day of current month
+        last_day = monthrange(today.year, today.month)[1]
+        end_date = date(today.year, today.month, last_day)
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Get all rooms, filtered by type if specified
+    rooms = Room.objects.all()
+    if room_type:
+        rooms = rooms.filter(room_type=room_type)
+    
+    # Calculate date range
+    date_range = (end_date - start_date).days + 1
+    dates = [start_date + timedelta(days=i) for i in range(date_range)]
+
+    # Filter reservations by status
+    pending_reservations = Reservation.objects.filter(status='pending')
+    confirmed_reservations = Reservation.objects.filter(status='confirmed')  # Add this line
+    expected_arrivals = Reservation.objects.filter(status='expected_arrival')
+    checked_in_reservations = Reservation.objects.filter(status='in_house')
+    expected_departures = Reservation.objects.filter(status='expected_departure')
+    canceled_reservations = Reservation.objects.filter(status='canceled')
+    no_show_reservations = Reservation.objects.filter(status='no_show')
+    checked_out_reservations = Reservation.objects.filter(status='checked_out')
+    all_reservations = Reservation.objects.all()
+
+    return render(request, 'pms/dashboard.html', {
+        'rooms': rooms,
+        'reservations': reservations,
+        'pending_reservations': pending_reservations,
+        'confirmed_reservations': confirmed_reservations,  # Add this line
+        'expected_arrivals': expected_arrivals,
+        'checked_in_reservations': checked_in_reservations,
+        'expected_departures': expected_departures,
+        'canceled_reservations': canceled_reservations,
+        'no_show_reservations': no_show_reservations,
+        'checked_out_reservations': checked_out_reservations,
+        'daily_occupancy': daily_occupancy,
+        'weekly_occupancy': weekly_occupancy,
+        'monthly_occupancy': monthly_occupancy,
+        'target_occupancy': 80,
+        'month_name': today.strftime('%B %Y'),
+        'all_reservations': all_reservations
+    })
+
+def create_reservation(request):
+    initial_data = {}
+    if 'check_in' in request.GET:
+        initial_data['check_in'] = request.GET['check_in']
+
+    if request.method == 'POST':
+        form = ReservationForm(request.POST, edit=False)
+        if form.is_valid():
+            form.save()
+            return redirect('dashboard')
+    else:
+        form = ReservationForm(initial=initial_data, edit=False)
+    return render(request, 'pms/reservation_form.html', {'form': form})
+
+def edit_reservation(request, reservation_id):
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    if request.method == 'POST':
+        form = ReservationForm(request.POST, instance=reservation, edit=True)
+        if form.is_valid():
+            form.save()
+            return redirect('reservations_list')
+    else:
+        form = ReservationForm(instance=reservation, edit=True)
+    return render(request, 'pms/reservation_form.html', {'form': form, 'reservation': reservation, 'editing': True})
+
+def confirm_reservation(request, reservation_id):
+    """Confirm a pending reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id, status='pending')
+    
+    # Check for conflicting pending reservations for the same room and overlapping dates
+    conflicting_reservations = Reservation.objects.filter(
+        room=reservation.room,
+        status='pending',
+        check_in__lt=reservation.check_out,
+        check_out__gt=reservation.check_in
+    ).exclude(id=reservation.id)
+    
+    # Check for active conflicts that would prevent confirmation
+    active_conflicts = Reservation.objects.filter(
+        room=reservation.room,
+        status__in=['confirmed', 'expected_arrival', 'in_house'],
+        check_in__lt=reservation.check_out,
+        check_out__gt=reservation.check_in
+    )
+    
+    # Determine if confirmation should be disabled
+    has_conflicts = conflicting_reservations.exists() or active_conflicts.exists()
+    
+    if request.method == 'POST' and not has_conflicts:
+        form = ConfirmReservationForm(request.POST, instance=reservation)
+        if form.is_valid():
+            reservation = form.save()
+            reservation.status = 'confirmed'  # Set status manually
+            reservation.save()
+            # Update room status after confirmation
+            reservation.room.update_status()
+            messages.success(request, f'Reservation for {reservation.guest.name} has been confirmed successfully!')
+            return redirect('dashboard')
+    elif request.method == 'POST' and has_conflicts:
+        messages.error(request, 'Cannot confirm reservation: There are conflicting reservations for this room and date range.')
+        form = ConfirmReservationForm(request.POST, instance=reservation)
+    else:
+        form = ConfirmReservationForm(instance=reservation)
+    
+    return render(request, 'pms/confirm_reservation.html', {
+        'reservation': reservation, 
+        'form': form,
+        'conflicting_reservations': conflicting_reservations,
+        'active_conflicts': active_conflicts,
+        'has_conflicts': has_conflicts
+    })
+
+def calendar_data(request):
+    reservations = Reservation.objects.all()
+    events = []
+    for reservation in reservations:
+        colors = {
+            'pending': '#FF9800',  # Orange (Pending)
+            'confirmed': '#9C27B0',  # Purple (Confirmed)
+            'expected_arrival': '#4CAF50',  # Green (Expected Arrival)
+            'in_house': '#673AB7',  # Deep Purple (In House)
+            'expected_departure': '#2196F3',  # Blue (Expected Departure)
+            'checked_out': '#00bcd4',  # Cyan (Checked Out)
+            'canceled': '#795548',  # Brown (Canceled)
+            'no_show': '#F44336',  # Red (No Show)
+        }
+        events.append({
+            'id': reservation.id,
+            'title': f"{reservation.guest.name} - {reservation.room.room_number} ({reservation.status})",
+            'start': reservation.check_in.isoformat(),
+            'end': reservation.check_out.isoformat(),
+            'color': colors.get(reservation.status, '#9C27B0'),
+        })
+    return JsonResponse(events, safe=False)
+
+def reservation_detail(request, reservation_id):
+    """View to display detailed information about a specific reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    
+    # Check if edit mode is requested via URL parameter
+    edit_mode = request.GET.get('edit', 'false').lower() == 'true'
+    form = None
+    
+    if request.method == 'POST':
+        # Handle in-place editing
+        form = ReservationForm(request.POST, instance=reservation, edit=True)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Reservation updated successfully!')
+            # Preserve the 'from' parameter in redirect
+            from_param = request.GET.get('from', '')
+            if from_param:
+                return redirect(f"{request.path}?from={from_param}")
+            return redirect('reservation_detail', reservation_id=reservation.id)
+        else:
+            # Set edit mode to true when there are validation errors
+            edit_mode = True
+            # Add form errors to messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field.title()}: {error}")
+    
+    # Get available rooms for the room selection dropdown
+    # Include current room and other available rooms
+    available_rooms = Room.objects.filter(
+        status__in=['vacant_clean', 'occupied']
+    ).order_by('room_number')
+    
+    # If editing, we need to check room availability for the date range
+    # but exclude the current reservation from the check
+    if reservation.status in ['pending', 'confirmed']:
+        # Get rooms that are either the current room or available for the dates
+        from django.db.models import Q
+        available_rooms = Room.objects.filter(
+            Q(id=reservation.room.id) |  # Current room
+            Q(status='vacant_clean')  # Available rooms
+        ).order_by('room_number')
+    
+    context = {
+        'reservation': reservation,
+        'available_rooms': available_rooms,
+        'auto_edit': edit_mode,
+        'form': form,  # Pass form to template for error display
+    }
+    return render(request, 'pms/reservation_detail.html', context)
+
+def checkout_reservation(request, reservation_id):
+    """Check out a guest"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    if request.method == 'POST' and reservation.status in ['in_house', 'expected_departure']:
+        reservation.status = 'checked_out'
+        reservation.save()
+        # Update room status with today's date
+        today = date.today()
+        reservation.room.status = 'vacant_dirty'
+        reservation.room.save()
+        reservation.room.update_status(today)
+        return redirect('reservations_list')
+    return redirect('reservations_list')
+
+def cancel_reservation(request, reservation_id):
+    """Cancel a reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+    if request.method == 'POST' and reservation.status not in ['completed', 'canceled', 'no_show']:
+        reason = request.POST.get('cancellation_reason', '').strip()
+        reservation.status = 'canceled'
+        reservation.cancellation_reason = reason
+        reservation.save()
+        # Set room status to vacant_dirty so it can be cleaned before rebooking
+        reservation.room.status = 'vacant_dirty'
+        reservation.room.save()
+        reservation.room.update_status()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'success': True, 'status': 'canceled', 'reason': reason})
+        return redirect('reservations_list')
+    return render(request, 'pms/cancel_reservation.html', {'reservation': reservation})
+
+
+
+def rooms_list(request):
+    """View for housekeeping to update room statuses"""
+    from .models import Room
+    from django.shortcuts import redirect
+    if request.method == 'POST':
+        room_id = request.POST.get('room_id')
+        room = Room.objects.get(id=room_id)
+        # Only allow changing from vacant_dirty to vacant_clean
+        if room.status == 'vacant_dirty':
+            room.status = 'vacant_clean'
+            room.save()
+        return redirect('rooms_list')
+    rooms = Room.objects.all()
+    return render(request, 'pms/rooms.html', {'rooms': rooms})
+
+
+def guests(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        email = request.POST.get('email', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        id_type = request.POST.get('id_type', '').strip()
+        id_number = request.POST.get('id_number', '').strip()
+        date_of_birth = request.POST.get('date_of_birth', '').strip()
+        address = request.POST.get('address', '').strip()
+        emergency_contact_name = request.POST.get('emergency_contact_name', '').strip()
+        emergency_contact_phone = request.POST.get('emergency_contact_phone', '').strip()
+        if name:
+            guest = Guest(
+                name=name,
+                email=email,
+                phone=phone,
+                id_type=id_type,
+                id_number=id_number,
+                address=address,
+                emergency_contact_name=emergency_contact_name,
+                emergency_contact_phone=emergency_contact_phone
+            )
+            if date_of_birth:
+                guest.date_of_birth = date_of_birth
+            try:
+                guest.save()
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'guest_id': guest.id})
+            except Exception as e:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': str(e)})
+                from django.contrib import messages
+                messages.error(request, f"Could not add guest: {str(e)}")
+        else:
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': 'Name is required.'})
+            from django.contrib import messages
+            messages.error(request, "Name is required.")
+        from django.shortcuts import redirect
+        return redirect('guests')
+    
+    # Handle GET request: render guests.html with guest list and metrics
+    from django.db.models import Count
+    
+    guests = Guest.objects.all().order_by('-id')
+    
+    # Calculate metrics
+    today = date.today()
+    current_month = today.month
+    current_year = today.year
+    
+    # 1. Total guests
+    total_guests = guests.count()
+    
+    # 2. Birthday this month
+    birthday_this_month = guests.filter(
+        date_of_birth__month=current_month
+    ).count()
+    
+    # 3. Recurring guests (guests with more than 1 reservation)
+    recurring_guests = guests.annotate(
+        reservation_count=Count('reservation')
+    ).filter(reservation_count__gt=1).count()
+    
+    # 4. Long stay guests (guests who have reservations more than 1 day)
+    from django.db.models import F, ExpressionWrapper, IntegerField
+    from django.db.models.functions import Extract
+    
+    long_stay_guests = Guest.objects.filter(
+        reservation__in=Reservation.objects.annotate(
+            stay_duration=ExpressionWrapper(
+                F('check_out') - F('check_in'),
+                output_field=IntegerField()
+            )
+        ).filter(stay_duration__gt=1)
+    ).distinct().count()
+    
+    context = {
+        'guests': guests,
+        'total_guests': total_guests,
+        'birthday_this_month': birthday_this_month,
+        'recurring_guests': recurring_guests,
+        'long_stay_guests': long_stay_guests,
+    }
+    
+    return render(request, 'pms/guests.html', context)
+
+def guest_detail(request, guest_id):
+    """View to display detailed information about a specific guest"""
+    from .forms import GuestForm
+    from django.contrib import messages
+    
+    guest = get_object_or_404(Guest, id=guest_id)
+    
+    # Handle POST request for editing guest information
+    if request.method == 'POST':
+        form = GuestForm(request.POST, instance=guest)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Guest information updated successfully!')
+            return redirect('guest_detail', guest_id=guest.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+            # Return to edit mode if there are errors
+            edit_mode = True
+    else:
+        form = GuestForm(instance=guest)
+        # Check if edit mode is requested via URL parameter
+        edit_mode = request.GET.get('edit', 'false').lower() == 'true'
+    
+    # Get guest's reservation history with nights calculation
+    reservations = Reservation.objects.filter(guest=guest).order_by('-check_in')
+    
+    # Add nights calculation to each reservation
+    for reservation in reservations:
+        reservation.nights = (reservation.check_out - reservation.check_in).days
+    
+    # Calculate guest statistics
+    total_reservations = reservations.count()
+    completed_stays = reservations.filter(status='completed').count()
+    
+    # Calculate total nights stayed
+    total_nights = 0
+    for reservation in reservations.filter(status__in=['completed', 'checked_out']):
+        nights = (reservation.check_out - reservation.check_in).days
+        total_nights += nights
+    
+    # Get upcoming reservations
+    upcoming_reservations = reservations.filter(
+        status__in=['pending', 'confirmed', 'expected_arrival', 'in_house'],
+        check_in__gte=date.today()
+    )
+    
+    # Get current reservation (if any)
+    current_reservation = reservations.filter(status='in_house').first()
+    
+    context = {
+        'guest': guest,
+        'form': form,
+        'reservations': reservations,
+        'total_reservations': total_reservations,
+        'completed_stays': completed_stays,
+        'total_nights': total_nights,
+        'upcoming_reservations': upcoming_reservations,
+        'current_reservation': current_reservation,
+        'auto_edit': edit_mode,
+    }
+    return render(request, 'pms/guest_detail.html', context)
+
+def guest_list_json(request):
+    guests = Guest.objects.all().order_by('-id')
+    data = [
+        {
+            "id": g.id, 
+            "name": g.name,
+            "email": g.email or "",
+            "phone": g.phone or ""
+        } for g in guests
+    ]
+    return JsonResponse({"guests": data})
+
+def check_reservation_conflict(request):
+    """AJAX endpoint to check for reservation conflicts"""
+    if request.method == 'GET':
+        room_id = request.GET.get('room_id')
+        check_in = request.GET.get('check_in')
+        check_out = request.GET.get('check_out')
+        current_reservation_id = request.GET.get('current_reservation_id')
+        
+        if not all([room_id, check_in, check_out]):
+            return JsonResponse({'error': 'Missing required parameters'}, status=400)
+        
+        try:
+            from datetime import datetime
+            check_in_date = datetime.strptime(check_in, '%Y-%m-%d').date()
+            check_out_date = datetime.strptime(check_out, '%Y-%m-%d').date()
+            
+            if check_out_date <= check_in_date:
+                return JsonResponse({
+                    'conflict': True,
+                    'message': 'Check-out date must be after check-in date'
+                })
+            
+            # Check for overlapping reservations
+            active_statuses = ['confirmed', 'expected_arrival', 'in_house']
+            overlapping = Reservation.objects.filter(
+                room_id=room_id,
+                check_in__lt=check_out_date,
+                check_out__gt=check_in_date,
+                status__in=active_statuses
+            )
+            
+            # Exclude current reservation if editing
+            if current_reservation_id:
+                overlapping = overlapping.exclude(id=current_reservation_id)
+            
+            if overlapping.exists():
+                conflicting_reservation = overlapping.first()
+                return JsonResponse({
+                    'conflict': True,
+                    'message': f'Room is already reserved by {conflicting_reservation.guest.name} from {conflicting_reservation.check_in} to {conflicting_reservation.check_out}'
+                })
+            
+            return JsonResponse({'conflict': False})
+            
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+def check_available_rooms(request):
+    """AJAX endpoint to get available rooms for given dates"""
+    if request.method == 'GET':
+        check_in = request.GET.get('check_in')
+        check_out = request.GET.get('check_out')
+        
+        if not all([check_in, check_out]):
+            return JsonResponse({'error': 'Missing required parameters'}, status=400)
+        
+        try:
+            from datetime import datetime
+            check_in_date = datetime.strptime(check_in, '%Y-%m-%d').date()
+            check_out_date = datetime.strptime(check_out, '%Y-%m-%d').date()
+            
+            if check_out_date <= check_in_date:
+                return JsonResponse({
+                    'error': 'Check-out date must be after check-in date'
+                }, status=400)
+            
+            # Get all rooms
+            all_rooms = Room.objects.all()
+            
+            # Find rooms that have conflicting reservations
+            active_statuses = ['confirmed', 'expected_arrival', 'in_house']
+            conflicting_room_ids = Reservation.objects.filter(
+                check_in__lt=check_out_date,
+                check_out__gt=check_in_date,
+                status__in=active_statuses
+            ).values_list('room_id', flat=True)
+            
+            # Get available rooms (exclude conflicting ones)
+            available_rooms = all_rooms.exclude(id__in=conflicting_room_ids)
+            
+            # Format response data
+            rooms_data = []
+            for room in available_rooms:
+                rooms_data.append({
+                    'id': room.id,
+                    'room_number': room.room_number,
+                    'room_type': room.room_type,
+                    'price_per_night': float(room.rate),
+                    'status': room.status
+                })
+            
+            return JsonResponse({
+                'available_rooms': rooms_data,
+                'total_available': len(rooms_data)
+            })
+            
+        except ValueError:
+            return JsonResponse({'error': 'Invalid date format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+def occupancy_report(request):
+    """View for generating detailed occupancy reports"""
+    # Get date range parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    room_type = request.GET.get('room_type', '')
+    
+    # Default to current month if no dates provided
+    today = date.today()
+    if not start_date_str:
+        # Default to first day of current month
+        start_date = date(today.year, today.month, 1)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        # Default to last day of current month
+        last_day = monthrange(today.year, today.month)[1]
+        end_date = date(today.year, today.month, last_day)
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Get all rooms, filtered by type if specified
+    rooms = Room.objects.all()
+    if room_type:
+        rooms = rooms.filter(room_type=room_type)
+    
+    # Calculate date range
+    date_range = (end_date - start_date).days + 1
+    dates = [start_date + timedelta(days=i) for i in range(date_range)]
+    
+    # Initialize data structures
+    daily_occupancy = []
+    room_occupancy = {}
+    total_rooms = rooms.count()
+    total_room_nights = total_rooms * date_range
+    occupied_room_nights = 0
+    
+    # Calculate occupancy for each day
+    for current_date in dates:
+        occupied_rooms = 0
+        for room in rooms:
+            # Check if room is occupied on this date
+            is_occupied = Reservation.objects.filter(
+                room=room,
+                check_in__lte=current_date,
+                check_out__gt=current_date,
+                status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+            ).exists()
+            
+            if is_occupied:
+                occupied_rooms += 1
+                # Track occupancy by room
+                if room.room_number not in room_occupancy:
+                    room_occupancy[room.room_number] = 0
+                room_occupancy[room.room_number] += 1
+        
+        # Calculate daily occupancy percentage
+        daily_percentage = (occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0
+        occupied_room_nights += occupied_rooms
+        
+        # Add to daily occupancy list
+        daily_occupancy.append({
+            'date': current_date,
+            'occupied': occupied_rooms,
+            'total': total_rooms,
+            'percentage': daily_percentage
+        })
+    
+    # Calculate overall occupancy percentage
+    overall_occupancy = (occupied_room_nights / total_room_nights * 100) if total_room_nights > 0 else 0
+    
+    # Calculate occupancy by room type
+    room_type_occupancy = {}
+    for room_type_choice, room_type_name in Room.ROOM_TYPES:
+        type_rooms = rooms.filter(room_type=room_type_choice)
+        type_room_count = type_rooms.count()
+        if type_room_count > 0:
+            type_occupied_nights = 0
+            for current_date in dates:
+                for room in type_rooms:
+                    is_occupied = Reservation.objects.filter(
+                        room=room,
+                        check_in__lte=current_date,
+                        check_out__gt=current_date,
+                        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+                    ).exists()
+                    if is_occupied:
+                        type_occupied_nights += 1
+            
+            type_total_nights = type_room_count * date_range
+            type_percentage = (type_occupied_nights / type_total_nights * 100) if type_total_nights > 0 else 0
+            room_type_occupancy[room_type_name] = {
+                'occupied_nights': type_occupied_nights,
+                'total_nights': type_total_nights,
+                'percentage': type_percentage
+            }
+    
+    # Calculate day of week occupancy
+    weekday_occupancy = {i: {'occupied': 0, 'total': 0} for i in range(7)}
+    for entry in daily_occupancy:
+        weekday = entry['date'].weekday()
+        weekday_occupancy[weekday]['occupied'] += entry['occupied']
+        weekday_occupancy[weekday]['total'] += entry['total']
+    
+    # Calculate percentages for weekdays
+    for weekday, data in weekday_occupancy.items():
+        if data['total'] > 0:
+            data['percentage'] = (data['occupied'] / data['total']) * 100
+        else:
+            data['percentage'] = 0
+    
+    # Format weekday data for template
+    weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    weekday_data = [{
+        'name': weekday_names[i],
+        'percentage': weekday_occupancy[i]['percentage']
+    } for i in range(7)]
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'daily_occupancy': daily_occupancy,
+        'overall_occupancy': overall_occupancy,
+        'room_occupancy': sorted([(room, (nights/date_range)*100) for room, nights in room_occupancy.items()], 
+                                key=lambda x: x[1], reverse=True),
+        'room_type_occupancy': room_type_occupancy,
+        'weekday_data': weekday_data,
+        'room_types': Room.ROOM_TYPES,
+        'selected_room_type': room_type
+    }
+    
+    return render(request, 'pms/reports/occupancy_report.html', context)

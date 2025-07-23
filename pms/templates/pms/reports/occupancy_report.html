@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Occupancy Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        margin-bottom: 1.5rem;
+        border: none;
+    }
+    .chart-container {
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+    .progress {
+        height: 0.5rem;
+    }
+    .occupancy-high {
+        background-color: #28a745;
+    }
+    .occupancy-medium {
+        background-color: #ffc107;
+    }
+    .occupancy-low {
+        background-color: #dc3545;
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Occupancy Report</h1>
+            <p class="mb-0 text-muted">Detailed occupancy analysis and insights</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary" onclick="window.print()">
+                <i class="bi bi-printer"></i> Print Report
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="card shadow-sm border-0 rounded-3 mb-4" 
+         style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-md-5">
+                    <h5 class="text-white mb-2 fw-bold d-flex align-items-center">
+                        <i class="bi bi-funnel-fill me-2"></i>Filter Report
+                    </h5>
+                    <p class="text-white-50 mb-0 small">Customize your occupancy analysis</p>
+                </div>
+                <div class="col-md-7">
+                    <form method="get" class="d-flex gap-2 align-items-end" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                        <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                            <label for="start_date" class="form-label text-white small fw-medium mb-1">Start Date</label>
+                            <input type="date" class="form-control border-0 shadow-sm" id="start_date" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" 
+                                   style="background: rgba(255,255,255,0.95) !important; 
+                                          backdrop-filter: blur(15px) !important; 
+                                          -webkit-backdrop-filter: blur(15px) !important;
+                                          height: 48px !important; 
+                                          color: #333 !important; 
+                                          border: 1px solid rgba(255,255,255,0.2) !important;
+                                          box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                        </div>
+                        <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                            <label for="end_date" class="form-label text-white small fw-medium mb-1">End Date</label>
+                            <input type="date" class="form-control border-0 shadow-sm" id="end_date" name="end_date" 
+                                   value="{{ end_date|date:'Y-m-d' }}"
+                                   style="background: rgba(255,255,255,0.95) !important; 
+                                          backdrop-filter: blur(15px) !important; 
+                                          -webkit-backdrop-filter: blur(15px) !important;
+                                          height: 48px !important; 
+                                          color: #333 !important; 
+                                          border: 1px solid rgba(255,255,255,0.2) !important;
+                                          box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                        </div>
+                        <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                            <label for="room_type" class="form-label text-white small fw-medium mb-1">Room Type</label>
+                            <select class="form-select border-0 shadow-sm" id="room_type" name="room_type"
+                                    style="background: rgba(255,255,255,0.95) !important; 
+                                           backdrop-filter: blur(15px) !important; 
+                                           -webkit-backdrop-filter: blur(15px) !important;
+                                           height: 48px !important; 
+                                           color: #333 !important; 
+                                           border: 1px solid rgba(255,255,255,0.2) !important;
+                                           box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                                <option value="" style="color: #666;">All Room Types</option>
+                                {% for type_value, type_name in room_types %}
+                                    <option value="{{ type_value }}" {% if selected_room_type == type_value %}selected{% endif %}>{{ type_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2" style="flex-shrink: 0; min-width: 100px;">
+                            <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Apply Filters">
+                                <i class="bi bi-search"></i> Apply
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card stat-card text-center p-3">
+                <div class="fs-6 text-muted">Overall Occupancy</div>
+                <div class="fs-2 fw-bold">{{ overall_occupancy|floatformat:1 }}%</div>
+                <div class="text-muted">{{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card text-center p-3">
+                <div class="fs-6 text-muted">Peak Occupancy Day</div>
+                {% with peak_day=daily_occupancy|dictsort:"percentage"|last %}
+                <div class="fs-2 fw-bold">{{ peak_day.percentage|floatformat:1 }}%</div>
+                <div class="text-muted">{{ peak_day.date|date:"l, M d, Y" }}</div>
+                {% endwith %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card stat-card text-center p-3">
+                <div class="fs-6 text-muted">Lowest Occupancy Day</div>
+                {% with lowest_day=daily_occupancy|dictsort:"percentage"|first %}
+                <div class="fs-2 fw-bold">{{ lowest_day.percentage|floatformat:1 }}%</div>
+                <div class="text-muted">{{ lowest_day.date|date:"l, M d, Y" }}</div>
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Daily Occupancy Chart -->
+    <h3 class="mt-4 mb-3">Daily Occupancy</h3>
+    <div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+        <div class="chart-container">
+            <canvas id="dailyOccupancyChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Weekday Occupancy Chart -->
+    <h3 class="mt-4 mb-3">Occupancy by Day of Week</h3>
+    <div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+        <div class="chart-container">
+            <canvas id="weekdayOccupancyChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Room Type Occupancy -->
+    <h3 class="mt-4 mb-3">Occupancy by Room Type</h3>
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="px-3">Room Type</th>
+                            <th class="px-3">Occupied Nights</th>
+                            <th class="px-3">Total Nights</th>
+                            <th class="px-3">Occupancy %</th>
+                            <th class="px-3">Visualization</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for type_name, data in room_type_occupancy.items %}
+                        <tr class="border-bottom">
+                            <td class="px-3 fw-medium">{{ type_name }}</td>
+                            <td class="px-3">{{ data.occupied_nights }}</td>
+                            <td class="px-3">{{ data.total_nights }}</td>
+                            <td class="px-3">{{ data.percentage|floatformat:1 }}%</td>
+                            <td class="px-3" style="width: 30%">
+                                <div class="progress">
+                                    <div class="progress-bar {% if data.percentage >= 80 %}occupancy-high{% elif data.percentage >= 50 %}occupancy-medium{% else %}occupancy-low{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ data.percentage }}%" 
+                                         aria-valuenow="{{ data.percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Individual Room Occupancy -->
+    <h3 class="mt-4 mb-3">Occupancy by Room</h3>
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="px-3">Room Number</th>
+                            <th class="px-3">Occupancy %</th>
+                            <th class="px-3">Visualization</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for room, percentage in room_occupancy %}
+                        <tr class="border-bottom">
+                            <td class="px-3 fw-medium">{{ room }}</td>
+                            <td class="px-3">{{ percentage|floatformat:1 }}%</td>
+                            <td class="px-3" style="width: 50%">
+                                <div class="progress">
+                                    <div class="progress-bar {% if percentage >= 80 %}occupancy-high{% elif percentage >= 50 %}occupancy-medium{% else %}occupancy-low{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ percentage }}%" 
+                                         aria-valuenow="{{ percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Daily Occupancy Table -->
+    <h3 class="mt-4 mb-3">Daily Breakdown</h3>
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="px-3">Date</th>
+                            <th class="px-3">Day of Week</th>
+                            <th class="px-3">Occupied Rooms</th>
+                            <th class="px-3">Total Rooms</th>
+                            <th class="px-3">Occupancy %</th>
+                            <th class="px-3">Visualization</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in daily_occupancy %}
+                        <tr class="border-bottom">
+                            <td class="px-3 fw-medium">{{ day.date|date:"M d, Y" }}</td>
+                            <td class="px-3">{{ day.date|date:"l" }}</td>
+                            <td class="px-3">{{ day.occupied }}</td>
+                            <td class="px-3">{{ day.total }}</td>
+                            <td class="px-3">{{ day.percentage|floatformat:1 }}%</td>
+                            <td class="px-3" style="width: 30%">
+                                <div class="progress">
+                                    <div class="progress-bar {% if day.percentage >= 80 %}occupancy-high{% elif day.percentage >= 50 %}occupancy-medium{% else %}occupancy-low{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ day.percentage }}%" 
+                                         aria-valuenow="{{ day.percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Daily Occupancy Chart
+    const dailyOccupancyCtx = document.getElementById('dailyOccupancyChart').getContext('2d');
+    const dailyOccupancyChart = new Chart(dailyOccupancyCtx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for day in daily_occupancy %}
+                    '{{ day.date|date:"M d" }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Occupancy %',
+                data: [
+                    {% for day in daily_occupancy %}
+                        {{ day.percentage|floatformat:1 }},
+                    {% endfor %}
+                ],
+                borderColor: 'rgba(102, 126, 234, 1)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Occupancy %'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Daily Occupancy Percentage'
+                }
+            }
+        }
+    });
+    
+    // Weekday Occupancy Chart
+    const weekdayOccupancyCtx = document.getElementById('weekdayOccupancyChart').getContext('2d');
+    const weekdayOccupancyChart = new Chart(weekdayOccupancyCtx, {
+        type: 'bar',
+        data: {
+            labels: [
+                {% for day in weekday_data %}
+                    '{{ day.name }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Occupancy %',
+                data: [
+                    {% for day in weekday_data %}
+                        {{ day.percentage|floatformat:1 }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(199, 199, 199, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(199, 199, 199, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Occupancy %'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Day of Week'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Occupancy by Day of Week'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
