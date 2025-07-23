@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports Dashboard - Hotel PMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 20px;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+        height: 250px;  /* Fixed height for uniformity */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    }
+    
+    .report-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="75" cy="25" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="50" cy="50" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="25" cy="75" r="1" fill="%23ffffff" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)" /></svg>') repeat;
+        pointer-events: none;
+    }
+    
+    .report-card .card-body {
+        position: relative;
+        z-index: 1;
+        color: white;
+        text-align: center;
+        padding: 2rem;
+    }
+    
+    .report-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+    }
+    
+    .report-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .report-description {
+        opacity: 0.9;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+    
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)" /></svg>') repeat;
+        pointer-events: none;
+    }
+    
+    .page-header h1 {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .page-header p {
+        position: relative;
+        z-index: 1;
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .coming-soon {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .coming-soon:hover {
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .coming-soon .card-body {
+        position: relative;
+    }
+    
+    .coming-soon .card-body::after {
+        content: 'Coming Soon';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-graph-up me-3"></i>Reports Dashboard</h1>
+    <p>Comprehensive analytics and insights for your hotel operations</p>
+</div>
+
+<div class="reports-grid">
+    <!-- Occupancy Report Card -->
+    <a href="{% url 'occupancy_report' %}" class="text-decoration-none">
+        <div class="card report-card">
+            <div class="card-body">
+                <div class="report-icon">
+                    <i class="bi bi-bar-chart-fill"></i>
+                </div>
+                <div class="report-title">Occupancy Report</div>
+                <div class="report-description">
+                    Detailed occupancy analytics including daily, weekly, and monthly trends. 
+                    View room-wise and type-wise occupancy patterns.
+                </div>
+            </div>
+        </div>
+    </a>
+    
+    <!-- Replace the Revenue Report Card (Coming Soon) section with: -->
+    <a href="{% url 'revenue_report' %}" class="text-decoration-none">
+        <div class="card report-card">
+            <div class="card-body">
+                <div class="report-icon">
+                    <i class="bi bi-currency-dollar"></i>
+                </div>
+                <div class="report-title">Revenue Report</div>
+                <div class="report-description">
+                    Track revenue performance, ADR, RevPAR, and financial trends 
+                    across different time periods and room categories.
+                </div>
+            </div>
+        </div>
+    </a>
+    
+    <!-- Guest Analytics Card (Coming Soon) -->
+    <div class="card report-card coming-soon">
+        <div class="card-body">
+            <div class="report-icon">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="report-title">Guest Analytics</div>
+            <div class="report-description">
+                Analyze guest demographics, booking patterns, length of stay, 
+                and customer segmentation insights.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Booking Source Report Card (Coming Soon) -->
+    <div class="card report-card coming-soon">
+        <div class="card-body">
+            <div class="report-icon">
+                <i class="bi bi-graph-down"></i>
+            </div>
+            <div class="report-title">Booking Sources</div>
+            <div class="report-description">
+                Track reservation sources, channel performance, and 
+                conversion rates across different booking platforms.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Operational Report Card (Coming Soon) -->
+    <div class="card report-card coming-soon">
+        <div class="card-body">
+            <div class="report-icon">
+                <i class="bi bi-gear-fill"></i>
+            </div>
+            <div class="report-title">Operational Report</div>
+            <div class="report-description">
+                Monitor housekeeping efficiency, maintenance schedules, 
+                and operational KPIs for better hotel management.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Forecast Report Card (Coming Soon) -->
+    <div class="card report-card coming-soon">
+        <div class="card-body">
+            <div class="report-icon">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div class="report-title">Forecast & Trends</div>
+            <div class="report-description">
+                Predictive analytics for occupancy, revenue forecasting, 
+                and seasonal trend analysis for strategic planning.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

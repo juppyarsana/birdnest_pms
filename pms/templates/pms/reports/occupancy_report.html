@@ -39,7 +39,10 @@
             <h1 class="h3 mb-0 text-gray-800">Occupancy Report</h1>
             <p class="mb-0 text-muted">Detailed occupancy analysis and insights</p>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Reports
+            </a>
             <button class="btn btn-outline-secondary" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print Report
             </button>

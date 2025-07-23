@@ -160,6 +160,9 @@ class Reservation(models.Model):
     agent = models.CharField(max_length=20, choices=AGENT_CHOICES, default='direct', help_text='Source/agent where this reservation came from')
     created_at = models.DateTimeField(auto_now_add=True)  # Reservation creation timestamp
     cancellation_reason = models.TextField(blank=True, default='')  # Reason for cancellation
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Final amount after discounts, taxes, and fees")
+    base_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Base room rate before discounts")
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Total discount applied")
 
     def __str__(self):
         return f"{self.guest.name} - {self.room.room_number} ({self.status})"
@@ -223,7 +226,20 @@ class Reservation(models.Model):
         
         super().clean()
 
+    def calculate_total_amount(self):
+        """Calculate total amount based on room rate, nights, discounts, etc."""
+        if not self.room or not self.check_in or not self.check_out:
+            return 0
+        
+        nights = (self.check_out - self.check_in).days
+        base_total = self.room.rate * nights
+        final_total = base_total - self.discount_amount
+        
+        return max(final_total, 0)  # Ensure non-negative
+    
     def save(self, *args, **kwargs):
-        """Override save to enforce validation."""
-        self.full_clean()
+        # Auto-calculate total_amount if not set
+        if self.total_amount is None:
+            self.base_amount = self.room.rate * (self.check_out - self.check_in).days if self.room and self.check_in and self.check_out else 0
+            self.total_amount = self.calculate_total_amount()
         super().save(*args, **kwargs)

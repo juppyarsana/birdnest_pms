@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Revenue Report - Hotel PMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        padding: 20px;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .revenue-high { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .revenue-medium { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+    .revenue-low { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon.revenue { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .metric-icon.adr { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .metric-icon.revpar { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+    .metric-icon.nights { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">💰 Revenue Report</h2>
+        <p class="text-muted mb-0">Financial performance and revenue analytics</p>
+    </div>
+    <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card shadow-sm border-0 rounded-3 mb-4" 
+     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><defs><pattern id=&quot;dots&quot; width=&quot;20&quot; height=&quot;20&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;1.5&quot; fill=&quot;%23ffffff&quot; opacity=&quot;0.1&quot;/></pattern></defs><rect width=&quot;100&quot; height=&quot;100&quot; fill=&quot;url(%23dots)&quot;/></svg>') repeat; 
+                pointer-events: none;"></div>
+    <div class="card-body" style="position: relative; z-index: 1;">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <h5 class="text-white mb-1"><i class="bi bi-funnel me-2"></i>Filter Revenue Data</h5>
+                <p class="text-white-50 mb-0 small">Customize your revenue analysis by date range and room type</p>
+            </div>
+            <div class="col-md-7">
+                <form method="get" class="d-flex gap-2 align-items-end" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="start_date" class="form-label text-white small fw-medium mb-1">Start Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="start_date" name="start_date" 
+                               value="{{ start_date|date:'Y-m-d' }}" 
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="end_date" class="form-label text-white small fw-medium mb-1">End Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="end_date" name="end_date" 
+                               value="{{ end_date|date:'Y-m-d' }}"
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="room_type" class="form-label text-white small fw-medium mb-1">Room Type</label>
+                        <select class="form-select border-0 shadow-sm" id="room_type" name="room_type"
+                                style="background: rgba(255,255,255,0.95) !important; 
+                                       backdrop-filter: blur(15px) !important; 
+                                       -webkit-backdrop-filter: blur(15px) !important;
+                                       height: 48px !important; 
+                                       color: #333 !important; 
+                                       border: 1px solid rgba(255,255,255,0.2) !important;
+                                       box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                            <option value="" style="color: #666;">All Room Types</option>
+                            {% for type_value, type_name in room_types %}
+                                <option value="{{ type_value }}" {% if selected_room_type == type_value %}selected{% endif %}>{{ type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2" style="flex-shrink: 0; min-width: 100px;">
+                        <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Apply Filters">
+                            <i class="bi bi-search"></i> Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon revenue mx-auto">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="fs-6 text-muted">Total Revenue</div>
+            <div class="fs-2 fw-bold">{{ total_revenue|idr_currency }}</div>
+            <div class="text-muted small">{{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon adr mx-auto">
+                <i class="bi bi-graph-up"></i>
+            </div>
+            <div class="fs-6 text-muted">ADR (Average Daily Rate)</div>
+            <div class="fs-2 fw-bold">{{ adr|idr_currency }}</div>
+            <div class="text-muted small">Per occupied room</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon revpar mx-auto">
+                <i class="bi bi-bar-chart"></i>
+            </div>
+            <div class="fs-6 text-muted">RevPAR</div>
+            <div class="fs-2 fw-bold">{{ revpar|idr_currency }}</div>
+            <div class="text-muted small">Revenue per available room</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon nights mx-auto">
+                <i class="bi bi-moon-stars"></i>
+            </div>
+            <div class="fs-6 text-muted">Occupied Nights</div>
+            <div class="fs-2 fw-bold">{{ occupied_nights }}</div>
+            <div class="text-muted small">Total room nights sold</div>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Revenue Chart -->
+<h3 class="mt-4 mb-3">Daily Revenue Trend</h3>
+<div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+    <div class="chart-container">
+        <canvas id="dailyRevenueChart"></canvas>
+    </div>
+</div>
+
+<!-- Revenue by Room Type -->
+{% if room_type_revenue %}
+<h3 class="mt-4 mb-3">Revenue by Room Type</h3>
+<div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-3">Room Type</th>
+                        <th class="px-3">Revenue</th>
+                        <th class="px-3">Nights Sold</th>
+                        <th class="px-3">ADR</th>
+                        <th class="px-3">Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for type_name, data in room_type_revenue.items %}
+                    <tr class="border-bottom">
+                        <td class="px-3 fw-medium">{{ type_name }}</td>
+                        <td class="px-3">{{ data.revenue|idr_currency }}</td>
+                        <td class="px-3">{{ data.nights }}</td>
+                        <td class="px-3">{{ data.adr|idr_currency }}</td>
+                        <td class="px-3" style="width: 30%">
+                            {% with percentage=data.revenue|floatformat:0 %}
+                            <div class="progress">
+                                <div class="progress-bar {% if data.adr >= 1000000 %}revenue-high{% elif data.adr >= 500000 %}revenue-medium{% else %}revenue-low{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {{ data.revenue|floatformat:0|add:'0'|slice:':2' }}%" 
+                                     aria-valuenow="{{ data.revenue }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Revenue by Payment Method -->
+{% if payment_method_revenue %}
+<h3 class="mt-4 mb-3">Revenue by Payment Method</h3>
+<div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+    <div class="chart-container">
+        <canvas id="paymentMethodChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Daily Revenue Chart
+const dailyRevenueCtx = document.getElementById('dailyRevenueChart').getContext('2d');
+const dailyRevenueChart = new Chart(dailyRevenueCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for day in daily_revenue %}"{{ day.date|date:'M d' }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Daily Revenue',
+            data: [{% for day in daily_revenue %}{{ day.revenue|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgb(102, 126, 234)',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'Rp ' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+{% if payment_method_revenue %}
+// Payment Method Chart
+const paymentMethodCtx = document.getElementById('paymentMethodChart').getContext('2d');
+const paymentMethodChart = new Chart(paymentMethodCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for method, revenue in payment_method_revenue.items %}"{{ method }}"{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for method, revenue in payment_method_revenue.items %}{{ revenue }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(102, 126, 234, 0.8)',
+                'rgba(118, 75, 162, 0.8)',
+                'rgba(40, 167, 69, 0.8)',
+                'rgba(255, 193, 7, 0.8)'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

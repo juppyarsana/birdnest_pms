@@ -1,11 +1,13 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import render
-from pms.views import dashboard
+from pms.views import calendar_data
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('pms.urls', namespace=None)),  # Include PMS app URLs at root
+    path('calendar/', lambda request: render(request, 'pms/calendar.html'), name='calendar'),
+    path('calendar/data/', calendar_data, name='calendar_data'),
+    path('', include('pms.urls')),  # Include PMS app URLs at root
 ]
 
 print("Debug: Root URL patterns loaded")

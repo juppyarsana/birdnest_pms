@@ -322,77 +322,7 @@ def dashboard(request):
         'all_reservations': all_reservations
     })
 
-def create_reservation(request):
-    initial_data = {}
-    if 'check_in' in request.GET:
-        initial_data['check_in'] = request.GET['check_in']
 
-    if request.method == 'POST':
-        form = ReservationForm(request.POST, edit=False)
-        if form.is_valid():
-            form.save()
-            return redirect('dashboard')
-    else:
-        form = ReservationForm(initial=initial_data, edit=False)
-    return render(request, 'pms/reservation_form.html', {'form': form})
-
-def edit_reservation(request, reservation_id):
-    reservation = get_object_or_404(Reservation, id=reservation_id)
-    if request.method == 'POST':
-        form = ReservationForm(request.POST, instance=reservation, edit=True)
-        if form.is_valid():
-            form.save()
-            return redirect('reservations_list')
-    else:
-        form = ReservationForm(instance=reservation, edit=True)
-    return render(request, 'pms/reservation_form.html', {'form': form, 'reservation': reservation, 'editing': True})
-
-def confirm_reservation(request, reservation_id):
-    """Confirm a pending reservation"""
-    reservation = get_object_or_404(Reservation, id=reservation_id, status='pending')
-    
-    # Check for conflicting pending reservations for the same room and overlapping dates
-    conflicting_reservations = Reservation.objects.filter(
-        room=reservation.room,
-        status='pending',
-        check_in__lt=reservation.check_out,
-        check_out__gt=reservation.check_in
-    ).exclude(id=reservation.id)
-    
-    # Check for active conflicts that would prevent confirmation
-    active_conflicts = Reservation.objects.filter(
-        room=reservation.room,
-        status__in=['confirmed', 'expected_arrival', 'in_house'],
-        check_in__lt=reservation.check_out,
-        check_out__gt=reservation.check_in
-    )
-    
-    # Determine if confirmation should be disabled
-    has_conflicts = conflicting_reservations.exists() or active_conflicts.exists()
-    
-    if request.method == 'POST' and not has_conflicts:
-        form = ConfirmReservationForm(request.POST, instance=reservation)
-        if form.is_valid():
-            reservation = form.save()
-            reservation.status = 'confirmed'  # Set status manually
-            reservation.save()
-            # Update room status after confirmation
-            reservation.room.update_status()
-            messages.success(request, f'Reservation for {reservation.guest.name} has been confirmed successfully!')
-            return redirect('dashboard')
-    elif request.method == 'POST' and has_conflicts:
-        messages.error(request, 'Cannot confirm reservation: There are conflicting reservations for this room and date range.')
-        form = ConfirmReservationForm(request.POST, instance=reservation)
-    else:
-        form = ConfirmReservationForm(instance=reservation)
-    
-    return render(request, 'pms/confirm_reservation.html', {
-        'reservation': reservation, 
-        'form': form,
-        'conflicting_reservations': conflicting_reservations,
-        'active_conflicts': active_conflicts,
-        'has_conflicts': has_conflicts
-    })
 
 def calendar_data(request):
     reservations = Reservation.objects.all()
@@ -786,6 +716,122 @@ def check_available_rooms(request):
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 
+def reports_home(request):
+    """View for reports dashboard/home page"""
+    # You can add any summary data here if needed
+    context = {
+        'page_title': 'Reports Dashboard'
+    }
+    return render(request, 'pms/reports/reports_home.html', context)
+
+
+
+def revenue_report(request):
+    """View for generating detailed revenue reports"""
+    # Get date range parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    room_type = request.GET.get('room_type', '')
+    
+    # Default to current month if no dates provided
+    today = date.today()
+    if not start_date_str:
+        start_date = date(today.year, today.month, 1)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        last_day = monthrange(today.year, today.month)[1]
+        end_date = date(today.year, today.month, last_day)
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Get reservations in date range
+    reservations = Reservation.objects.filter(
+        check_in__lte=end_date,
+        check_out__gte=start_date,
+        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+    )
+    
+    if room_type:
+        reservations = reservations.filter(room__room_type=room_type)
+    
+    # Calculate total revenue
+    total_revenue = sum(res.total_amount for res in reservations if res.total_amount)
+    
+    # Calculate occupied room nights and daily revenue
+    date_range = (end_date - start_date).days + 1
+    dates = [start_date + timedelta(days=i) for i in range(date_range)]
+    
+    occupied_nights = 0
+    daily_revenue = []
+    
+    for current_date in dates:
+        day_reservations = reservations.filter(
+            check_in__lte=current_date,
+            check_out__gt=current_date
+        )
+        day_revenue = 0
+        for res in day_reservations:
+            if res.total_amount:
+                nights = (res.check_out - res.check_in).days
+                day_revenue += res.total_amount / nights if nights > 0 else 0
+        
+        daily_revenue.append({
+            'date': current_date,
+            'revenue': day_revenue,
+            'occupied_rooms': day_reservations.count()
+        })
+        occupied_nights += day_reservations.count()
+    
+    # Calculate ADR (Average Daily Rate)
+    adr = total_revenue / occupied_nights if occupied_nights > 0 else 0
+    
+    # Calculate RevPAR (Revenue Per Available Room)
+    total_rooms = Room.objects.count()
+    available_room_nights = total_rooms * date_range
+    revpar = total_revenue / available_room_nights if available_room_nights > 0 else 0
+    
+    # Revenue by room type
+    room_type_revenue = {}
+    for room_type_choice, room_type_name in Room.ROOM_TYPES:
+        type_reservations = reservations.filter(room__room_type=room_type_choice)
+        type_revenue = sum(res.total_amount for res in type_reservations if res.total_amount)
+        type_nights = sum((res.check_out - res.check_in).days for res in type_reservations)
+        type_adr = type_revenue / type_nights if type_nights > 0 else 0
+        
+        if type_revenue > 0:  # Only include room types with revenue
+            room_type_revenue[room_type_name] = {
+                'revenue': type_revenue,
+                'nights': type_nights,
+                'adr': type_adr
+            }
+    
+    # Revenue by payment method
+    payment_method_revenue = {}
+    payment_methods = [('cash', 'Cash'), ('card', 'Card'), ('transfer', 'Bank Transfer'), ('other', 'Other')]
+    for method_choice, method_name in payment_methods:
+        method_revenue = sum(res.total_amount for res in reservations 
+                           if res.payment_method == method_choice and res.total_amount)
+        if method_revenue > 0:  # Only include methods with revenue
+            payment_method_revenue[method_name] = method_revenue
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_revenue': total_revenue,
+        'adr': adr,
+        'revpar': revpar,
+        'occupied_nights': occupied_nights,
+        'daily_revenue': daily_revenue,
+        'room_type_revenue': room_type_revenue,
+        'payment_method_revenue': payment_method_revenue,
+        'room_types': Room.ROOM_TYPES,
+        'selected_room_type': room_type
+    }
+    
+    return render(request, 'pms/reports/revenue_report.html', context)
+
 def occupancy_report(request):
     """View for generating detailed occupancy reports"""
     # Get date range parameters
@@ -816,36 +862,109 @@ def occupancy_report(request):
     # Calculate date range
     date_range = (end_date - start_date).days + 1
     dates = [start_date + timedelta(days=i) for i in range(date_range)]
-
-    # Filter reservations by status
-    pending_reservations = Reservation.objects.filter(status='pending')
-    confirmed_reservations = Reservation.objects.filter(status='confirmed')  # Add this line
-    expected_arrivals = Reservation.objects.filter(status='expected_arrival')
-    checked_in_reservations = Reservation.objects.filter(status='in_house')
-    expected_departures = Reservation.objects.filter(status='expected_departure')
-    canceled_reservations = Reservation.objects.filter(status='canceled')
-    no_show_reservations = Reservation.objects.filter(status='no_show')
-    checked_out_reservations = Reservation.objects.filter(status='checked_out')
-    all_reservations = Reservation.objects.all()
-
-    return render(request, 'pms/dashboard.html', {
-        'rooms': rooms,
-        'reservations': reservations,
-        'pending_reservations': pending_reservations,
-        'confirmed_reservations': confirmed_reservations,  # Add this line
-        'expected_arrivals': expected_arrivals,
-        'checked_in_reservations': checked_in_reservations,
-        'expected_departures': expected_departures,
-        'canceled_reservations': canceled_reservations,
-        'no_show_reservations': no_show_reservations,
-        'checked_out_reservations': checked_out_reservations,
+    
+    # Initialize data structures
+    daily_occupancy = []
+    room_occupancy = {}
+    total_rooms = rooms.count()
+    total_room_nights = total_rooms * date_range
+    occupied_room_nights = 0
+    
+    # Calculate occupancy for each day
+    for current_date in dates:
+        occupied_rooms = 0
+        for room in rooms:
+            # Check if room is occupied on this date
+            is_occupied = Reservation.objects.filter(
+                room=room,
+                check_in__lte=current_date,
+                check_out__gt=current_date,
+                status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+            ).exists()
+            
+            if is_occupied:
+                occupied_rooms += 1
+                # Track occupancy by room
+                if room.room_number not in room_occupancy:
+                    room_occupancy[room.room_number] = 0
+                room_occupancy[room.room_number] += 1
+        
+        # Calculate daily occupancy percentage
+        daily_percentage = (occupied_rooms / total_rooms * 100) if total_rooms > 0 else 0
+        occupied_room_nights += occupied_rooms
+        
+        # Add to daily occupancy list
+        daily_occupancy.append({
+            'date': current_date,
+            'occupied': occupied_rooms,
+            'total': total_rooms,
+            'percentage': daily_percentage
+        })
+    
+    # Calculate overall occupancy percentage
+    overall_occupancy = (occupied_room_nights / total_room_nights * 100) if total_room_nights > 0 else 0
+    
+    # Calculate occupancy by room type
+    room_type_occupancy = {}
+    for room_type_choice, room_type_name in Room.ROOM_TYPES:
+        type_rooms = rooms.filter(room_type=room_type_choice)
+        type_room_count = type_rooms.count()
+        if type_room_count > 0:
+            type_occupied_nights = 0
+            for current_date in dates:
+                for room in type_rooms:
+                    is_occupied = Reservation.objects.filter(
+                        room=room,
+                        check_in__lte=current_date,
+                        check_out__gt=current_date,
+                        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+                    ).exists()
+                    if is_occupied:
+                        type_occupied_nights += 1
+            
+            type_total_nights = type_room_count * date_range
+            type_percentage = (type_occupied_nights / type_total_nights * 100) if type_total_nights > 0 else 0
+            room_type_occupancy[room_type_name] = {
+                'occupied_nights': type_occupied_nights,
+                'total_nights': type_total_nights,
+                'percentage': type_percentage
+            }
+    
+    # Calculate day of week occupancy
+    weekday_occupancy = {i: {'occupied': 0, 'total': 0} for i in range(7)}
+    for entry in daily_occupancy:
+        weekday = entry['date'].weekday()
+        weekday_occupancy[weekday]['occupied'] += entry['occupied']
+        weekday_occupancy[weekday]['total'] += entry['total']
+    
+    # Calculate percentages for weekdays
+    for weekday, data in weekday_occupancy.items():
+        if data['total'] > 0:
+            data['percentage'] = (data['occupied'] / data['total']) * 100
+        else:
+            data['percentage'] = 0
+    
+    # Format weekday data for template
+    weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    weekday_data = [{
+        'name': weekday_names[i],
+        'percentage': weekday_occupancy[i]['percentage']
+    } for i in range(7)]
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
         'daily_occupancy': daily_occupancy,
-        'weekly_occupancy': weekly_occupancy,
-        'monthly_occupancy': monthly_occupancy,
-        'target_occupancy': 80,
-        'month_name': today.strftime('%B %Y'),
-        'all_reservations': all_reservations
-    })
+        'overall_occupancy': overall_occupancy,
+        'room_occupancy': sorted([(room, (nights/date_range)*100) for room, nights in room_occupancy.items()], 
+                                key=lambda x: x[1], reverse=True),
+        'room_type_occupancy': room_type_occupancy,
+        'weekday_data': weekday_data,
+        'room_types': Room.ROOM_TYPES,
+        'selected_room_type': room_type
+    }
+    
+    return render(request, 'pms/reports/occupancy_report.html', context)
 
 def create_reservation(request):
     initial_data = {}
