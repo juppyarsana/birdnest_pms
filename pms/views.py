@@ -262,7 +262,7 @@ def dashboard(request):
                 room=room,
                 check_in__lte=current_date,
                 check_out__gt=current_date,  # Don't count check-out day
-                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out']
             ).exists()
             if is_occupied:
                 booked_room_nights_week += 1
@@ -286,10 +286,21 @@ def dashboard(request):
                 room=room,
                 check_in__lte=current_date,
                 check_out__gt=current_date,  # Don't count check-out day
-                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out']
             ).exists()
             if is_occupied:
                 booked_room_nights += 1
+    sold_room_nights = 0
+    for current_date in [month_start + timedelta(days=i) for i in range(days_in_month)]:
+        for room in Room.objects.all():
+            is_sold = Reservation.objects.filter(
+                room=room,
+                check_in__lte=current_date,
+                check_out__gt=current_date,  # Don't count check-out day
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
+            ).exists()
+            if is_sold:
+                sold_room_nights += 1
     monthly_occupancy = (booked_room_nights / total_room_nights) * 100 if total_room_nights > 0 else 0
 
     # Filter reservations by status
@@ -317,6 +328,7 @@ def dashboard(request):
         'daily_occupancy': daily_occupancy,
         'weekly_occupancy': weekly_occupancy,
         'monthly_occupancy': monthly_occupancy,
+        'monthly_nights_sold': sold_room_nights,
         'target_occupancy': 80,
         'month_name': today.strftime('%B %Y'),
         'all_reservations': all_reservations
@@ -750,7 +762,7 @@ def revenue_report(request):
     reservations = Reservation.objects.filter(
         check_in__lte=end_date,
         check_out__gte=start_date,
-        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
     )
     
     if room_type:
@@ -965,6 +977,170 @@ def occupancy_report(request):
     }
     
     return render(request, 'pms/reports/occupancy_report.html', context)
+
+
+def guest_analytics(request):
+    """View for generating detailed guest analytics reports"""
+    from django.db.models import Count, Avg, Q, F
+    from collections import defaultdict
+    
+    # Get date range parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    # Default to current month if no dates provided
+    today = date.today()
+    if not start_date_str:
+        # Default to first day of current month
+        start_date = date(today.year, today.month, 1)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        # Default to last day of current month
+        last_day = monthrange(today.year, today.month)[1]
+        end_date = date(today.year, today.month, last_day)
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Get reservations in the date range
+    reservations = Reservation.objects.filter(
+        check_in__gte=start_date,
+        check_in__lte=end_date
+    ).select_related('guest', 'room')
+    
+    # Basic guest statistics
+    total_guests = reservations.count()
+    unique_guests = reservations.values('guest').distinct().count()
+    repeat_guests = total_guests - unique_guests
+    repeat_guest_rate = (repeat_guests / total_guests * 100) if total_guests > 0 else 0
+    
+    # Calculate average length of stay
+    avg_los = 0
+    if reservations.exists():
+        total_nights = sum([(res.check_out - res.check_in).days for res in reservations])
+        avg_los = total_nights / total_guests if total_guests > 0 else 0
+    
+    # Guest demographics by nationality - removed since Guest model doesn't have nationality field
+    # This can be added back when nationality field is added to Guest model
+    nationality_data = []
+    
+    # Booking patterns by day of week
+    weekday_bookings = defaultdict(int)
+    weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for reservation in reservations:
+        weekday = reservation.check_in.weekday()
+        weekday_bookings[weekday] += 1
+    
+    weekday_data = [{
+        'name': weekday_names[i],
+        'bookings': weekday_bookings[i]
+    } for i in range(7)]
+    
+    # Length of stay distribution
+    los_distribution_dict = defaultdict(int)
+    for reservation in reservations:
+        nights = (reservation.check_out - reservation.check_in).days
+        if nights == 1:
+            los_distribution_dict['1 night'] += 1
+        elif nights == 2:
+            los_distribution_dict['2 nights'] += 1
+        elif nights <= 4:
+            los_distribution_dict['3-4 nights'] += 1
+        elif nights <= 7:
+            los_distribution_dict['5-7 nights'] += 1
+        else:
+            los_distribution_dict['8+ nights'] += 1
+    
+    # Convert to regular dict for template
+    los_distribution = dict(los_distribution_dict)
+    
+    # Room type preferences
+    room_type_preferences = defaultdict(int)
+    for reservation in reservations:
+        room_type_preferences[reservation.room.get_room_type_display()] += 1
+    
+    room_type_data = sorted(room_type_preferences.items(), key=lambda x: x[1], reverse=True)
+    
+    # Payment method analysis
+    payment_method_dict = defaultdict(int)
+    for reservation in reservations:
+        if reservation.payment_method:
+            payment_method_dict[reservation.get_payment_method_display()] += 1
+        else:
+            payment_method_dict['Not Specified'] += 1
+    
+    # Convert to sorted list for display but keep as dict for template iteration
+    payment_method_data = sorted(payment_method_dict.items(), key=lambda x: x[1], reverse=True)
+    
+    # Monthly booking trends (for the past 12 months)
+    monthly_trends = []
+    for i in range(12):
+        # Calculate the month by going back i months from today
+        if today.month - i > 0:
+            month_start = today.replace(day=1, month=today.month - i)
+        else:
+            # Handle year rollover
+            year_offset = (i - today.month) // 12 + 1
+            month_offset = (i - today.month) % 12
+            new_month = 12 - month_offset if month_offset > 0 else 12
+            month_start = today.replace(day=1, year=today.year - year_offset, month=new_month)
+        
+        # Calculate month end using monthrange
+        last_day = monthrange(month_start.year, month_start.month)[1]
+        month_end = month_start.replace(day=last_day)
+        
+        month_bookings = Reservation.objects.filter(
+            check_in__gte=month_start,
+            check_in__lte=month_end
+        ).count()
+        
+        monthly_trends.append({
+            'month': month_start.strftime('%b %Y'),
+            'bookings': month_bookings
+        })
+    
+    monthly_trends.reverse()  # Show oldest to newest
+    
+    # Top guests by number of stays
+    top_guests = (
+        Guest.objects
+        .annotate(stay_count=Count('reservation'))
+        .filter(stay_count__gt=0)
+        .order_by('-stay_count')[:10]
+    )
+    
+    # Guest satisfaction metrics (based on status completion)
+    completed_stays = reservations.filter(status='checked_out').count()
+    canceled_stays = reservations.filter(status='canceled').count()
+    no_shows = reservations.filter(status='no_show').count()
+    
+    completion_rate = (completed_stays / total_guests * 100) if total_guests > 0 else 0
+    cancellation_rate = (canceled_stays / total_guests * 100) if total_guests > 0 else 0
+    no_show_rate = (no_shows / total_guests * 100) if total_guests > 0 else 0
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_guests': total_guests,
+        'unique_guests': unique_guests,
+        'repeat_guests': repeat_guests,
+        'repeat_guest_rate': repeat_guest_rate,
+        'avg_los': avg_los,
+        'nationality_data': nationality_data,
+        'weekday_data': weekday_data,
+        'los_distribution': los_distribution,
+        'room_type_data': room_type_data,
+        'payment_method_data': payment_method_data,
+        'monthly_trends': monthly_trends,
+        'top_guests': top_guests,
+        'completion_rate': completion_rate,
+        'cancellation_rate': cancellation_rate,
+        'no_show_rate': no_show_rate,
+    }
+    
+    return render(request, 'pms/reports/guest_analytics.html', context)
 
 def create_reservation(request):
     initial_data = {}

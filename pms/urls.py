@@ -7,7 +7,7 @@ from .views import (
     checkout_reservation, cancel_reservation, edit_reservation,
     reservations_list, reservation_detail, rooms_list,
     guests, guest_detail, guest_list_json, check_reservation_conflict,
-    check_available_rooms, occupancy_report, reports_home, revenue_report
+    check_available_rooms, occupancy_report, reports_home, revenue_report, guest_analytics
 )
 
 urlpatterns = [
@@ -31,6 +31,7 @@ urlpatterns = [
     path('reports/', reports_home, name='reports_home'),
     path('reports/occupancy/', occupancy_report, name='occupancy_report'),
     path('reports/revenue/', revenue_report, name='revenue_report'),
+    path('reports/guest-analytics/', guest_analytics, name='guest_analytics'),
 ]
 
 print("Debug: URL patterns loaded:")

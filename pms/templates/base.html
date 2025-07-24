@@ -388,21 +388,16 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var sidebar = document.getElementById('sidebarMenu');
-            var overlay = document.getElementById('sidebarOverlay');
-            sidebar.addEventListener('mouseenter', function() {
-                sidebar.classList.add('expanded');
-                overlay.style.display = 'block';
-            });
-            sidebar.addEventListener('mouseleave', function(e) {
-                if (!sidebar.contains(e.relatedTarget)) {
-                    sidebar.classList.remove('expanded');
-                    overlay.style.display = 'none';
-                }
-            });
-            overlay.addEventListener('mouseenter', function() {
-                sidebar.classList.remove('expanded');
-                overlay.style.display = 'none';
-            });
+            if (sidebar) {
+                sidebar.addEventListener('mouseenter', function() {
+                    sidebar.classList.add('expanded');
+                });
+                sidebar.addEventListener('mouseleave', function(e) {
+                    if (!sidebar.contains(e.relatedTarget)) {
+                        sidebar.classList.remove('expanded');
+                    }
+                });
+            }
         });
     </script>
     {% block extra_js %}{% endblock %}

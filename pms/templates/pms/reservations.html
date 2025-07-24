@@ -196,22 +196,26 @@
                                 <td class="px-2">{{ reservation.check_out|date:"M d, Y" }}</td>
                                 <td class="px-2">
                                     {% if reservation.status == 'pending' %}
-                                        <span class="badge rounded-pill bg-warning text-dark">Pending</span>
-                                    {% elif reservation.status == 'confirmed' %}
-                                        <span class="badge rounded-pill bg-info">Confirmed</span>
-                                    {% elif reservation.status == 'expected_arrival' %}
-                                        <span class="badge rounded-pill bg-primary">Expected</span>
-                                    {% elif reservation.status == 'in_house' %}
-                                        <span class="badge rounded-pill bg-success">In</span>
-                                    {% elif reservation.status == 'completed' %}
-                                        <span class="badge rounded-pill bg-secondary">Done</span>
-                                    {% elif reservation.status == 'cancelled' %}
-                                        <span class="badge rounded-pill bg-danger">Cancelled</span>
-                                    {% elif reservation.status == 'no_show' %}
-                                        <span class="badge rounded-pill bg-dark">No Show</span>
-                                    {% else %}
-                                        <span class="badge rounded-pill bg-secondary">{{ reservation.status|title }}</span>
-                                    {% endif %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%); color: #fff; font-size: 0.875rem;">🟡 Pending</span>
+                                {% elif reservation.status == 'confirmed' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%); color: #fff; font-size: 0.875rem;">🔵 Confirmed</span>
+                                {% elif reservation.status == 'expected_arrival' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: #fff; font-size: 0.875rem;">🟢 Expected Arrival</span>
+                                {% elif reservation.status == 'in_house' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%); color: #fff; font-size: 0.875rem;">✅ In House</span>
+                                {% elif reservation.status == 'expected_departure' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); color: #fff; font-size: 0.875rem;">🟠 Expected Departure</span>
+                                {% elif reservation.status == 'checked_out' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); color: #fff; font-size: 0.875rem;">✔️ Checked Out</span>
+                                {% elif reservation.status == 'completed' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%); color: #fff; font-size: 0.875rem;">✔️ Completed</span>
+                                {% elif reservation.status == 'canceled' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #795548 0%, #5D4037 100%); color: #fff; font-size: 0.875rem;">❌ Canceled</span>
+                                {% elif reservation.status == 'no_show' %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%); color: #fff; font-size: 0.875rem;">⚫ No Show</span>
+                                {% else %}
+                                    <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: #fff; font-size: 0.875rem;">{{ reservation.status|title }}</span>
+                                {% endif %}
                                 </td>
                                 <td class="px-2">{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
                                 <td class="px-2">{{ reservation.created_at|date:"M d, Y H:i" }}</td>

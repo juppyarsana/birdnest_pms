@@ -1,0 +1,693 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Guest Analytics - Hotel PMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chart-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .chart-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)" /></svg>') repeat;
+        pointer-events: none;
+    }
+    
+    .page-header h1 {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .page-header p {
+        position: relative;
+        z-index: 1;
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+        padding: 1rem;
+    }
+    
+    .table tbody td {
+        padding: 1rem;
+        border-color: #f8f9fa;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .icon-guests { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .icon-repeat { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .icon-stay { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .icon-satisfaction { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">👥 Guest Analytics</h2>
+        <p class="text-muted mb-0">Comprehensive guest insights and behavioral analytics</p>
+    </div>
+    <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card shadow-sm border-0 rounded-3 mb-4" 
+     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><defs><pattern id=&quot;dots&quot; width=&quot;20&quot; height=&quot;20&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;1.5&quot; fill=&quot;%23ffffff&quot; opacity=&quot;0.1&quot;/></pattern></defs><rect width=&quot;100&quot; height=&quot;100&quot; fill=&quot;url(%23dots)&quot;/></svg>') repeat; 
+                pointer-events: none;"></div>
+    <div class="card-body" style="position: relative; z-index: 1;">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <h5 class="text-white mb-1"><i class="bi bi-funnel me-2"></i>Filter Guest Data</h5>
+                <p class="text-white-50 mb-0 small">Customize your guest analysis by date range</p>
+            </div>
+            <div class="col-md-7">
+                <form method="get" class="d-flex gap-2 align-items-end" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                    <div style="flex: 1; min-width: 120px; max-width: 200px;">
+                        <label for="start_date" class="form-label text-white small fw-medium mb-1">Start Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="start_date" name="start_date" 
+                               value="{{ start_date|date:'Y-m-d' }}" 
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 200px;">
+                        <label for="end_date" class="form-label text-white small fw-medium mb-1">End Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="end_date" name="end_date" 
+                               value="{{ end_date|date:'Y-m-d' }}"
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div class="d-flex gap-2" style="flex-shrink: 0; min-width: 120px;">
+                        <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Apply Filters">
+                            <i class="bi bi-search"></i> Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon icon-guests mx-auto">
+                <i class="bi bi-people-fill"></i>
+            </div>
+            <div class="fs-6 text-muted">Total Guests</div>
+            <div class="fs-2 fw-bold">{{ total_guests|floatformat:0 }}</div>
+            <div class="text-muted small">{{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon icon-repeat mx-auto">
+                <i class="bi bi-arrow-repeat"></i>
+            </div>
+            <div class="fs-6 text-muted">Repeat Guest Rate</div>
+            <div class="fs-2 fw-bold">{{ repeat_guest_rate|floatformat:1 }}%</div>
+            <div class="text-muted small">Returning customers</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon icon-stay mx-auto">
+                <i class="bi bi-calendar-range"></i>
+            </div>
+            <div class="fs-6 text-muted">Avg Length of Stay</div>
+            <div class="fs-2 fw-bold">{{ avg_los|floatformat:1 }}</div>
+            <div class="text-muted small">Days per booking</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon icon-satisfaction mx-auto">
+                <i class="bi bi-emoji-smile"></i>
+            </div>
+            <div class="fs-6 text-muted">Completion Rate</div>
+            <div class="fs-2 fw-bold">{{ completion_rate|floatformat:1 }}%</div>
+            <div class="text-muted small">Successful bookings</div>
+        </div>
+    </div>
+</div>
+
+<!-- Guest Behavior Analytics -->
+<h3 class="mt-4 mb-3">📊 Guest Behavior Analytics</h3>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 p-3">
+            <h5 class="chart-title mb-3">Booking Patterns by Day</h5>
+            <div class="chart-container">
+                <canvas id="weekdayChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 p-3">
+            <h5 class="chart-title mb-3">Length of Stay Distribution</h5>
+            <div class="chart-container">
+                <canvas id="losChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preferences & Payment Analytics -->
+<h3 class="mt-4 mb-3">🏨 Preferences & Payment Analytics</h3>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 p-3">
+            <h5 class="chart-title mb-3">Room Type Preferences</h5>
+            <div class="chart-container">
+                <canvas id="roomTypeChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 p-3">
+            <h5 class="chart-title mb-3">Payment Method Distribution</h5>
+            <div class="chart-container">
+                <canvas id="paymentChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Trends -->
+<h3 class="mt-4 mb-3">📈 Monthly Booking Trends</h3>
+<div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+    <div class="chart-container">
+        <canvas id="monthlyTrendsChart" height="400"></canvas>
+    </div>
+</div>
+
+<!-- Guest Demographics & Top Performers -->
+<h3 class="mt-4 mb-3">👥 Guest Demographics & Top Performers</h3>
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h5 class="mb-0">🌍 Top Nationalities</h5>
+                <small class="text-muted">Guest distribution by country</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nationality</th>
+                                <th>Guests</th>
+                                <th>Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if nationality_data %}
+                                {% for nationality, count in nationality_data %}
+                                <tr>
+                                    <td>{{ nationality }}</td>
+                                    <td><span class="badge bg-primary">{{ count }}</span></td>
+                                    <td>
+                                        {% widthratio count total_guests 100 as percentage %}
+                                        <div class="d-flex align-items-center">
+                                            <span class="me-2">{{ percentage|floatformat:1 }}%</span>
+                                            <div class="progress flex-grow-1" style="width: 80px; height: 6px;">
+                                                <div class="progress-bar" style="width: {{ percentage }}%"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Nationality data not available
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-transparent border-0 pb-0">
+                <h5 class="mb-0">⭐ Top Guests</h5>
+                <small class="text-muted">Most frequent visitors</small>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Guest</th>
+                                <th>Stays</th>
+                                <th>Loyalty Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for guest in top_guests %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <strong>{{ guest.name }}</strong><br>
+                                        <small class="text-muted">{{ guest.email }}</small>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-success">{{ guest.stay_count }}</span></td>
+                                <td>
+                                    {% if guest.stay_count >= 10 %}
+                                        <span class="badge bg-warning text-dark">🏆 VIP</span>
+                                    {% elif guest.stay_count >= 5 %}
+                                        <span class="badge bg-info">💎 Loyal</span>
+                                    {% elif guest.stay_count >= 2 %}
+                                        <span class="badge bg-success">🔄 Repeat</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">✨ New</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Guest Satisfaction Metrics -->
+<h3 class="mt-4 mb-3">😊 Guest Satisfaction Metrics</h3>
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-body">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="metric-icon icon-satisfaction mx-auto mb-3">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="fs-2 fw-bold text-success">{{ completion_rate|floatformat:1 }}%</div>
+                <div class="fs-6 text-muted">Completion Rate</div>
+                <small class="text-muted">Successfully completed bookings</small>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-icon mx-auto mb-3" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                    <i class="bi bi-x-circle"></i>
+                </div>
+                <div class="fs-2 fw-bold text-warning">{{ cancellation_rate|floatformat:1 }}%</div>
+                <div class="fs-6 text-muted">Cancellation Rate</div>
+                <small class="text-muted">Bookings canceled by guests</small>
+            </div>
+            <div class="col-md-4">
+                <div class="metric-icon mx-auto mb-3" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                    <i class="bi bi-person-x"></i>
+                </div>
+                <div class="fs-2 fw-bold text-danger">{{ no_show_rate|floatformat:1 }}%</div>
+                <div class="fs-6 text-muted">No-Show Rate</div>
+                <small class="text-muted">Guests who didn't arrive</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Chart.js configuration
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#6c757d';
+
+// Weekday Bookings Chart
+const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
+new Chart(weekdayCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for day in weekday_data %}'{{ day.name }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Bookings',
+            data: [{% for day in weekday_data %}{{ day.bookings }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 2,
+            borderRadius: 8,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0,0,0,0.05)'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// Length of Stay Chart
+const losCtx = document.getElementById('losChart').getContext('2d');
+new Chart(losCtx, {
+    type: 'doughnut',
+    data: {
+        labels: [{% for category, count in los_distribution.items %}'{{ category }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for category, count in los_distribution.items %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(102, 126, 234, 0.8)',
+                'rgba(118, 75, 162, 0.8)',
+                'rgba(255, 154, 158, 0.8)',
+                'rgba(255, 206, 84, 0.8)',
+                'rgba(75, 192, 192, 0.8)'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+
+// Room Type Preferences Chart
+const roomTypeCtx = document.getElementById('roomTypeChart').getContext('2d');
+new Chart(roomTypeCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for room_type, count in room_type_data %}'{{ room_type }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Bookings',
+            data: [{% for room_type, count in room_type_data %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(118, 75, 162, 0.8)',
+            borderColor: 'rgba(118, 75, 162, 1)',
+            borderWidth: 2,
+            borderRadius: 8,
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0,0,0,0.05)'
+                }
+            },
+            y: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+
+// Payment Method Chart
+const paymentCtx = document.getElementById('paymentChart').getContext('2d');
+new Chart(paymentCtx, {
+    type: 'pie',
+    data: {
+        labels: [{% for method, count in payment_method_data %}'{{ method }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            data: [{% for method, count in payment_method_data %}{{ count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(102, 126, 234, 0.8)',
+                'rgba(118, 75, 162, 0.8)',
+                'rgba(255, 154, 158, 0.8)',
+                'rgba(255, 206, 84, 0.8)',
+                'rgba(75, 192, 192, 0.8)',
+                'rgba(153, 102, 255, 0.8)'
+            ],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    padding: 20,
+                    usePointStyle: true
+                }
+            }
+        }
+    }
+});
+
+// Monthly Trends Chart
+const monthlyCtx = document.getElementById('monthlyTrendsChart').getContext('2d');
+new Chart(monthlyCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for trend in monthly_trends %}'{{ trend.month }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Bookings',
+            data: [{% for trend in monthly_trends %}{{ trend.bookings }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgba(102, 126, 234, 1)',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0,0,0,0.05)'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
