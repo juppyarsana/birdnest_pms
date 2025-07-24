@@ -9,8 +9,7 @@
     .table thead { background: #f1f3f4; }
     .table th, .table td { vertical-align: middle; }
     .section-title { margin-top: 2.5rem; margin-bottom: 1rem; font-weight: 600; }
-    .room-cards { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 1rem; padding: 0.5rem; margin-bottom: 2rem; }
-    .room-card { min-width: 200px; flex: 0 0 auto; transition: transform 0.2s; padding: 0 !important; overflow: hidden; }
+    .room-card { transition: transform 0.2s; padding: 0 !important; overflow: hidden; border-radius: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
     .room-card:hover { transform: translateY(-5px); }
     .room-status-bar { width: 100%; padding: 0.5rem; text-align: center; color: white; font-weight: 500; }
     .room-status-bar.occupied { background-color: #dc3545; }
@@ -29,10 +28,6 @@
         font-size: 0.75rem;
         font-weight: 400;
     }
-    .room-cards::-webkit-scrollbar { height: 6px; }
-    .room-cards::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-    .room-cards::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
-    .room-cards::-webkit-scrollbar-thumb:hover { background: #555; }
     .status-cards { 
         display: grid; 
         grid-template-columns: repeat(7, 1fr); 
@@ -75,102 +70,104 @@
         <!-- Title removed from here -->
         <!-- Buttons removed from here -->
     </div>
-    <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card text-center p-3">
+    <div class="row g-2 mb-4">
+        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-6" style="flex: 0 0 20%; max-width: 20%;">
+            <div class="card stat-card text-center p-2">
                 <div class="fs-6 text-muted">Daily Occupancy</div>
-                <div class="fs-2 fw-bold">{{ daily_occupancy|floatformat:1 }}%</div>
-                <div class="text-muted">Target: {{ target_occupancy }}%</div>
+                <div class="fs-3 fw-bold">{{ daily_occupancy|floatformat:1 }}%</div>
+                <div class="text-muted small">Target: {{ target_occupancy }}%</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card text-center p-3">
+        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-6" style="flex: 0 0 20%; max-width: 20%;">
+            <div class="card stat-card text-center p-2">
                 <div class="fs-6 text-muted">Weekly Occupancy</div>
-                <div class="fs-2 fw-bold">{{ weekly_occupancy|floatformat:1 }}%</div>
-                <div class="text-muted">This Week</div>
+                <div class="fs-3 fw-bold">{{ weekly_occupancy|floatformat:1 }}%</div>
+                <div class="text-muted small">This Week</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card text-center p-3">
+        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-6" style="flex: 0 0 20%; max-width: 20%;">
+            <div class="card stat-card text-center p-2">
                 <div class="fs-6 text-muted">Monthly Occupancy</div>
-                <div class="fs-2 fw-bold">{{ monthly_occupancy|floatformat:1 }}%</div>
-                <div class="text-muted">{{ month_name }}</div>
+                <div class="fs-3 fw-bold">{{ monthly_occupancy|floatformat:1 }}%</div>
+                <div class="text-muted small">{{ month_name }}</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card text-center p-3">
+        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-6" style="flex: 0 0 20%; max-width: 20%;">
+            <div class="card stat-card text-center p-2">
                 <div class="fs-6 text-muted">Total Reservations</div>
-                <div class="fs-2 fw-bold">{{ all_reservations|length }}</div>
-                <div class="text-muted">in database</div>
+                <div class="fs-3 fw-bold">{{ all_reservations|length }}</div>
+                <div class="text-muted small">in database</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card text-center p-3">
+        <div class="col-xl-2 col-lg-3 col-md-6 col-sm-6" style="flex: 0 0 20%; max-width: 20%;">
+            <div class="card stat-card text-center p-2">
                 <div class="fs-6 text-muted">Monthly Nights Sold</div>
-                <div class="fs-2 fw-bold">{{ monthly_nights_sold|intcomma }}</div>
-                <div class="text-muted">{{ month_name }}</div>
+                <div class="fs-3 fw-bold">{{ monthly_nights_sold|intcomma }}</div>
+                <div class="text-muted small">{{ month_name }}</div>
             </div>
         </div>
     </div>
 
     <h3 class="section-title">Rooms</h3>
-    <div class="room-cards">
+    <div class="row g-2 mb-4">
         {% for room in rooms %}
-        <div class="card room-card">
-            <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% elif room.status == 'vacant_dirty' %}bg-warning text-dark{% elif room.status == 'vacant_clean' %}vacant_clean{% else %}bg-secondary text-white{% endif %}">
-                {% if room.status == 'occupied' %}
-                    <i class="bi bi-person-fill"></i> Occupied
-                {% elif room.status == 'vacant_dirty' %}
-                    <i class="bi bi-exclamation-triangle-fill"></i> Vacant Dirty
-                {% elif room.status == 'vacant_clean' %}
-                    <i class="bi bi-check-circle-fill"></i> Vacant Clean
-                {% else %}
-                    <i class="bi bi-dash-circle-fill"></i> {{ room.get_status_display }}
-                {% endif %}
-            </div>
-            <div class="room-content">
-                <div class="room-number">Room {{ room.room_number }}</div>
-                
-                {# Show guest information for all active reservation statuses #}
-                {% comment %} Check for in_house reservations {% endcomment %}
-                {% for reservation in checked_in_reservations %}
-                    {% if reservation.room == room %}
-                        <div class="room-guest">
-                            <i class="bi bi-person-fill"></i> {{ reservation.guest.name }}
-                            <div class="text-muted small">In House</div>
-                        </div>
+        <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 col-12" style="flex: 0 0 20%; max-width: 20%;">
+            <div class="card room-card">
+                <div class="room-status-bar {% if room.status == 'occupied' %}occupied{% elif room.status == 'vacant_dirty' %}bg-warning text-dark{% elif room.status == 'vacant_clean' %}vacant_clean{% else %}bg-secondary text-white{% endif %}">
+                    {% if room.status == 'occupied' %}
+                        <i class="bi bi-person-fill"></i> Occupied
+                    {% elif room.status == 'vacant_dirty' %}
+                        <i class="bi bi-exclamation-triangle-fill"></i> Vacant Dirty
+                    {% elif room.status == 'vacant_clean' %}
+                        <i class="bi bi-check-circle-fill"></i> Vacant Clean
+                    {% else %}
+                        <i class="bi bi-dash-circle-fill"></i> {{ room.get_status_display }}
                     {% endif %}
-                {% endfor %}
-                
-                {% comment %} Check for confirmed reservations {% endcomment %}
-                {% for reservation in confirmed_reservations %}
-                    {% if reservation.room == room %}
-                        <div class="room-guest">
-                            <i class="bi bi-check-circle"></i> {{ reservation.guest.name }}
-                            <div class="text-muted small">Confirmed</div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                
-                {% comment %} Check for expected arrival reservations {% endcomment %}
-                {% for reservation in expected_arrivals %}
-                    {% if reservation.room == room %}
-                        <div class="room-guest">
-                            <i class="bi bi-box-arrow-in-right"></i> {{ reservation.guest.name }}
-                            <div class="text-muted small">Expected Arrival</div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-                
-                {% comment %} Check for expected departure reservations {% endcomment %}
-                {% for reservation in expected_departures %}
-                    {% if reservation.room == room %}
-                        <div class="room-guest">
-                            <i class="bi bi-box-arrow-right"></i> {{ reservation.guest.name }}
-                            <div class="text-muted small">Expected Departure</div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
+                </div>
+                <div class="room-content">
+                    <div class="room-number">Room {{ room.room_number }}</div>
+                    
+                    {# Show guest information for all active reservation statuses #}
+                    {% comment %} Check for in_house reservations {% endcomment %}
+                    {% for reservation in checked_in_reservations %}
+                        {% if reservation.room == room %}
+                            <div class="room-guest">
+                                <i class="bi bi-person-fill"></i> {{ reservation.guest.name }}
+                                <div class="text-muted small">In House</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% comment %} Check for confirmed reservations {% endcomment %}
+                    {% for reservation in confirmed_reservations %}
+                        {% if reservation.room == room %}
+                            <div class="room-guest">
+                                <i class="bi bi-check-circle"></i> {{ reservation.guest.name }}
+                                <div class="text-muted small">Confirmed</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% comment %} Check for expected arrival reservations {% endcomment %}
+                    {% for reservation in expected_arrivals %}
+                        {% if reservation.room == room %}
+                            <div class="room-guest">
+                                <i class="bi bi-box-arrow-in-right"></i> {{ reservation.guest.name }}
+                                <div class="text-muted small">Expected Arrival</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% comment %} Check for expected departure reservations {% endcomment %}
+                    {% for reservation in expected_departures %}
+                        {% if reservation.room == room %}
+                            <div class="room-guest">
+                                <i class="bi bi-box-arrow-right"></i> {{ reservation.guest.name }}
+                                <div class="text-muted small">Expected Departure</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
         {% endfor %}
