@@ -39,9 +39,8 @@ class HotelSettings(models.Model):
 
 class Room(models.Model):
     ROOM_TYPES = [
-        ('single', 'Single'),
-        ('double', 'Double'),
-        ('suite', 'Suite'),
+        ('garden_view', 'Garden View'),
+        ('mountain_view', 'Mountain View'),
     ]
     STATUS_CHOICES = [
         ('vacant_clean', 'Vacant Clean'),
