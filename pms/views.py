@@ -124,7 +124,19 @@ def checkin_reservation(request, reservation_id):
         current_time = datetime.now().time()
         
         # Check room status and time window for warnings
-        room_ready = reservation.room.status == 'vacant_clean'
+        # Modified logic: room is ready if it's vacant_clean OR if it's occupied by this same reservation
+        room_is_vacant_clean = reservation.room.status == 'vacant_clean'
+        room_occupied_by_this_guest = (
+            reservation.room.status == 'occupied' and 
+            Reservation.objects.filter(
+                room=reservation.room,
+                check_in__lte=date.today(),
+                check_out__gt=date.today(),
+                status='expected_arrival',
+                id=reservation.id
+            ).exists()
+        )
+        room_ready = room_is_vacant_clean or room_occupied_by_this_guest
         time_allowed = settings.is_check_in_allowed(current_time)
         
         # Add warning messages but don't redirect
