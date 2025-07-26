@@ -1,4 +1,4 @@
-from .models import Guest, Reservation, Nationality, PaymentMethod
+from .models import Guest, Reservation, Nationality, PaymentMethod, Agent
 
 # Form for completing guest data during check-in
 from django import forms
@@ -38,7 +38,7 @@ class CheckInGuestForm(forms.ModelForm):
             'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
         }
 from django import forms
-from .models import Room, Guest, Reservation, PaymentMethod
+from .models import Room, Guest, Reservation, PaymentMethod, Agent
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import date
@@ -52,6 +52,10 @@ class ReservationForm(forms.ModelForm):
         # Set payment method queryset to only active payment methods
         self.fields['payment_method'].queryset = PaymentMethod.objects.filter(is_active=True).order_by('display_order', 'name')
         self.fields['payment_method'].empty_label = "Select Payment Method"
+        
+        # Set agent queryset to only active agents
+        self.fields['agent'].queryset = Agent.objects.filter(is_active=True).order_by('display_order', 'name')
+        self.fields['agent'].empty_label = "Select Agent/Source"
         
         # Apply Bootstrap classes to all fields
         for field_name, field in self.fields.items():

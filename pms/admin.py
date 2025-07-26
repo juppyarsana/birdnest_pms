@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Room, Guest, Reservation, HotelSettings, Nationality, PaymentMethod
+from .models import Room, Guest, Reservation, HotelSettings, Nationality, PaymentMethod, Agent
 from django.contrib.humanize.templatetags.humanize import intcomma
 
 class RoomAdmin(admin.ModelAdmin):
@@ -15,6 +15,24 @@ class NationalityAdmin(admin.ModelAdmin):
     search_fields = ('name', 'code')
     list_editable = ('is_active',)
     ordering = ('name',)
+
+class AgentAdmin(admin.ModelAdmin):
+    list_display = ('name', 'display_order', 'is_active', 'created_at', 'updated_at')
+    list_filter = ('is_active', 'created_at', 'updated_at')
+    search_fields = ('name',)
+    list_editable = ('display_order', 'is_active')
+    ordering = ('display_order', 'name')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'display_order', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
 
 class PaymentMethodAdmin(admin.ModelAdmin):
     list_display = ('name', 'code', 'is_active', 'display_order', 'created_at')
@@ -63,6 +81,7 @@ class HotelSettingsAdmin(admin.ModelAdmin):
 admin.site.register(Room, RoomAdmin)
 admin.site.register(Nationality, NationalityAdmin)
 admin.site.register(PaymentMethod, PaymentMethodAdmin)
+admin.site.register(Agent, AgentAdmin)
 admin.site.register(Guest, GuestAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(HotelSettings, HotelSettingsAdmin)

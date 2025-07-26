@@ -236,18 +236,12 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Agent/Source</span>
                                 <div class="edit-field">
-                                    <span class="view-mode">{{ reservation.get_agent_display }}</span>
+                                    <span class="view-mode">{{ reservation.agent.name|default:"Not Specified" }}</span>
                                     <select name="agent" class="form-select edit-mode" style="display: none;">
-                                        <option value="direct" {% if reservation.agent == 'direct' %}selected{% endif %}>Direct Booking</option>
-                                        <option value="booking_com" {% if reservation.agent == 'booking_com' %}selected{% endif %}>Booking.com</option>
-                                        <option value="expedia" {% if reservation.agent == 'expedia' %}selected{% endif %}>Expedia</option>
-                                        <option value="agoda" {% if reservation.agent == 'agoda' %}selected{% endif %}>Agoda</option>
-                                        <option value="airbnb" {% if reservation.agent == 'airbnb' %}selected{% endif %}>Airbnb</option>
-                                        <option value="travel_agent" {% if reservation.agent == 'travel_agent' %}selected{% endif %}>Travel Agent</option>
-                                        <option value="corporate" {% if reservation.agent == 'corporate' %}selected{% endif %}>Corporate</option>
-                                        <option value="walk_in" {% if reservation.agent == 'walk_in' %}selected{% endif %}>Walk-in</option>
-                                        <option value="phone" {% if reservation.agent == 'phone' %}selected{% endif %}>Phone Booking</option>
-                                        <option value="other" {% if reservation.agent == 'other' %}selected{% endif %}>Other</option>
+                                        <option value="" {% if not reservation.agent %}selected{% endif %}>Not Specified</option>
+                                        {% for agent in agents %}
+                                            <option value="{{ agent.id }}" {% if reservation.agent.id == agent.id %}selected{% endif %}>{{ agent.name }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>
@@ -580,6 +574,7 @@ function syncFormFields() {
     const checkInTimeInput = document.querySelector('input[name="check_in_time"].edit-mode');
     const checkOutInput = document.querySelector('input[name="check_out"].edit-mode');
     const numGuestsInput = document.querySelector('input[name="num_guests"].edit-mode');
+    const agentSelect = document.querySelector('select[name="agent"].edit-mode');
     const statusSelect = document.querySelector('select[name="status"].edit-mode');
     const paymentMethodSelect = document.querySelector('select[name="payment_method"].edit-mode');
     const paymentNotesTextarea = document.querySelector('textarea[name="payment_notes"].edit-mode');
@@ -605,6 +600,10 @@ function syncFormFields() {
         document.getElementById('form_num_guests').value = numGuestsInput.value;
         console.log('Num guests synced:', numGuestsInput.value);
     }
+    if (agentSelect) {
+            document.getElementById('form_agent').value = agentSelect.value;
+            console.log('Agent synced:', agentSelect.value);
+        }
     if (statusSelect) {
         document.getElementById('form_status').value = statusSelect.value;
         console.log('Status synced:', statusSelect.value);

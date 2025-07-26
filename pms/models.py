@@ -51,6 +51,21 @@ class Nationality(models.Model):
     def __str__(self):
         return self.name
 
+class Agent(models.Model):
+    """Model for managing booking agents/sources dynamically"""
+    name = models.CharField(max_length=100, unique=True, help_text="Name of the booking agent or source")
+    display_order = models.PositiveIntegerField(default=0, help_text="Order in which this agent appears in dropdowns")
+    is_active = models.BooleanField(default=True, help_text="Whether this agent is currently available for selection")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['display_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
 class PaymentMethod(models.Model):
     name = models.CharField(max_length=100, unique=True, help_text="Payment method name (e.g., Bank Transfer, Cash)")
     code = models.CharField(max_length=20, unique=True, help_text="Internal code for the payment method")
@@ -176,18 +191,6 @@ class Reservation(models.Model):
         ('cash', 'Cash'),
         ('credit_card', 'Credit Card'),
     ]
-    AGENT_CHOICES = [
-        ('direct', 'Direct Booking'),
-        ('booking_com', 'Booking.com'),
-        ('expedia', 'Expedia'),
-        ('agoda', 'Agoda'),
-        ('airbnb', 'Airbnb'),
-        ('travel_agent', 'Travel Agent'),
-        ('corporate', 'Corporate'),
-        ('walk_in', 'Walk-in'),
-        ('phone', 'Phone Booking'),
-        ('other', 'Other'),
-    ]
     guest = models.ForeignKey(Guest, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
     check_in = models.DateField()
@@ -198,7 +201,7 @@ class Reservation(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True, help_text="Payment method used for this reservation")
     payment_notes = models.TextField(blank=True, default='')  # New field
-    agent = models.CharField(max_length=20, choices=AGENT_CHOICES, default='direct', help_text='Source/agent where this reservation came from')
+    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, help_text="Booking agent/source for this reservation")
     created_at = models.DateTimeField(auto_now_add=True)  # Reservation creation timestamp
     cancellation_reason = models.TextField(blank=True, default='')  # Reason for cancellation
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Final amount after discounts, taxes, and fees")

@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from datetime import datetime, date, time, timedelta
 from calendar import monthrange
-from .models import Room, Reservation, HotelSettings, Guest, PaymentMethod
+from .models import Room, Reservation, HotelSettings, Guest, PaymentMethod, Agent
 from .forms import ReservationForm, CheckInGuestForm, ConfirmReservationForm
 from django.views.decorators.http import require_GET
 
@@ -851,6 +851,16 @@ def revenue_report(request):
         if method_revenue > 0:  # Only include methods with revenue
             payment_method_revenue[payment_method.name] = method_revenue
     
+    # Revenue by agent/source
+    agent_revenue = {}
+    # Get active agents from the database
+    agents = Agent.objects.filter(is_active=True)
+    for agent in agents:
+        agent_rev = sum(res.total_amount for res in reservations 
+                       if res.agent == agent and res.total_amount)
+        if agent_rev > 0:  # Only include agents with revenue
+            agent_revenue[agent.name] = agent_rev
+    
     context = {
         'start_date': start_date,
         'end_date': end_date,
@@ -861,6 +871,7 @@ def revenue_report(request):
         'daily_revenue': daily_revenue,
         'room_type_revenue': room_type_revenue,
         'payment_method_revenue': payment_method_revenue,
+        'agent_revenue': agent_revenue,
         'room_types': Room.ROOM_TYPES,
         'selected_room_type': room_type
     }
@@ -1104,6 +1115,17 @@ def guest_analytics(request):
     # Convert to sorted list for display but keep as dict for template iteration
     payment_method_data = sorted(payment_method_dict.items(), key=lambda x: x[1], reverse=True)
     
+    # Agent/Source analysis
+    agent_dict = defaultdict(int)
+    for reservation in reservations:
+        if reservation.agent:
+            agent_dict[reservation.agent.name] += 1
+        else:
+            agent_dict['Not Specified'] += 1
+    
+    # Convert to sorted list for display
+    agent_data = sorted(agent_dict.items(), key=lambda x: x[1], reverse=True)
+    
     # Monthly booking trends (for the past 12 months)
     monthly_trends = []
     for i in range(12):
@@ -1163,6 +1185,7 @@ def guest_analytics(request):
         'los_distribution': los_distribution,
         'room_type_data': room_type_data,
         'payment_method_data': payment_method_data,
+        'agent_data': agent_data,
         'monthly_trends': monthly_trends,
         'top_guests': top_guests,
         'completion_rate': completion_rate,
@@ -1310,9 +1333,13 @@ def reservation_detail(request, reservation_id):
             Q(status='vacant_clean')  # Available rooms
         ).order_by('room_number')
     
+    # Get available agents for the agent selection dropdown
+    agents = Agent.objects.filter(is_active=True).order_by('display_order', 'name')
+    
     context = {
         'reservation': reservation,
         'available_rooms': available_rooms,
+        'agents': agents,
         'auto_edit': edit_mode,
         'form': form,  # Pass form to template for error display
     }
