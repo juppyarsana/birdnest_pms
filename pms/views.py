@@ -1033,9 +1033,16 @@ def guest_analytics(request):
         total_nights = sum([(res.check_out - res.check_in).days for res in reservations])
         avg_los = total_nights / total_guests if total_guests > 0 else 0
     
-    # Guest demographics by nationality - removed since Guest model doesn't have nationality field
-    # This can be added back when nationality field is added to Guest model
-    nationality_data = []
+    # Guest demographics by nationality
+    nationality_counts = defaultdict(int)
+    for reservation in reservations:
+        if reservation.guest.nationality:
+            nationality_counts[reservation.guest.nationality] += 1
+        else:
+            nationality_counts['Not Specified'] += 1
+    
+    # Convert to sorted list for display
+    nationality_data = sorted(nationality_counts.items(), key=lambda x: x[1], reverse=True)[:10]  # Top 10 nationalities
     
     # Booking patterns by day of week
     weekday_bookings = defaultdict(int)

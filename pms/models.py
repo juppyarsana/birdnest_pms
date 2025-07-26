@@ -104,11 +104,33 @@ class Room(models.Model):
         return not overlapping and self.status == 'vacant_clean'
 
 class Guest(models.Model):
+    NATIONALITY_CHOICES = [
+        ('', 'Select Nationality'),
+        ('indonesian', 'Indonesian'),
+        ('american', 'American'),
+        ('australian', 'Australian'),
+        ('british', 'British'),
+        ('canadian', 'Canadian'),
+        ('chinese', 'Chinese'),
+        ('dutch', 'Dutch'),
+        ('french', 'French'),
+        ('german', 'German'),
+        ('indian', 'Indian'),
+        ('japanese', 'Japanese'),
+        ('malaysian', 'Malaysian'),
+        ('singaporean', 'Singaporean'),
+        ('south_korean', 'South Korean'),
+        ('thai', 'Thai'),
+        ('vietnamese', 'Vietnamese'),
+        ('other', 'Other'),
+    ]
+    
     name = models.CharField(max_length=100)
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True)
     id_type = models.CharField(max_length=50, blank=True)  # e.g., Passport, KTP, etc.
     id_number = models.CharField(max_length=50, blank=True)
+    nationality = models.CharField(max_length=100, choices=NATIONALITY_CHOICES, blank=True, help_text="Guest's nationality")
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)

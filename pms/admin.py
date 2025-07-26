@@ -9,6 +9,11 @@ class RoomAdmin(admin.ModelAdmin):
         return f"Rp {intcomma(obj.rate)}"
     display_rate.short_description = 'Rate'
 
+class GuestAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'phone', 'nationality', 'id_type', 'id_number')
+    search_fields = ('name', 'email', 'phone', 'nationality', 'id_number')
+    list_filter = ('nationality', 'id_type')
+
 class ReservationAdmin(admin.ModelAdmin):
     list_display = ('guest', 'room', 'check_in', 'check_out', 'agent', 'status')
     list_filter = ('status', 'agent', 'check_in', 'check_out')
@@ -37,6 +42,6 @@ class HotelSettingsAdmin(admin.ModelAdmin):
         return False
 
 admin.site.register(Room, RoomAdmin)
-admin.site.register(Guest)
+admin.site.register(Guest, GuestAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(HotelSettings, HotelSettingsAdmin)

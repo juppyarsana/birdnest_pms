@@ -164,6 +164,19 @@
                                 </div>
                             </div>
                             <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center view-mode">
+                                    <span class="text-muted">Nationality</span>
+                                    <span>{{ guest.nationality|default:"-" }}</span>
+                                </div>
+                                <div class="edit-mode">
+                                    <label class="form-label text-muted">Nationality</label>
+                                    {{ form.nationality }}
+                                    {% if form.nationality.errors %}
+                                        <div class="text-danger small">{{ form.nationality.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-12">
                                 <hr class="my-2">
                                 <h6 class="text-muted mb-2">Emergency Contact</h6>
                             </div>

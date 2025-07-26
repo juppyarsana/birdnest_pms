@@ -18,7 +18,7 @@ class CheckInGuestForm(forms.ModelForm):
     class Meta:
         model = Guest
         fields = [
-            'name', 'email', 'phone', 'id_type', 'id_number', 'date_of_birth',
+            'name', 'email', 'phone', 'id_type', 'id_number', 'nationality', 'date_of_birth',
             'address', 'emergency_contact_name', 'emergency_contact_phone'
         ]
         widgets = {
@@ -28,6 +28,7 @@ class CheckInGuestForm(forms.ModelForm):
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
             'id_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Passport, KTP'}),
             'id_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'nationality': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control'}),
             'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
@@ -119,7 +120,7 @@ class GuestForm(forms.ModelForm):
     class Meta:
         model = Guest
         fields = [
-            'name', 'email', 'phone', 'id_type', 'id_number', 'date_of_birth',
+            'name', 'email', 'phone', 'id_type', 'id_number', 'nationality', 'date_of_birth',
             'address', 'emergency_contact_name', 'emergency_contact_phone'
         ]
         widgets = {
@@ -135,6 +136,7 @@ class GuestForm(forms.ModelForm):
                 ('other', 'Other')
             ], attrs={'class': 'form-select'}),
             'id_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'nationality': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'emergency_contact_name': forms.TextInput(attrs={'class': 'form-control'}),
             'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
