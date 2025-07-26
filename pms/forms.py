@@ -26,7 +26,7 @@ class CheckInGuestForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'id_type': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Passport, KTP'}),
+            'id_type': forms.Select(attrs={'class': 'form-select'}),
             'id_number': forms.TextInput(attrs={'class': 'form-control'}),
             'nationality': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -128,13 +128,7 @@ class GuestForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control'}),
             'phone': forms.TextInput(attrs={'class': 'form-control'}),
-            'id_type': forms.Select(choices=[
-                ('', 'Select ID Type'),
-                ('passport', 'Passport'),
-                ('license', "Driver's License"),
-                ('national_id', 'National ID'),
-                ('other', 'Other')
-            ], attrs={'class': 'form-select'}),
+            'id_type': forms.Select(attrs={'class': 'form-select'}),
             'id_number': forms.TextInput(attrs={'class': 'form-control'}),
             'nationality': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),

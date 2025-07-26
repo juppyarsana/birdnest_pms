@@ -125,10 +125,21 @@ class Guest(models.Model):
         ('other', 'Other'),
     ]
     
+    ID_TYPE_CHOICES = [
+        ('', 'Select ID Type'),
+        ('passport', 'Passport'),
+        ('ktp', 'KTP (Indonesian ID)'),
+        ('drivers_license', 'Driver\'s License'),
+        ('national_id', 'National ID Card'),
+        ('sim', 'SIM (Indonesian Driver\'s License)'),
+        ('visa', 'Visa'),
+        ('other', 'Other'),
+    ]
+    
     name = models.CharField(max_length=100)
     email = models.EmailField(blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True)
-    id_type = models.CharField(max_length=50, blank=True)  # e.g., Passport, KTP, etc.
+    id_type = models.CharField(max_length=50, choices=ID_TYPE_CHOICES, blank=True, help_text="Type of identification document")
     id_number = models.CharField(max_length=50, blank=True)
     nationality = models.CharField(max_length=100, choices=NATIONALITY_CHOICES, blank=True, help_text="Guest's nationality")
     date_of_birth = models.DateField(null=True, blank=True)
