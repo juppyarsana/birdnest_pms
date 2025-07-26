@@ -51,6 +51,22 @@ class Nationality(models.Model):
     def __str__(self):
         return self.name
 
+class PaymentMethod(models.Model):
+    name = models.CharField(max_length=100, unique=True, help_text="Payment method name (e.g., Bank Transfer, Cash)")
+    code = models.CharField(max_length=20, unique=True, help_text="Internal code for the payment method")
+    description = models.TextField(blank=True, help_text="Optional description or instructions")
+    is_active = models.BooleanField(default=True, help_text="Whether this payment method is available for selection")
+    display_order = models.PositiveIntegerField(default=0, help_text="Order in which to display this payment method")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Payment Method'
+        verbose_name_plural = 'Payment Methods'
+        ordering = ['display_order', 'name']
+    
+    def __str__(self):
+        return self.name
+
 class Room(models.Model):
     ROOM_TYPES = [
         ('garden_view', 'Garden View'),
@@ -180,7 +196,7 @@ class Reservation(models.Model):
     num_guests = models.PositiveIntegerField(default=1)
     terms_accepted = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, blank=True, default='')
+    payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True, help_text="Payment method used for this reservation")
     payment_notes = models.TextField(blank=True, default='')  # New field
     agent = models.CharField(max_length=20, choices=AGENT_CHOICES, default='direct', help_text='Source/agent where this reservation came from')
     created_at = models.DateTimeField(auto_now_add=True)  # Reservation creation timestamp

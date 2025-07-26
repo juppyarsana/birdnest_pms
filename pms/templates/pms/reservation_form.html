@@ -551,10 +551,10 @@
                         </div>
                         <div class="col-md-4">
                             <label for="{{ form.payment_method.id_for_label }}" class="form-label">Payment Method</label>
-                            {{ form.payment_method }}
-                            {% if form.payment_method.errors %}
-                                <div class="text-danger small mt-1">
-                                    {% for error in form.payment_method.errors %}
+                                    {{ form.payment_method }}
+                                    {% if form.payment_method.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {% for error in form.payment_method.errors %}
                                         <div>{{ error }}</div>
                                     {% endfor %}
                                 </div>

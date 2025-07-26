@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Room, Guest, Reservation, HotelSettings, Nationality
+from .models import Room, Guest, Reservation, HotelSettings, Nationality, PaymentMethod
 from django.contrib.humanize.templatetags.humanize import intcomma
 
 class RoomAdmin(admin.ModelAdmin):
@@ -15,6 +15,13 @@ class NationalityAdmin(admin.ModelAdmin):
     search_fields = ('name', 'code')
     list_editable = ('is_active',)
     ordering = ('name',)
+
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'is_active', 'display_order', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('name', 'code', 'description')
+    list_editable = ('is_active', 'display_order')
+    ordering = ('display_order', 'name')
 
 class GuestAdmin(admin.ModelAdmin):
     list_display = ('name', 'email', 'phone', 'get_nationality', 'id_type', 'id_number')
@@ -55,6 +62,7 @@ class HotelSettingsAdmin(admin.ModelAdmin):
 
 admin.site.register(Room, RoomAdmin)
 admin.site.register(Nationality, NationalityAdmin)
+admin.site.register(PaymentMethod, PaymentMethodAdmin)
 admin.site.register(Guest, GuestAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(HotelSettings, HotelSettingsAdmin)

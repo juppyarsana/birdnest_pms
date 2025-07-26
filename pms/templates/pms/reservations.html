@@ -217,7 +217,7 @@
                                     <span class="badge rounded-pill px-3 py-2" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: #fff; font-size: 0.875rem;">{{ reservation.status|title }}</span>
                                 {% endif %}
                                 </td>
-                                <td class="px-2">{{ reservation.get_payment_method_display|default:"Not Specified" }}</td>
+                                <td class="px-2">{{ reservation.payment_method.name|default:"Not Specified" }}</td>
                                 <td class="px-2">{{ reservation.created_at|date:"M d, Y H:i" }}</td>
                                 <td class="px-2 text-end">
                                     <div class="d-flex gap-1 align-items-center justify-content-end">

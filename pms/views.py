@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from datetime import datetime, date, time, timedelta
 from calendar import monthrange
-from .models import Room, Reservation, HotelSettings, Guest
+from .models import Room, Reservation, HotelSettings, Guest, PaymentMethod
 from .forms import ReservationForm, CheckInGuestForm, ConfirmReservationForm
 from django.views.decorators.http import require_GET
 
@@ -70,7 +70,7 @@ def reservations_list(request):
         'check_in': 'check_in',
         'check_out': 'check_out',
         'status': 'status',
-        'payment_method': 'payment_method'
+        'payment_method': 'payment_method__name'
     }
 
     # Apply sorting
@@ -419,6 +419,7 @@ def reservation_detail(request, reservation_id):
         'available_rooms': available_rooms,
         'auto_edit': edit_mode,
         'form': form,  # Pass form to template for error display
+        'payment_methods': PaymentMethod.objects.filter(is_active=True).order_by('display_order', 'name'),
     }
     return render(request, 'pms/reservation_detail.html', context)
 
@@ -842,12 +843,13 @@ def revenue_report(request):
     
     # Revenue by payment method
     payment_method_revenue = {}
-    payment_methods = [('cash', 'Cash'), ('card', 'Card'), ('transfer', 'Bank Transfer'), ('other', 'Other')]
-    for method_choice, method_name in payment_methods:
+    # Get active payment methods from the database
+    payment_methods = PaymentMethod.objects.filter(is_active=True)
+    for payment_method in payment_methods:
         method_revenue = sum(res.total_amount for res in reservations 
-                           if res.payment_method == method_choice and res.total_amount)
+                           if res.payment_method == payment_method and res.total_amount)
         if method_revenue > 0:  # Only include methods with revenue
-            payment_method_revenue[method_name] = method_revenue
+            payment_method_revenue[payment_method.name] = method_revenue
     
     context = {
         'start_date': start_date,
@@ -1095,7 +1097,7 @@ def guest_analytics(request):
     payment_method_dict = defaultdict(int)
     for reservation in reservations:
         if reservation.payment_method:
-            payment_method_dict[reservation.get_payment_method_display()] += 1
+            payment_method_dict[reservation.payment_method.name] += 1
         else:
             payment_method_dict['Not Specified'] += 1
     

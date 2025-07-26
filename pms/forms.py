@@ -1,4 +1,4 @@
-from .models import Guest, Reservation, Nationality
+from .models import Guest, Reservation, Nationality, PaymentMethod
 
 # Form for completing guest data during check-in
 from django import forms
@@ -38,7 +38,7 @@ class CheckInGuestForm(forms.ModelForm):
             'emergency_contact_phone': forms.TextInput(attrs={'class': 'form-control'}),
         }
 from django import forms
-from .models import Room, Guest, Reservation
+from .models import Room, Guest, Reservation, PaymentMethod
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import date
@@ -48,6 +48,10 @@ class ReservationForm(forms.ModelForm):
         # 'edit' kwarg determines if this is for editing
         self.is_edit = kwargs.pop('edit', False)
         super().__init__(*args, **kwargs)
+        
+        # Set payment method queryset to only active payment methods
+        self.fields['payment_method'].queryset = PaymentMethod.objects.filter(is_active=True).order_by('display_order', 'name')
+        self.fields['payment_method'].empty_label = "Select Payment Method"
         
         # Apply Bootstrap classes to all fields
         for field_name, field in self.fields.items():
@@ -87,7 +91,7 @@ class ReservationForm(forms.ModelForm):
         check_in = cleaned_data.get('check_in')
         check_out = cleaned_data.get('check_out')
         status = cleaned_data.get('status') if self.is_edit else 'pending'
-        payment_method = cleaned_data.get('payment_method') if self.is_edit else ''
+        payment_method = cleaned_data.get('payment_method') if self.is_edit else None
 
         if check_in and check_out:
             # Ensure check_out is after check_in
@@ -168,12 +172,14 @@ class ConfirmReservationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Set payment method queryset to only active payment methods
+        self.fields['payment_method'].queryset = PaymentMethod.objects.filter(is_active=True).order_by('display_order', 'name')
         self.fields['payment_method'].required = True
         self.fields['payment_method'].empty_label = None
 
     def clean(self):
         cleaned_data = super().clean()
         payment_method = cleaned_data.get('payment_method')
-        if not payment_method or payment_method == '':
+        if not payment_method:
             raise ValidationError("Please select a payment method for confirmation.")
         return cleaned_data

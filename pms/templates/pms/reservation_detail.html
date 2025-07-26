@@ -286,12 +286,12 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted">Payment Method</span>
                                 <div class="edit-field">
-                                    <span class="view-mode">{{ reservation.get_payment_method_display|default:"Not Specified" }}</span>
-                                    <select name="payment_method" class="form-select edit-mode" style="display: none;">
-                                        <option value="" {% if not reservation.payment_method %}selected{% endif %}>Not Specified</option>
-                                        <option value="bank_transfer" {% if reservation.payment_method == 'bank_transfer' %}selected{% endif %}>Bank Transfer</option>
-                                        <option value="cash" {% if reservation.payment_method == 'cash' %}selected{% endif %}>Cash</option>
-                                        <option value="credit_card" {% if reservation.payment_method == 'credit_card' %}selected{% endif %}>Credit Card</option>
+                                    <span class="view-mode">{{ reservation.payment_method.name|default:"Not Specified" }}</span>
+                            <select name="payment_method" class="form-select edit-mode" style="display: none;">
+                                <option value="" {% if not reservation.payment_method %}selected{% endif %}>Not Specified</option>
+                                {% for method in payment_methods %}
+                                    <option value="{{ method.id }}" {% if reservation.payment_method.id == method.id %}selected{% endif %}>{{ method.name }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                             </div>
