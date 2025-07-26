@@ -498,7 +498,16 @@ def guests(request):
             try:
                 guest.save()
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True, 'guest_id': guest.id})
+                    return JsonResponse({
+                        'success': True, 
+                        'guest_id': guest.id,
+                        'guest': {
+                            'id': guest.id,
+                            'name': guest.name,
+                            'email': guest.email or '',
+                            'phone': guest.phone or ''
+                        }
+                    })
             except Exception as e:
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'error': str(e)})
@@ -1383,7 +1392,16 @@ def guests(request):
             try:
                 guest.save()
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True, 'guest_id': guest.id})
+                    return JsonResponse({
+                        'success': True, 
+                        'guest_id': guest.id,
+                        'guest': {
+                            'id': guest.id,
+                            'name': guest.name,
+                            'email': guest.email or '',
+                            'phone': guest.phone or ''
+                        }
+                    })
             except Exception as e:
                 if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                     return JsonResponse({'success': False, 'error': str(e)})

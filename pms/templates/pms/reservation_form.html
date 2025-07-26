@@ -288,6 +288,48 @@
         color: #667eea;
         font-size: 1.2em;
     }
+    
+    /* Guest Type Button Styling */
+    .btn-check:checked + .btn-outline-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-color: #667eea !important;
+        color: white !important;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-outline-primary {
+        border: 2px solid #667eea;
+        color: #667eea;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-group .btn-outline-primary:first-child {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    
+    .btn-group .btn-outline-primary:last-child {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-left: none;
+    }
+    
+    .btn-group .btn-outline-primary:not(:first-child):not(:last-child) {
+        border-radius: 0;
+        border-left: none;
+    }
 </style>
 {% endblock %}
 {% block content %}
@@ -295,25 +337,18 @@
     <!-- Page Header -->
     <div class="page-header fade-in">
         <div class="container position-relative">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="mb-2">
-                        <i class="bi {% if editing %}bi-pencil-square{% else %}bi-plus-circle{% endif %} me-2"></i>
-                        {% if editing %}Edit Reservation{% else %}Create New Reservation{% endif %}
-                    </h1>
-                    <p class="mb-0 opacity-75">
-                        {% if editing %}
-                            Update reservation details and manage booking information
-                        {% else %}
-                            Create a new reservation for your guests
-                        {% endif %}
-                    </p>
-                </div>
-                {% if not editing %}
-                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#addGuestModal">
-                    <i class="bi bi-person-plus me-2"></i>Add Guest
-                </button>
-                {% endif %}
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi {% if editing %}bi-pencil-square{% else %}bi-plus-circle{% endif %} me-2"></i>
+                    {% if editing %}Edit Reservation{% else %}Create New Reservation{% endif %}
+                </h1>
+                <p class="mb-0 opacity-75">
+                    {% if editing %}
+                        Update reservation details and manage booking information
+                    {% else %}
+                        Create a new reservation for your guests
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
@@ -405,14 +440,14 @@
                     <div class="row g-3 mb-3">
                         <div class="col-12">
                             <div class="btn-group w-100" role="group" aria-label="Guest selection type">
-                                <input type="radio" class="btn-check" name="guest-type" id="existing-guest" value="existing" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="existing-guest">
-                                    <i class="bi bi-search me-2"></i>Select Existing Guest
-                                </label>
-                                
                                 <input type="radio" class="btn-check" name="guest-type" id="new-guest" value="new" autocomplete="off" checked>
                                 <label class="btn btn-outline-primary" for="new-guest">
                                     <i class="bi bi-person-plus me-2"></i>Add New Guest
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="guest-type" id="existing-guest" value="existing" autocomplete="off">
+                                <label class="btn btn-outline-primary" for="existing-guest">
+                                    <i class="bi bi-search me-2"></i>Select Existing Guest
                                 </label>
                             </div>
                         </div>
@@ -837,7 +872,49 @@ function initializeContactValidation() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
-            if (!validateContact()) {
+            const newGuestRadio = document.getElementById('new-guest');
+            const existingGuestRadio = document.getElementById('existing-guest');
+            
+            // Check which guest type is selected
+            if (newGuestRadio && newGuestRadio.checked) {
+                // Handle new guest creation
+                const guestName = document.getElementById('guest_name').value.trim();
+                const guestEmail = document.getElementById('guest_email').value.trim();
+                const guestPhone = document.getElementById('guest_phone').value.trim();
+                
+                if (!guestName) {
+                    e.preventDefault();
+                    alert('Please enter a guest name.');
+                    document.getElementById('guest_name').focus();
+                    return;
+                }
+                
+                if (!guestEmail && !guestPhone) {
+                    e.preventDefault();
+                    alert('Please enter either an email or phone number for the guest.');
+                    document.getElementById('guest_email').focus();
+                    return;
+                }
+                
+                // Prevent form submission and create guest first
+                e.preventDefault();
+                
+                // Create or find guest, then submit form
+                createOrFindGuestAndSubmit(guestName, guestEmail, guestPhone, form);
+                
+            } else if (existingGuestRadio && existingGuestRadio.checked) {
+                // Handle existing guest selection
+                const selectedGuestId = document.getElementById('selected-guest-id').value;
+                if (!selectedGuestId) {
+                    e.preventDefault();
+                    alert('Please select a guest.');
+                    document.getElementById('guest-search').focus();
+                    return;
+                }
+            }
+            
+            // Additional contact validation for new guests
+            if (newGuestRadio && newGuestRadio.checked && !validateContact()) {
                 e.preventDefault();
                 const emailField = document.getElementById('guest_email');
                 if (emailField) emailField.focus();
@@ -914,6 +991,48 @@ function initializeContactValidation() {
 </div>
 
 <script>
+
+function createOrFindGuestAndSubmit(name, email, phone, form) {
+    // First, try to find existing guest
+    const existingGuest = guestData.find(guest => 
+        guest.name.toLowerCase() === name.toLowerCase() || 
+        (email && guest.email === email) ||
+        (phone && guest.phone === phone)
+    );
+    
+    if (existingGuest) {
+        document.getElementById('selected-guest-id').value = existingGuest.id;
+        form.submit();
+    } else {
+        // Create new guest via AJAX
+        const formData = new FormData();
+        formData.append('name', name);
+        if (email) formData.append('email', email);
+        if (phone) formData.append('phone', phone);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        
+        fetch('/guests/', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.guest_id) {
+                document.getElementById('selected-guest-id').value = data.guest_id;
+                form.submit();
+            } else {
+                alert('Error creating guest: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error creating guest:', error);
+            alert('Error creating guest. Please try again.');
+        });
+    }
+}
 
 function createOrFindGuest(name, email, phone) {
     // First, try to find existing guest
@@ -1223,11 +1342,32 @@ window.refreshGuestDropdown = function() {
                     if (window.refreshGuestDropdown) {
                         window.refreshGuestDropdown();
                     }
+                    
+                    // Auto-select the newly created guest in Step 3
+                    if (data.guest) {
+                        // Switch to existing guest selection
+                        const existingGuestRadio = document.getElementById('existing-guest');
+                        const newGuestRadio = document.getElementById('new-guest');
+                        if (existingGuestRadio && newGuestRadio) {
+                            existingGuestRadio.checked = true;
+                            newGuestRadio.checked = false;
+                            
+                            // Trigger the toggle to show existing guest section
+                            const event = new Event('change');
+                            existingGuestRadio.dispatchEvent(event);
+                            
+                            // Auto-select the new guest
+                            setTimeout(function() {
+                                selectGuest(data.guest);
+                            }, 100);
+                        }
+                    }
+                    
                     // Clear the form
                     addGuestForm.reset();
                     // Show success message
                     setTimeout(function() {
-                        alert('Guest added successfully!');
+                        alert('Guest added successfully and selected for this reservation!');
                     }, 300);
                 } else {
                     if (addGuestModal) addGuestModal.hide();
