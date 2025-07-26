@@ -37,6 +37,20 @@ class HotelSettings(models.Model):
             settings = cls.objects.create()
         return settings
 
+class Nationality(models.Model):
+    name = models.CharField(max_length=100, unique=True, help_text="Nationality name (e.g., Indonesian, American)")
+    code = models.CharField(max_length=10, unique=True, blank=True, help_text="Optional country code (e.g., ID, US)")
+    is_active = models.BooleanField(default=True, help_text="Whether this nationality is available for selection")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Nationality'
+        verbose_name_plural = 'Nationalities'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
 class Room(models.Model):
     ROOM_TYPES = [
         ('garden_view', 'Garden View'),
@@ -104,27 +118,6 @@ class Room(models.Model):
         return not overlapping and self.status == 'vacant_clean'
 
 class Guest(models.Model):
-    NATIONALITY_CHOICES = [
-        ('', 'Select Nationality'),
-        ('indonesian', 'Indonesian'),
-        ('american', 'American'),
-        ('australian', 'Australian'),
-        ('british', 'British'),
-        ('canadian', 'Canadian'),
-        ('chinese', 'Chinese'),
-        ('dutch', 'Dutch'),
-        ('french', 'French'),
-        ('german', 'German'),
-        ('indian', 'Indian'),
-        ('japanese', 'Japanese'),
-        ('malaysian', 'Malaysian'),
-        ('singaporean', 'Singaporean'),
-        ('south_korean', 'South Korean'),
-        ('thai', 'Thai'),
-        ('vietnamese', 'Vietnamese'),
-        ('other', 'Other'),
-    ]
-    
     ID_TYPE_CHOICES = [
         ('', 'Select ID Type'),
         ('passport', 'Passport'),
@@ -141,7 +134,7 @@ class Guest(models.Model):
     phone = models.CharField(max_length=15, blank=True)
     id_type = models.CharField(max_length=50, choices=ID_TYPE_CHOICES, blank=True, help_text="Type of identification document")
     id_number = models.CharField(max_length=50, blank=True)
-    nationality = models.CharField(max_length=100, choices=NATIONALITY_CHOICES, blank=True, help_text="Guest's nationality")
+    nationality = models.ForeignKey(Nationality, on_delete=models.SET_NULL, null=True, blank=True, help_text="Guest's nationality")
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True)
     emergency_contact_name = models.CharField(max_length=100, blank=True)

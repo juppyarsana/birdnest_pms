@@ -1,4 +1,4 @@
-from .models import Guest, Reservation
+from .models import Guest, Reservation, Nationality
 
 # Form for completing guest data during check-in
 from django import forms
@@ -14,6 +14,10 @@ class CheckInGuestForm(forms.ModelForm):
         self.fields['email'].required = True
         self.fields['id_type'].required = True
         self.fields['id_number'].required = True
+        
+        # Set nationality queryset to only active nationalities
+        self.fields['nationality'].queryset = Nationality.objects.filter(is_active=True).order_by('name')
+        self.fields['nationality'].empty_label = "Select Nationality"
 
     class Meta:
         model = Guest
@@ -116,6 +120,10 @@ class GuestForm(forms.ModelForm):
         for field in self.fields.values():
             field.required = False
         self.fields['name'].required = True
+        
+        # Set nationality queryset to only active nationalities
+        self.fields['nationality'].queryset = Nationality.objects.filter(is_active=True).order_by('name')
+        self.fields['nationality'].empty_label = "Select Nationality"
 
     class Meta:
         model = Guest

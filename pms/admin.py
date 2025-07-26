@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Room, Guest, Reservation, HotelSettings
+from .models import Room, Guest, Reservation, HotelSettings, Nationality
 from django.contrib.humanize.templatetags.humanize import intcomma
 
 class RoomAdmin(admin.ModelAdmin):
@@ -9,10 +9,22 @@ class RoomAdmin(admin.ModelAdmin):
         return f"Rp {intcomma(obj.rate)}"
     display_rate.short_description = 'Rate'
 
+class NationalityAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'is_active', 'created_at')
+    list_filter = ('is_active', 'created_at')
+    search_fields = ('name', 'code')
+    list_editable = ('is_active',)
+    ordering = ('name',)
+
 class GuestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'phone', 'nationality', 'id_type', 'id_number')
-    search_fields = ('name', 'email', 'phone', 'nationality', 'id_number')
+    list_display = ('name', 'email', 'phone', 'get_nationality', 'id_type', 'id_number')
+    search_fields = ('name', 'email', 'phone', 'nationality__name', 'id_number')
     list_filter = ('nationality', 'id_type')
+    
+    def get_nationality(self, obj):
+        return obj.nationality.name if obj.nationality else '-'
+    get_nationality.short_description = 'Nationality'
+    get_nationality.admin_order_field = 'nationality__name'
 
 class ReservationAdmin(admin.ModelAdmin):
     list_display = ('guest', 'room', 'check_in', 'check_out', 'agent', 'status')
@@ -42,6 +54,7 @@ class HotelSettingsAdmin(admin.ModelAdmin):
         return False
 
 admin.site.register(Room, RoomAdmin)
+admin.site.register(Nationality, NationalityAdmin)
 admin.site.register(Guest, GuestAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(HotelSettings, HotelSettingsAdmin)
