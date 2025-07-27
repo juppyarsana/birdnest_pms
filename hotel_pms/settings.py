@@ -142,6 +142,10 @@ HOTEL_CONTACT = os.getenv('HOTEL_CONTACT', '')
 HOTEL_ADDRESS = os.getenv('HOTEL_ADDRESS', '')
 
 # Logging Configuration
+# Ensure logs directory exists
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -149,7 +153,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'email_notifications.log',
+            'filename': LOGS_DIR / 'email_notifications.log',
         },
         'console': {
             'level': 'INFO',
