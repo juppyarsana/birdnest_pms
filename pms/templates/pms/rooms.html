@@ -1,78 +1,602 @@
 {% extends 'base.html' %}
+{% load currency_filters %}
+
 {% block content %}
 <div class="container-fluid py-4">
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-0 text-gray-800">Room Management</h1>
-            <p class="mb-0 text-muted">Monitor and manage room status for housekeeping operations</p>
+            <p class="mb-0 text-muted">Comprehensive room status and maintenance management</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roomStatsModal">
+                <i class="bi bi-bar-chart"></i> Room Statistics
+            </button>
         </div>
     </div>
+
+    <!-- Room Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-success">
+                        <i class="bi bi-check-circle fs-2"></i>
+                    </div>
+                    <h4 class="mt-2 mb-0">{{ room_stats.vacant_clean }}</h4>
+                    <small class="text-muted">Available</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-warning">
+                        <i class="bi bi-exclamation-triangle fs-2"></i>
+                    </div>
+                    <h4 class="mt-2 mb-0">{{ room_stats.vacant_dirty }}</h4>
+                    <small class="text-muted">Need Cleaning</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-danger">
+                        <i class="bi bi-person-fill fs-2"></i>
+                    </div>
+                    <h4 class="mt-2 mb-0">{{ room_stats.occupied }}</h4>
+                    <small class="text-muted">Occupied</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-info">
+                        <i class="bi bi-tools fs-2"></i>
+                    </div>
+                    <h4 class="mt-2 mb-0">{{ room_stats.maintenance }}</h4>
+                    <small class="text-muted">Maintenance</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-dark">
+                        <i class="bi bi-x-circle fs-2"></i>
+                    </div>
+                    <h4 class="mt-2 mb-0">{{ room_stats.out_of_order }}</h4>
+                    <small class="text-muted">Out of Order</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="text-secondary">
+                        <i class="bi bi-pause-circle fs-2"></i>
+                    </div>
+                    <h4 class="mt-2 mb-0">{{ room_stats.out_of_service }}</h4>
+                    <small class="text-muted">Out of Service</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rooms Grid -->
     <div class="row">
         {% for room in rooms %}
-        <div class="col-md-4 mb-3">
-            <div class="card">
-                <div class="card-header {% if room.status == 'vacant_dirty' %}bg-warning text-dark{% elif room.status == 'vacant_clean' %}bg-success text-white{% elif room.status == 'occupied' %}bg-danger text-white{% else %}bg-secondary text-white{% endif %}">
-                    Room {{ room.room_number }}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100 d-flex flex-column">
+                <!-- Room Header -->
+                <div class="card-header 
+                    {% if room.status == 'vacant_clean' %}bg-success text-white
+                    {% elif room.status == 'vacant_dirty' %}bg-warning text-dark
+                    {% elif room.status == 'occupied' %}bg-danger text-white
+                    {% elif room.status == 'maintenance' %}bg-info text-white
+                    {% elif room.status == 'out_of_order' %}bg-dark text-white
+                    {% elif room.status == 'out_of_service' %}bg-secondary text-white
+                    {% else %}bg-light text-dark{% endif %} d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">Room {{ room.room_number }}</h5>
+                        <small>{{ room.get_room_type_display }}</small>
+                    </div>
+                    <div>
+                        <a href="{% url 'room_detail' room.id %}" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p>Status: <strong>{{ room.get_status_display }}</strong></p>
-                    {% if room.status == 'vacant_dirty' %}
-                    <form method="post" style="display:inline;" class="vacant-clean-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="room_id" value="{{ room.id }}">
-                        <button type="button" class="btn btn-success" onclick="showCleanModal(this)">Mark as Vacant Clean</button>
-                    </form>
-                    {% elif room.status == 'vacant_clean' %}
-                        <span class="badge bg-success">Ready</span>
-                    {% elif room.status == 'occupied' %}
-                        <span class="badge bg-danger">Occupied</span>
-                    {% else %}
-                        <span class="badge bg-secondary">{{ room.get_status_display }}</span>
+
+                <div class="card-body flex-grow-1 d-flex flex-column">
+                    <!-- Status and Basic Info -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge 
+                            {% if room.status == 'vacant_clean' %}bg-success
+                            {% elif room.status == 'vacant_dirty' %}bg-warning text-dark
+                            {% elif room.status == 'occupied' %}bg-danger
+                            {% elif room.status == 'maintenance' %}bg-info
+                            {% elif room.status == 'out_of_order' %}bg-dark
+                            {% elif room.status == 'out_of_service' %}bg-secondary
+                            {% endif %} fs-6">
+                            {{ room.get_status_display }}
+                        </span>
+                        <small class="text-muted">{{ room.rate|idr_currency }}</small>
+                    </div>
+
+                    <!-- Current Guest Info -->
+                    {% if room.current_guest %}
+                    <div class="alert alert-info py-2 mb-3">
+                        <small>
+                            <i class="bi bi-person"></i> 
+                            <strong>{{ room.current_guest.guest.name }}</strong><br>
+                            Check-out: {{ room.current_guest.check_out }}
+                        </small>
+                    </div>
                     {% endif %}
+
+                    <!-- Room Details -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <small class="text-muted">Occupancy</small><br>
+                            <strong>{{ room.occupancy_rate|floatformat:1 }}%</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Max Guests</small><br>
+                            <strong>{{ room.max_occupancy }}</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted">Floor</small><br>
+                            <strong>{{ room.floor|default:"N/A" }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- Room Features -->
+                    <div class="mb-3">
+                        <div class="d-flex flex-wrap gap-1">
+                            {% if room.has_ac %}<span class="badge bg-light text-dark"><i class="bi bi-snow"></i> AC</span>{% endif %}
+                            {% if room.has_wifi %}<span class="badge bg-light text-dark"><i class="bi bi-wifi"></i> WiFi</span>{% endif %}
+                            {% if room.has_tv %}<span class="badge bg-light text-dark"><i class="bi bi-tv"></i> TV</span>{% endif %}
+                            {% if room.has_balcony %}<span class="badge bg-light text-dark"><i class="bi bi-tree"></i> Balcony</span>{% endif %}
+                            {% if room.has_minibar %}<span class="badge bg-light text-dark"><i class="bi bi-cup"></i> Minibar</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Status-specific Information -->
+                    <div class="flex-grow-1">
+                        {% if room.status == 'maintenance' and room.maintenance_end_date %}
+                        <div class="alert alert-warning py-2 mb-3">
+                            <small>
+                                <i class="bi bi-tools"></i> 
+                                Maintenance until {{ room.maintenance_end_date }}
+                            </small>
+                        </div>
+                        {% endif %}
+
+                        {% if room.housekeeping_notes %}
+                        <div class="alert alert-info py-2 mb-3">
+                            <small>
+                                <i class="bi bi-sticky"></i> 
+                                {{ room.housekeeping_notes|truncatechars:50 }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row g-2 mt-2">
+                        {% if room.status == 'vacant_dirty' %}
+                            <div class="col-6">
+                                <button class="btn btn-warning btn-sm w-100" onclick="setMaintenance({{ room.id }})" title="Maintenance">
+                                    <i class="bi bi-tools"></i> Maintenance
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="setOutOfOrder({{ room.id }})" title="Out of Order">
+                                    <i class="bi bi-x-circle"></i> Out of Order
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="setOutOfService({{ room.id }})" title="Out of Service">
+                                    <i class="bi bi-pause-circle"></i> Out of Service
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="updateNotes({{ room.id }})" title="Update Notes">
+                                    <i class="bi bi-sticky"></i> Update Notes
+                                </button>
+                            </div>
+                        {% elif room.status == 'vacant_clean' %}
+                            <div class="col-6">
+                                <button class="btn btn-warning btn-sm w-100" onclick="setMaintenance({{ room.id }})" title="Maintenance">
+                                    <i class="bi bi-tools"></i> Maintenance
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="setOutOfOrder({{ room.id }})" title="Out of Order">
+                                    <i class="bi bi-x-circle"></i> Out of Order
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="setOutOfService({{ room.id }})" title="Out of Service">
+                                    <i class="bi bi-pause-circle"></i> Out of Service
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="updateNotes({{ room.id }})" title="Update Notes">
+                                    <i class="bi bi-sticky"></i> Update Notes
+                                </button>
+                            </div>
+                        {% elif room.status in 'maintenance,out_of_order,out_of_service' %}
+                            <div class="col-6">
+                                <button class="btn btn-success btn-sm w-100" onclick="returnToService({{ room.id }})" title="Return to Service">
+                                    <i class="bi bi-arrow-clockwise"></i> Return to Service
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="updateNotes({{ room.id }})" title="Update Notes">
+                                    <i class="bi bi-sticky"></i> Update Notes
+                                </button>
+                            </div>
+                        {% else %}
+                            <div class="col-6">
+                                <button class="btn btn-warning btn-sm w-100" onclick="setMaintenance({{ room.id }})" title="Maintenance">
+                                    <i class="bi bi-tools"></i> Maintenance
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="updateNotes({{ room.id }})" title="Update Notes">
+                                    <i class="bi bi-sticky"></i> Update Notes
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
+
+                <!-- Recent Activity -->
+                {% if room.recent_reservations %}
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="bi bi-clock-history"></i> 
+                        Last guest: {{ room.recent_reservations.0.guest.name }} 
+                        ({{ room.recent_reservations.0.check_out }})
+                    </small>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<!-- Clean Confirmation Modal -->
-<div class="modal fade" id="cleanModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header border-0 pb-0">
-        <h5 class="modal-title fw-bold">Confirm Room Cleaning</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body py-4">
-        <div class="text-center text-success mb-3">
-          <i class="bi bi-bucket fs-1"></i>
+<!-- Room Statistics Modal -->
+<div class="modal fade" id="roomStatsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Room Statistics Overview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <canvas id="roomStatusChart" width="400" height="400"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Room Status Summary</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="bi bi-check-circle text-success"></i> Available</span>
+                                <strong>{{ room_stats.vacant_clean }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="bi bi-exclamation-triangle text-warning"></i> Need Cleaning</span>
+                                <strong>{{ room_stats.vacant_dirty }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="bi bi-person-fill text-danger"></i> Occupied</span>
+                                <strong>{{ room_stats.occupied }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="bi bi-tools text-info"></i> Maintenance</span>
+                                <strong>{{ room_stats.maintenance }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="bi bi-x-circle text-dark"></i> Out of Order</span>
+                                <strong>{{ room_stats.out_of_order }}</strong>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span><i class="bi bi-pause-circle text-secondary"></i> Out of Service</span>
+                                <strong>{{ room_stats.out_of_service }}</strong>
+                            </li>
+                        </ul>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Total Rooms:</strong></span>
+                            <strong>{{ room_stats.total }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Available for Sale:</strong></span>
+                            <strong>{{ room_stats.available }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><strong>Unavailable:</strong></span>
+                            <strong>{{ room_stats.unavailable }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <p class="text-center mb-0">Are you sure this room has been cleaned and is ready for the next guest?</p>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" id="confirmCleanBtn">Yes, Mark as Clean</button>
-      </div>
     </div>
-  </div>
 </div>
+
+<!-- Action Modals -->
+<!-- Mark Clean Modal -->
+<div class="modal fade" id="markCleanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mark Room as Clean</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure this room has been cleaned and is ready for the next guest?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmMarkClean">Yes, Mark as Clean</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal fade" id="maintenanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="maintenanceForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_maintenance">
+                <input type="hidden" name="room_id" id="maintenanceRoomId">
+                <div class="modal-header">
+                    <h5 class="modal-title">Schedule Maintenance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" name="maintenance_start_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">End Date (Optional)</label>
+                        <input type="date" class="form-control" name="maintenance_end_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Maintenance Notes</label>
+                        <textarea class="form-control" name="maintenance_notes" rows="3" placeholder="Describe the maintenance work needed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Schedule Maintenance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Out of Order Modal -->
+<div class="modal fade" id="outOfOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="outOfOrderForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_out_of_order">
+                <input type="hidden" name="room_id" id="oooRoomId">
+                <div class="modal-header">
+                    <h5 class="modal-title">Mark Room Out of Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="ooo_reason" rows="3" placeholder="Explain why this room is out of order..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Expected Return Date (Optional)</label>
+                        <input type="date" class="form-control" name="ooo_end_date">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark">Mark Out of Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Return to Service Modal -->
+<div class="modal fade" id="returnToServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Return Room to Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to return this room to service? It will be marked as available for booking.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmReturnToService">Yes, Return to Service</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Out of Service Modal -->
+<div class="modal fade" id="outOfServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="outOfServiceForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_out_of_service">
+                <input type="hidden" name="room_id" id="oosRoomId">
+                <div class="modal-header">
+                    <h5 class="modal-title">Set Room Out of Service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="oos_reason" rows="3" placeholder="Explain why this room is out of service..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-outline-secondary">Set Out of Service</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Notes Modal -->
+<div class="modal fade" id="updateNotesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="updateNotesForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_housekeeping_notes">
+                <input type="hidden" name="room_id" id="notesRoomId">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Housekeeping Notes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Housekeeping Notes</label>
+                        <textarea class="form-control" name="housekeeping_notes" rows="4" placeholder="Special instructions for housekeeping..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Notes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-function showCleanModal(btn) {
-    window.cleanForm = btn.closest('form');
-    var modal = new bootstrap.Modal(document.getElementById('cleanModal'));
-    modal.show();
+// Global variables for room actions
+let currentRoomId = null;
+
+// Room action functions
+function markClean(roomId) {
+    currentRoomId = roomId;
+    new bootstrap.Modal(document.getElementById('markCleanModal')).show();
 }
+
+function setMaintenance(roomId) {
+    document.getElementById('maintenanceRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('maintenanceModal')).show();
+}
+
+function setOutOfOrder(roomId) {
+    document.getElementById('oooRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('outOfOrderModal')).show();
+}
+
+function setOutOfService(roomId) {
+    document.getElementById('oosRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('outOfServiceModal')).show();
+}
+
+function returnToService(roomId) {
+    currentRoomId = roomId;
+    new bootstrap.Modal(document.getElementById('returnToServiceModal')).show();
+}
+
+function updateNotes(roomId) {
+    document.getElementById('notesRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('updateNotesModal')).show();
+}
+
+// Event listeners
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('confirmCleanBtn').onclick = function() {
-        if (window.cleanForm) {
-            window.cleanForm.submit();
+    // Mark clean confirmation
+    document.getElementById('confirmMarkClean').onclick = function() {
+        if (currentRoomId) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                {% csrf_token %}
+                <input type="hidden" name="action" value="mark_clean">
+                <input type="hidden" name="room_id" value="${currentRoomId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
         }
     };
+
+    // Return to service confirmation
+    document.getElementById('confirmReturnToService').onclick = function() {
+        if (currentRoomId) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                {% csrf_token %}
+                <input type="hidden" name="action" value="return_to_service">
+                <input type="hidden" name="room_id" value="${currentRoomId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    };
+
+    // Room status chart
+    const ctx = document.getElementById('roomStatusChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Available', 'Need Cleaning', 'Occupied', 'Maintenance', 'Out of Order', 'Out of Service'],
+            datasets: [{
+                data: [
+                    {{ room_stats.vacant_clean }},
+                    {{ room_stats.vacant_dirty }},
+                    {{ room_stats.occupied }},
+                    {{ room_stats.maintenance }},
+                    {{ room_stats.out_of_order }},
+                    {{ room_stats.out_of_service }}
+                ],
+                backgroundColor: [
+                    '#28a745',
+                    '#ffc107',
+                    '#dc3545',
+                    '#17a2b8',
+                    '#343a40',
+                    '#6c757d'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
 });
 </script>
 {% endblock %}

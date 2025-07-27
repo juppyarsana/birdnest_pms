@@ -5,7 +5,7 @@ from .views import (
     dashboard, create_reservation, calendar_data,
     checkin_reservation, confirm_reservation,
     checkout_reservation, cancel_reservation, edit_reservation,
-    reservations_list, reservation_detail, rooms_list,
+    reservations_list, reservation_detail, rooms_list, room_detail,
     guests, guest_detail, guest_list_json, check_reservation_conflict,
     check_available_rooms, occupancy_report, reports_home, revenue_report, guest_analytics, booking_sources_report, operational_report, forecast_report
 )
@@ -22,7 +22,9 @@ urlpatterns = [
     path('reservations/<int:reservation_id>/checkout/', checkout_reservation, name='checkout_reservation'),
     path('reservations/<int:reservation_id>/cancel/', cancel_reservation, name='cancel_reservation'),
     path('reservations/<int:reservation_id>/edit/', edit_reservation, name='edit_reservation'),
+    # Room management URLs
     path('rooms/', rooms_list, name='rooms_list'),
+    path('rooms/<int:room_id>/', room_detail, name='room_detail'),
     path('guests/', guests, name='guests'),
     path('guests/<int:guest_id>/', guest_detail, name='guest_detail'),
     path('guests/json/', guest_list_json, name='guest_list_json'),

@@ -16,10 +16,20 @@
     .room-status-bar.vacant_clean { background-color: #198754; }
     .room-content { padding: 1rem; }
     .room-number { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .room-number a { transition: color 0.2s ease; }
+    .room-number a:hover { color: #0d6efd !important; }
     .room-guest {
         font-weight: 500;
         color: #0d6efd;
         margin-bottom: 0.25rem;
+    }
+    .room-guest a {
+        color: #0d6efd;
+        transition: color 0.2s ease;
+    }
+    .room-guest a:hover {
+        color: #0a58ca;
+        text-decoration: underline !important;
     }
     .room-guest:last-child {
         margin-bottom: 0;
@@ -125,14 +135,21 @@
                     {% endif %}
                 </div>
                 <div class="room-content">
-                    <div class="room-number">Room {{ room.room_number }}</div>
+                    <div class="room-number">
+                        <a href="{% url 'room_detail' room.id %}" class="text-decoration-none text-dark">
+                            Room {{ room.room_number }}
+                        </a>
+                    </div>
                     
                     {# Show guest information for all active reservation statuses #}
                     {% comment %} Check for in_house reservations {% endcomment %}
                     {% for reservation in checked_in_reservations %}
                         {% if reservation.room == room %}
                             <div class="room-guest">
-                                <i class="bi bi-person-fill"></i> {{ reservation.guest.name }}
+                                <i class="bi bi-person-fill"></i> 
+                                <a href="{% url 'reservation_detail' reservation.id %}" class="text-decoration-none">
+                                    {{ reservation.guest.name }}
+                                </a>
                                 <div class="text-muted small">In House</div>
                             </div>
                         {% endif %}
@@ -142,7 +159,10 @@
                     {% for reservation in confirmed_reservations %}
                         {% if reservation.room == room %}
                             <div class="room-guest">
-                                <i class="bi bi-check-circle"></i> {{ reservation.guest.name }}
+                                <i class="bi bi-check-circle"></i> 
+                                <a href="{% url 'reservation_detail' reservation.id %}" class="text-decoration-none">
+                                    {{ reservation.guest.name }}
+                                </a>
                                 <div class="text-muted small">Confirmed</div>
                             </div>
                         {% endif %}
@@ -152,7 +172,10 @@
                     {% for reservation in expected_arrivals %}
                         {% if reservation.room == room %}
                             <div class="room-guest">
-                                <i class="bi bi-box-arrow-in-right"></i> {{ reservation.guest.name }}
+                                <i class="bi bi-box-arrow-in-right"></i> 
+                                <a href="{% url 'reservation_detail' reservation.id %}" class="text-decoration-none">
+                                    {{ reservation.guest.name }}
+                                </a>
                                 <div class="text-muted small">Expected Arrival</div>
                             </div>
                         {% endif %}
@@ -162,7 +185,10 @@
                     {% for reservation in expected_departures %}
                         {% if reservation.room == room %}
                             <div class="room-guest">
-                                <i class="bi bi-box-arrow-right"></i> {{ reservation.guest.name }}
+                                <i class="bi bi-box-arrow-right"></i> 
+                                <a href="{% url 'reservation_detail' reservation.id %}" class="text-decoration-none">
+                                    {{ reservation.guest.name }}
+                                </a>
                                 <div class="text-muted small">Expected Departure</div>
                             </div>
                         {% endif %}

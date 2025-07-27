@@ -93,11 +93,43 @@ class Room(models.Model):
         ('occupied', 'Occupied'),
         ('out_of_order', 'Out of Order'),
         ('maintenance', 'Maintenance'),
+        ('out_of_service', 'Out of Service'),
     ]
     room_number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=20, choices=ROOM_TYPES)
     rate = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='vacant_clean')
+    
+    # Enhanced room details
+    floor = models.PositiveIntegerField(null=True, blank=True, help_text="Floor number")
+    max_occupancy = models.PositiveIntegerField(default=2, help_text="Maximum number of guests")
+    size_sqm = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True, help_text="Room size in square meters")
+    amenities = models.TextField(blank=True, help_text="Room amenities (comma-separated)")
+    description = models.TextField(blank=True, help_text="Room description")
+    
+    # Status tracking
+    status_changed_at = models.DateTimeField(auto_now=True)
+    status_changed_by = models.CharField(max_length=100, blank=True, help_text="Who changed the status")
+    status_reason = models.TextField(blank=True, help_text="Reason for status change")
+    
+    # Maintenance tracking
+    maintenance_start_date = models.DateField(null=True, blank=True)
+    maintenance_end_date = models.DateField(null=True, blank=True)
+    maintenance_notes = models.TextField(blank=True)
+    
+    # Housekeeping notes
+    housekeeping_notes = models.TextField(blank=True, help_text="Special housekeeping instructions")
+    last_cleaned = models.DateTimeField(null=True, blank=True)
+    
+    # Room features
+    has_balcony = models.BooleanField(default=False)
+    has_ac = models.BooleanField(default=True)
+    has_wifi = models.BooleanField(default=True)
+    has_tv = models.BooleanField(default=True)
+    has_minibar = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Room {self.room_number}"
@@ -116,8 +148,8 @@ class Room(models.Model):
         if self.status == 'vacant_dirty':
             self.save()
             return
-        # If the room is marked as out_of_order or maintenance, do not auto-update
-        if self.status in ['out_of_order', 'maintenance']:
+        # If the room is marked as out_of_order, maintenance, or out_of_service, do not auto-update
+        if self.status in ['out_of_order', 'maintenance', 'out_of_service']:
             self.save()
             return
         # Check if there are any active reservations for this room on the given date
@@ -147,6 +179,114 @@ class Room(models.Model):
         ).exists()
         # Room must also be vacant_clean to be bookable
         return not overlapping and self.status == 'vacant_clean'
+    
+    def get_reservation_history(self, limit=10):
+        """Get recent reservation history for this room"""
+        return Reservation.objects.filter(room=self).order_by('-check_in')[:limit]
+    
+    def get_occupancy_rate(self, start_date=None, end_date=None):
+        """Calculate occupancy rate for a given period"""
+        from datetime import date as date_class, timedelta
+        
+        if not start_date:
+            start_date = date_class.today() - timedelta(days=30)
+        if not end_date:
+            end_date = date_class.today()
+            
+        total_days = (end_date - start_date).days
+        if total_days <= 0:
+            return 0
+            
+        occupied_days = Reservation.objects.filter(
+            room=self,
+            check_in__lt=end_date,
+            check_out__gt=start_date,
+            status__in=['confirmed', 'in_house', 'checked_out', 'expected_arrival', 'expected_departure', 'no_show']
+        ).count()
+        
+        return (occupied_days / total_days) * 100
+    
+    def get_amenities_list(self):
+        """Return amenities as a list"""
+        if self.amenities:
+            return [amenity.strip() for amenity in self.amenities.split(',') if amenity.strip()]
+        return []
+    
+    def set_maintenance(self, start_date, end_date, notes, changed_by):
+        """Set room to maintenance status with tracking"""
+        self.status = 'maintenance'
+        self.maintenance_start_date = start_date
+        self.maintenance_end_date = end_date
+        self.maintenance_notes = notes
+        self.status_changed_by = changed_by
+        self.status_reason = f"Maintenance scheduled from {start_date} to {end_date}"
+        self.save()
+        
+        # Create maintenance log entry
+        RoomMaintenanceLog.objects.create(
+            room=self,
+            maintenance_type='scheduled',
+            start_date=start_date,
+            end_date=end_date,
+            notes=notes,
+            created_by=changed_by
+        )
+    
+    def set_out_of_order(self, reason, changed_by, end_date=None):
+        """Set room to out of order status"""
+        self.status = 'out_of_order'
+        self.status_changed_by = changed_by
+        self.status_reason = reason
+        if end_date:
+            self.maintenance_end_date = end_date
+        self.save()
+        
+        # Create maintenance log entry
+        RoomMaintenanceLog.objects.create(
+            room=self,
+            maintenance_type='out_of_order',
+            start_date=date.today(),
+            end_date=end_date,
+            notes=reason,
+            created_by=changed_by
+        )
+
+
+class RoomMaintenanceLog(models.Model):
+    MAINTENANCE_TYPES = [
+        ('scheduled', 'Scheduled Maintenance'),
+        ('emergency', 'Emergency Repair'),
+        ('out_of_order', 'Out of Order'),
+        ('deep_cleaning', 'Deep Cleaning'),
+        ('renovation', 'Renovation'),
+        ('inspection', 'Inspection'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='maintenance_logs')
+    maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    actual_end_date = models.DateField(null=True, blank=True)
+    notes = models.TextField()
+    cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    vendor = models.CharField(max_length=100, blank=True, help_text="Maintenance vendor/contractor")
+    created_by = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.room.room_number} - {self.get_maintenance_type_display()} ({self.start_date})"
 
 class Guest(models.Model):
     ID_TYPE_CHOICES = [

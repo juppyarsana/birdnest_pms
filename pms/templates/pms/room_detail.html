@@ -1,0 +1,609 @@
+{% extends 'base.html' %}
+{% load currency_filters %}
+
+{% block title %}Room {{ room.room_number }} - Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Room {{ room.room_number }} Details</h1>
+            <p class="mb-0 text-muted">{{ room.get_room_type_display }} - {{ room.get_status_display }}</p>
+        </div>
+        <div>
+            <button onclick="history.back()" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <a href="{% url 'rooms_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-list"></i> All Rooms
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Room Information -->
+        <div class="col-lg-8">
+            <!-- Basic Information Card -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header 
+                    {% if room.status == 'vacant_clean' %}bg-success text-white
+                    {% elif room.status == 'vacant_dirty' %}bg-warning text-dark
+                    {% elif room.status == 'occupied' %}bg-danger text-white
+                    {% elif room.status == 'maintenance' %}bg-info text-white
+                    {% elif room.status == 'out_of_order' %}bg-dark text-white
+                    {% elif room.status == 'out_of_service' %}bg-secondary text-white
+                    {% else %}bg-light text-dark{% endif %}">
+                    <h5 class="mb-0">Room Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Room Number:</strong></td>
+                                    <td>{{ room.room_number }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Type:</strong></td>
+                                    <td>{{ room.get_room_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status:</strong></td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if room.status == 'vacant_clean' %}bg-success
+                                            {% elif room.status == 'vacant_dirty' %}bg-warning text-dark
+                                            {% elif room.status == 'occupied' %}bg-danger
+                                            {% elif room.status == 'maintenance' %}bg-info
+                                            {% elif room.status == 'out_of_order' %}bg-dark
+                                            {% elif room.status == 'out_of_service' %}bg-secondary
+                                            {% endif %}">
+                                            {{ room.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Rate:</strong></td>
+                                    <td>{{ room.rate|idr_currency }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Max Occupancy:</strong></td>
+                                    <td>{{ room.max_occupancy }} guests</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr>
+                                    <td><strong>Floor:</strong></td>
+                                    <td>{{ room.floor|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Size:</strong></td>
+                                    <td>{{ room.size_sqm|default:"N/A" }} sqm</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Last Cleaned:</strong></td>
+                                    <td>{{ room.last_cleaned|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Status Changed:</strong></td>
+                                    <td>{{ room.status_changed_at|default:"N/A" }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Changed By:</strong></td>
+                                    <td>{{ room.status_changed_by|default:"N/A" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Room Features -->
+                    <div class="mt-3">
+                        <h6>Room Features</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% if room.has_ac %}<span class="badge bg-primary"><i class="bi bi-snow"></i> Air Conditioning</span>{% endif %}
+                            {% if room.has_wifi %}<span class="badge bg-primary"><i class="bi bi-wifi"></i> WiFi</span>{% endif %}
+                            {% if room.has_tv %}<span class="badge bg-primary"><i class="bi bi-tv"></i> Television</span>{% endif %}
+                            {% if room.has_balcony %}<span class="badge bg-primary"><i class="bi bi-tree"></i> Balcony</span>{% endif %}
+                            {% if room.has_minibar %}<span class="badge bg-primary"><i class="bi bi-cup"></i> Minibar</span>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Amenities -->
+                    {% if room.amenities %}
+                    <div class="mt-3">
+                        <h6>Additional Amenities</h6>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for amenity in room.get_amenities_list %}
+                            <span class="badge bg-light text-dark">{{ amenity }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Description -->
+                    {% if room.description %}
+                    <div class="mt-3">
+                        <h6>Description</h6>
+                        <p class="text-muted">{{ room.description }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Current Reservation -->
+            {% if current_reservation %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Current Guest</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Guest:</strong> {{ current_reservation.guest.name }}</p>
+                            <p><strong>Email:</strong> {{ current_reservation.guest.email }}</p>
+                            <p><strong>Phone:</strong> {{ current_reservation.guest.phone }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Check-in:</strong> {{ current_reservation.check_in }}</p>
+                            <p><strong>Check-out:</strong> {{ current_reservation.check_out }}</p>
+                            <p><strong>Guests:</strong> {{ current_reservation.number_of_guests }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Upcoming Reservations -->
+            {% if upcoming_reservations %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Upcoming Reservations</h5>
+                </div>
+                <div class="card-body">
+                    {% for reservation in upcoming_reservations %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>{{ reservation.guest.name }}</strong><br>
+                                <small class="text-muted">{{ reservation.guest.email }}</small>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <small>{{ reservation.check_in }} - {{ reservation.check_out }}</small><br>
+                                <small class="text-muted">{{ reservation.number_of_guests }} guests</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reservation History -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Reservation History</h5>
+                </div>
+                <div class="card-body">
+                    {% if reservation_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Guest</th>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Guests</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for reservation in reservation_history %}
+                                <tr>
+                                    <td>{{ reservation.guest.name }}</td>
+                                    <td>{{ reservation.check_in }}</td>
+                                    <td>{{ reservation.check_out }}</td>
+                                    <td>{{ reservation.number_of_guests }}</td>
+                                    <td>{{ reservation.total_amount|idr_currency }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if reservation.status == 'confirmed' %}bg-success
+                                            {% elif reservation.status == 'checked_in' %}bg-info
+                                            {% elif reservation.status == 'checked_out' %}bg-secondary
+                                            {% elif reservation.status == 'cancelled' %}bg-danger
+                                            {% else %}bg-warning{% endif %}">
+                                            {{ reservation.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No reservation history available.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Maintenance History -->
+            {% if maintenance_logs %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Maintenance History</h5>
+                </div>
+                <div class="card-body">
+                    {% for log in maintenance_logs %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>{{ log.get_maintenance_type_display }}</strong>
+                                <p class="mb-1">{{ log.description }}</p>
+                                <small class="text-muted">By: {{ log.performed_by|default:"System" }}</small>
+                            </div>
+                            <div class="text-end">
+                                <small>{{ log.start_date }}</small>
+                                {% if log.end_date %}
+                                <br><small>to {{ log.end_date }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Room Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <h4 class="text-primary">{{ occupancy_30_days|floatformat:1 }}%</h4>
+                            <small class="text-muted">30-Day Occupancy</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-success">{{ revenue_30d|idr_currency }}</h4>
+                            <small class="text-muted">30-Day Revenue</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6 border-end">
+                            <h4 class="text-info">{{ occupancy_90_days|floatformat:1 }}%</h4>
+                            <small class="text-muted">90-Day Occupancy</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 class="text-warning">{{ revenue_90d|idr_currency }}</h4>
+                            <small class="text-muted">90-Day Revenue</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Management -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Status Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        {% if room.status == 'vacant_dirty' %}
+                            <button class="btn btn-success" onclick="markClean({{ room.id }})">
+                                <i class="bi bi-check-circle"></i> Mark as Clean
+                            </button>
+                        {% elif room.status == 'vacant_clean' %}
+                            <button class="btn btn-warning" onclick="setMaintenance({{ room.id }})">
+                                <i class="bi bi-tools"></i> Schedule Maintenance
+                            </button>
+                            <button class="btn btn-dark" onclick="setOutOfOrder({{ room.id }})">
+                                <i class="bi bi-x-circle"></i> Mark Out of Order
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="setOutOfService({{ room.id }})">
+                                <i class="bi bi-pause-circle"></i> Set Out of Service
+                            </button>
+                        {% elif room.status in 'maintenance,out_of_order,out_of_service' %}
+                            <button class="btn btn-success" onclick="returnToService({{ room.id }})">
+                                <i class="bi bi-arrow-clockwise"></i> Return to Service
+                            </button>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline-primary" onclick="updateNotes({{ room.id }})">
+                            <i class="bi bi-sticky"></i> Update Notes
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Status Info -->
+            {% if room.status == 'maintenance' %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Maintenance Information</h5>
+                </div>
+                <div class="card-body">
+                    {% if room.maintenance_start_date %}
+                    <p><strong>Start Date:</strong> {{ room.maintenance_start_date }}</p>
+                    {% endif %}
+                    {% if room.maintenance_end_date %}
+                    <p><strong>End Date:</strong> {{ room.maintenance_end_date }}</p>
+                    {% endif %}
+                    {% if room.maintenance_notes %}
+                    <p><strong>Notes:</strong></p>
+                    <p class="text-muted">{{ room.maintenance_notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Housekeeping Notes -->
+            {% if room.housekeeping_notes %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Housekeeping Notes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ room.housekeeping_notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Status Reason -->
+            {% if room.status_reason %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Status Reason</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ room.status_reason }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Include the same modals from rooms.html -->
+<!-- Mark Clean Modal -->
+<div class="modal fade" id="markCleanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Mark Room as Clean</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure this room has been cleaned and is ready for the next guest?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmMarkClean">Yes, Mark as Clean</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Maintenance Modal -->
+<div class="modal fade" id="maintenanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="maintenanceForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_maintenance">
+                <input type="hidden" name="room_id" id="maintenanceRoomId" value="{{ room.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Schedule Maintenance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" name="maintenance_start_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">End Date (Optional)</label>
+                        <input type="date" class="form-control" name="maintenance_end_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Maintenance Notes</label>
+                        <textarea class="form-control" name="maintenance_notes" rows="3" placeholder="Describe the maintenance work needed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Schedule Maintenance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Out of Order Modal -->
+<div class="modal fade" id="outOfOrderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="outOfOrderForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_out_of_order">
+                <input type="hidden" name="room_id" id="oooRoomId" value="{{ room.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Mark Room Out of Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="ooo_reason" rows="3" placeholder="Explain why this room is out of order..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Expected Return Date (Optional)</label>
+                        <input type="date" class="form-control" name="ooo_end_date">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark">Mark Out of Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Out of Service Modal -->
+<div class="modal fade" id="outOfServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="outOfServiceForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_out_of_service">
+                <input type="hidden" name="room_id" id="oosRoomId" value="{{ room.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Set Room Out of Service</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="oos_reason" rows="3" placeholder="Explain why this room is out of service..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Expected Return Date (Optional)</label>
+                        <input type="date" class="form-control" name="oos_end_date">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-secondary">Set Out of Service</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Return to Service Modal -->
+<div class="modal fade" id="returnToServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Return Room to Service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to return this room to service? It will be marked as available for booking.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmReturnToService">Yes, Return to Service</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Notes Modal -->
+<div class="modal fade" id="updateNotesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="updateNotesForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_housekeeping_notes">
+                <input type="hidden" name="room_id" id="notesRoomId" value="{{ room.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Housekeeping Notes</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Housekeeping Notes</label>
+                        <textarea class="form-control" name="housekeeping_notes" rows="4" placeholder="Special instructions for housekeeping...">{{ room.housekeeping_notes }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Notes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Global variables for room actions
+let currentRoomId = {{ room.id }};
+
+// Room action functions
+function markClean(roomId) {
+    currentRoomId = roomId;
+    new bootstrap.Modal(document.getElementById('markCleanModal')).show();
+}
+
+function setMaintenance(roomId) {
+    document.getElementById('maintenanceRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('maintenanceModal')).show();
+}
+
+function setOutOfOrder(roomId) {
+    document.getElementById('oooRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('outOfOrderModal')).show();
+}
+
+function setOutOfService(roomId) {
+    document.getElementById('oosRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('outOfServiceModal')).show();
+}
+
+function returnToService(roomId) {
+    currentRoomId = roomId;
+    new bootstrap.Modal(document.getElementById('returnToServiceModal')).show();
+}
+
+function updateNotes(roomId) {
+    document.getElementById('notesRoomId').value = roomId;
+    new bootstrap.Modal(document.getElementById('updateNotesModal')).show();
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    // Mark clean confirmation
+    document.getElementById('confirmMarkClean').onclick = function() {
+        if (currentRoomId) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                {% csrf_token %}
+                <input type="hidden" name="action" value="mark_clean">
+                <input type="hidden" name="room_id" value="${currentRoomId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    };
+
+    // Return to service confirmation
+    document.getElementById('confirmReturnToService').onclick = function() {
+        if (currentRoomId) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = `
+                {% csrf_token %}
+                <input type="hidden" name="action" value="return_to_service">
+                <input type="hidden" name="room_id" value="${currentRoomId}">
+            `;
+            document.body.appendChild(form);
+            form.submit();
+        }
+    };
+});
+</script>
+{% endblock %}

@@ -274,7 +274,7 @@ def dashboard(request):
                 room=room,
                 check_in__lte=current_date,
                 check_out__gt=current_date,  # Don't count check-out day
-                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out']
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
             ).exists()
             if is_occupied:
                 booked_room_nights_week += 1
@@ -298,7 +298,7 @@ def dashboard(request):
                 room=room,
                 check_in__lte=current_date,
                 check_out__gt=current_date,  # Don't count check-out day
-                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out']
+                status__in=['confirmed', 'expected_arrival', 'expected_departure', 'in_house', 'checked_out', 'no_show']
             ).exists()
             if is_occupied:
                 booked_room_nights += 1
@@ -399,9 +399,9 @@ def reservation_detail(request, reservation_id):
                     messages.error(request, f"{field.title()}: {error}")
     
     # Get available rooms for the room selection dropdown
-    # Include current room and other available rooms
+    # Only include vacant_clean rooms as available for booking
     available_rooms = Room.objects.filter(
-        status__in=['vacant_clean', 'occupied']
+        status='vacant_clean'
     ).order_by('room_number')
     
     # If editing, we need to check room availability for the date range
@@ -457,19 +457,234 @@ def cancel_reservation(request, reservation_id):
 
 
 def rooms_list(request):
-    """View for housekeeping to update room statuses"""
-    from .models import Room
+    """Enhanced view for comprehensive room management"""
+    from .models import Room, RoomMaintenanceLog
     from django.shortcuts import redirect
+    from django.contrib import messages
+    from datetime import datetime, date
+    
     if request.method == 'POST':
+        action = request.POST.get('action')
         room_id = request.POST.get('room_id')
-        room = Room.objects.get(id=room_id)
-        # Only allow changing from vacant_dirty to vacant_clean
-        if room.status == 'vacant_dirty':
-            room.status = 'vacant_clean'
+        room = get_object_or_404(Room, id=room_id)
+        
+        if action == 'mark_clean':
+            if room.status == 'vacant_dirty':
+                room.status = 'vacant_clean'
+                room.last_cleaned = datetime.now()
+                room.status_changed_by = request.user.username if request.user.is_authenticated else 'System'
+                room.status_reason = 'Marked as clean by housekeeping'
+                room.save()
+                messages.success(request, f'Room {room.room_number} marked as clean.')
+        
+        elif action == 'set_maintenance':
+            start_date = request.POST.get('maintenance_start_date')
+            end_date = request.POST.get('maintenance_end_date')
+            notes = request.POST.get('maintenance_notes', '')
+            changed_by = request.user.username if request.user.is_authenticated else 'System'
+            
+            if start_date:
+                # Convert empty string to None for end_date
+                end_date = end_date if end_date else None
+                room.set_maintenance(start_date, end_date, notes, changed_by)
+                messages.success(request, f'Room {room.room_number} scheduled for maintenance.')
+        
+        elif action == 'set_out_of_order':
+            reason = request.POST.get('ooo_reason', '')
+            end_date = request.POST.get('ooo_end_date')
+            changed_by = request.user.username if request.user.is_authenticated else 'System'
+            
+            # Convert empty string to None for end_date
+            end_date = end_date if end_date else None
+            room.set_out_of_order(reason, changed_by, end_date)
+            messages.success(request, f'Room {room.room_number} marked as out of order.')
+        
+        elif action == 'set_out_of_service':
+            reason = request.POST.get('oos_reason', '')
+            room.status = 'out_of_service'
+            room.status_changed_by = request.user.username if request.user.is_authenticated else 'System'
+            room.status_reason = reason
             room.save()
+            messages.success(request, f'Room {room.room_number} marked as out of service.')
+        
+        elif action == 'return_to_service':
+            room.status = 'vacant_clean'
+            room.status_changed_by = request.user.username if request.user.is_authenticated else 'System'
+            room.status_reason = 'Returned to service'
+            room.maintenance_start_date = None
+            room.maintenance_end_date = None
+            room.maintenance_notes = ''
+            room.save()
+            messages.success(request, f'Room {room.room_number} returned to service.')
+        
+        elif action == 'update_housekeeping_notes':
+            notes = request.POST.get('housekeeping_notes', '')
+            room.housekeeping_notes = notes
+            room.save()
+            messages.success(request, f'Housekeeping notes updated for room {room.room_number}.')
+        
         return redirect('rooms_list')
-    rooms = Room.objects.all()
-    return render(request, 'pms/rooms.html', {'rooms': rooms})
+    
+    # GET request - display rooms with enhanced information
+    rooms = Room.objects.all().order_by('room_number')
+    
+    # Add additional context for each room
+    for room in rooms:
+        # Get recent reservations
+        room.recent_reservations = room.get_reservation_history(5)
+        # Get occupancy rate for last 30 days
+        room.occupancy_rate = room.get_occupancy_rate()
+        # Get maintenance logs
+        room.recent_maintenance = room.maintenance_logs.all()[:3]
+        # Check if room has current guest
+        today = date.today()
+        room.current_guest = room.reservation_set.filter(
+            check_in__lte=today,
+            check_out__gt=today,
+            status='in_house'
+        ).first()
+    
+    # Room statistics
+    total_rooms = rooms.count()
+    vacant_clean = rooms.filter(status='vacant_clean').count()
+    vacant_dirty = rooms.filter(status='vacant_dirty').count()
+    occupied = rooms.filter(status='occupied').count()
+    maintenance = rooms.filter(status='maintenance').count()
+    out_of_order = rooms.filter(status='out_of_order').count()
+    out_of_service = rooms.filter(status='out_of_service').count()
+    
+    context = {
+        'rooms': rooms,
+        'room_stats': {
+            'total': total_rooms,
+            'vacant_clean': vacant_clean,
+            'vacant_dirty': vacant_dirty,
+            'occupied': occupied,
+            'maintenance': maintenance,
+            'out_of_order': out_of_order,
+            'out_of_service': out_of_service,
+            'available': vacant_clean,
+            'unavailable': maintenance + out_of_order + out_of_service,
+        }
+    }
+    
+    return render(request, 'pms/rooms.html', context)
+
+
+def room_detail(request, room_id):
+    """Detailed view for individual room management"""
+    room = get_object_or_404(Room, id=room_id)
+    
+    # Handle POST requests for room status updates
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'mark_clean':
+            if room.status == 'vacant_dirty':
+                room.status = 'vacant_clean'
+                room.last_cleaned = datetime.now()
+                room.status_changed_by = request.user.username if request.user.is_authenticated else 'System'
+                room.status_reason = 'Marked as clean by housekeeping'
+                room.save()
+                messages.success(request, f'Room {room.room_number} marked as clean.')
+        
+        elif action == 'set_maintenance':
+            start_date = request.POST.get('maintenance_start_date')
+            end_date = request.POST.get('maintenance_end_date')
+            notes = request.POST.get('maintenance_notes', '')
+            changed_by = request.user.username if request.user.is_authenticated else 'System'
+            
+            if start_date:
+                # Convert empty string to None for end_date
+                end_date = end_date if end_date else None
+                room.set_maintenance(start_date, end_date, notes, changed_by)
+                messages.success(request, f'Room {room.room_number} scheduled for maintenance.')
+        
+        elif action == 'set_out_of_order':
+            reason = request.POST.get('ooo_reason', '')
+            end_date = request.POST.get('ooo_end_date')
+            changed_by = request.user.username if request.user.is_authenticated else 'System'
+            
+            # Convert empty string to None for end_date
+            end_date = end_date if end_date else None
+            room.set_out_of_order(reason, changed_by, end_date)
+            messages.success(request, f'Room {room.room_number} marked as out of order.')
+        
+        elif action == 'set_out_of_service':
+            reason = request.POST.get('oos_reason', '')
+            room.status = 'out_of_service'
+            room.status_changed_by = request.user.username if request.user.is_authenticated else 'System'
+            room.status_reason = reason
+            room.save()
+            messages.success(request, f'Room {room.room_number} marked as out of service.')
+        
+        elif action == 'return_to_service':
+            room.status = 'vacant_clean'
+            room.status_changed_by = request.user.username if request.user.is_authenticated else 'System'
+            room.status_reason = 'Returned to service'
+            room.maintenance_start_date = None
+            room.maintenance_end_date = None
+            room.maintenance_notes = ''
+            room.save()
+            messages.success(request, f'Room {room.room_number} returned to service.')
+        
+        elif action == 'update_housekeeping_notes':
+            notes = request.POST.get('housekeeping_notes', '')
+            room.housekeeping_notes = notes
+            room.save()
+            messages.success(request, f'Housekeeping notes updated for room {room.room_number}.')
+        
+        return redirect('room_detail', room_id=room.id)
+    
+    # GET request - Get comprehensive room data
+    reservation_history = room.get_reservation_history(20)
+    maintenance_logs = room.maintenance_logs.all()
+    occupancy_rate_30d = room.get_occupancy_rate()
+    occupancy_rate_90d = room.get_occupancy_rate(
+        start_date=date.today() - timedelta(days=90)
+    )
+    
+    # Calculate revenue for last 30 and 90 days
+    from django.db.models import Sum
+    # Include all revenue-generating statuses (no_show typically still generates revenue)
+    revenue_statuses = ['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+    revenue_30d = room.reservation_set.filter(
+        check_in__gte=date.today() - timedelta(days=30),
+        status__in=revenue_statuses
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    revenue_90d = room.reservation_set.filter(
+        check_in__gte=date.today() - timedelta(days=90),
+        status__in=revenue_statuses
+    ).aggregate(total=Sum('total_amount'))['total'] or 0
+    
+    # Get current reservation if any
+    current_reservation = room.reservation_set.filter(
+        check_in__lte=date.today(),
+        check_out__gt=date.today(),
+        status='in_house'
+    ).first()
+    
+    # Get upcoming reservations
+    upcoming_reservations = room.reservation_set.filter(
+        check_in__gt=date.today(),
+        status__in=['confirmed', 'expected_arrival']
+    ).order_by('check_in')[:5]
+    
+    context = {
+        'room': room,
+        'reservation_history': reservation_history,
+        'maintenance_logs': maintenance_logs,
+        'current_reservation': current_reservation,
+        'upcoming_reservations': upcoming_reservations,
+        'occupancy_30_days': round(occupancy_rate_30d, 1),
+        'occupancy_90_days': round(occupancy_rate_90d, 1),
+        'revenue_30d': revenue_30d,
+        'revenue_90d': revenue_90d,
+        'amenities_list': room.get_amenities_list(),
+    }
+    
+    return render(request, 'pms/room_detail.html', context)
 
 
 def guests(request):
@@ -723,8 +938,11 @@ def check_available_rooms(request):
                 status__in=active_statuses
             ).values_list('room_id', flat=True)
             
-            # Get available rooms (exclude conflicting ones)
-            available_rooms = all_rooms.exclude(id__in=conflicting_room_ids)
+            # Get available rooms (exclude conflicting ones and rooms not available for booking)
+            # Rooms must be vacant_clean and not in maintenance/out of order/out of service
+            available_rooms = all_rooms.exclude(id__in=conflicting_room_ids).filter(
+                status='vacant_clean'
+            )
             
             # Format response data
             rooms_data = []
@@ -1059,7 +1277,7 @@ def forecast_report(request):
     # Get historical data for analysis
     historical_reservations = Reservation.objects.filter(
         check_in__range=[start_date, end_date],
-        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
     )
     
     # Monthly trends analysis (last 12 months)
@@ -1074,7 +1292,7 @@ def forecast_report(request):
         
         month_reservations = Reservation.objects.filter(
             check_in__range=[month_start, month_end],
-            status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+            status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
         )
         
         month_revenue = float(sum(r.total_amount for r in month_reservations))
@@ -1230,7 +1448,7 @@ def forecast_report(request):
     current_month_reservations = Reservation.objects.filter(
         check_in__gte=current_month_start,
         check_in__lt=today,
-        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
     )
     
     current_month_revenue = float(sum(r.total_amount for r in current_month_reservations))
@@ -2066,9 +2284,9 @@ def reservation_detail(request, reservation_id):
                     messages.error(request, f"{field.title()}: {error}")
     
     # Get available rooms for the room selection dropdown
-    # Include current room and other available rooms
+    # Only include vacant_clean rooms as available for booking
     available_rooms = Room.objects.filter(
-        status__in=['vacant_clean', 'occupied']
+        status='vacant_clean'
     ).order_by('room_number')
     
     # If editing, we need to check room availability for the date range
@@ -2126,20 +2344,7 @@ def cancel_reservation(request, reservation_id):
 
 
 
-def rooms_list(request):
-    """View for housekeeping to update room statuses"""
-    from .models import Room
-    from django.shortcuts import redirect
-    if request.method == 'POST':
-        room_id = request.POST.get('room_id')
-        room = Room.objects.get(id=room_id)
-        # Only allow changing from vacant_dirty to vacant_clean
-        if room.status == 'vacant_dirty':
-            room.status = 'vacant_clean'
-            room.save()
-        return redirect('rooms_list')
-    rooms = Room.objects.all()
-    return render(request, 'pms/rooms.html', {'rooms': rooms})
+
 
 
 def guests(request):
@@ -2393,8 +2598,11 @@ def check_available_rooms(request):
                 status__in=active_statuses
             ).values_list('room_id', flat=True)
             
-            # Get available rooms (exclude conflicting ones)
-            available_rooms = all_rooms.exclude(id__in=conflicting_room_ids)
+            # Get available rooms (exclude conflicting ones and rooms not available for booking)
+            # Rooms must be vacant_clean and not in maintenance/out of order/out of service
+            available_rooms = all_rooms.exclude(id__in=conflicting_room_ids).filter(
+                status='vacant_clean'
+            )
             
             # Format response data
             rooms_data = []
