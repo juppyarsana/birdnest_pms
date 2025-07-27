@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-out Reminder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #fff3cd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .reservation-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .status-badge {
+            background-color: #fd7e14;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .checkout-info {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ hotel_name }}</h1>
+        <h2>🕐 Check-out Reminder</h2>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ guest.name }},</p>
+        
+        <p>We hope you've enjoyed your stay with us at {{ hotel_name }}! This is a friendly reminder that your check-out is scheduled for today.</p>
+        
+        <div class="reservation-details">
+            <h3>Your Reservation Details:</h3>
+            <p><strong>Guest Name:</strong> {{ guest.name }}</p>
+            <p><strong>Room:</strong> {{ room.room_number }} ({{ room.get_room_type_display }})</p>
+            <p><strong>Check-in:</strong> {{ reservation.check_in|date:"F d, Y" }}</p>
+            <p><strong>Check-out:</strong> {{ reservation.check_out|date:"F d, Y" }} (Today!)</p>
+            <p><strong>Number of Guests:</strong> {{ reservation.num_guests }}</p>
+            <p><strong>Total Amount:</strong> ${{ reservation.total_amount|floatformat:2 }}</p>
+            <p><strong>Status:</strong> <span class="status-badge">{{ reservation.get_status_display }}</span></p>
+        </div>
+        
+        <div class="checkout-info">
+            <h4>Check-out Information:</h4>
+            <ul>
+                <li><strong>Check-out Time:</strong> 12:00 PM (Noon)</li>
+                <li><strong>Late Check-out:</strong> Available upon request (additional charges may apply)</li>
+                <li><strong>Luggage Storage:</strong> We can store your luggage if you need to explore after check-out</li>
+                <li><strong>Final Bill:</strong> Please settle any outstanding charges at the front desk</li>
+                <li><strong>Room Key:</strong> Please return your room key at check-out</li>
+            </ul>
+        </div>
+        
+        <p>If you need assistance with transportation, recommendations for your onward journey, or have any other requests, our front desk team is here to help.</p>
+        
+        <p>Thank you for choosing {{ hotel_name }}. We hope you had a wonderful stay and look forward to welcoming you back in the future!</p>
+        
+        <p>Best regards,<br>
+        {{ hotel_name }} Team</p>
+    </div>
+    
+    <div class="footer">
+        {% if hotel_contact %}
+        <p>Contact: {{ hotel_contact }}</p>
+        {% endif %}
+        {% if hotel_address %}
+        <p>Address: {{ hotel_address }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

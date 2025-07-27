@@ -1,0 +1,494 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}Booking Sources Report - Hotel PMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 400px;
+        padding: 20px;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background: rgba(102, 126, 234, 0.1);
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .source-high { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .source-medium { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+    .source-low { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon.bookings { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .metric-icon.revenue { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .metric-icon.conversion { background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); }
+    .metric-icon.cancellation { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
+    
+    .source-card {
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .source-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    
+    .source-rank {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .performance-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge-excellent { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+    .badge-good { background: rgba(23, 162, 184, 0.1); color: #17a2b8; }
+    .badge-average { background: rgba(255, 193, 7, 0.1); color: #ffc107; }
+    .badge-poor { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    
+    .trend-chart {
+        height: 300px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">📊 Booking Sources Report</h2>
+        <p class="text-muted mb-0">Channel performance and booking source analytics</p>
+    </div>
+    <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card shadow-sm border-0 rounded-3 mb-4" 
+     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><defs><pattern id=&quot;dots&quot; width=&quot;20&quot; height=&quot;20&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;1.5&quot; fill=&quot;%23ffffff&quot; opacity=&quot;0.1&quot;/></pattern></defs><rect width=&quot;100&quot; height=&quot;100&quot; fill=&quot;url(%23dots)&quot;/></svg>') repeat; 
+                pointer-events: none;"></div>
+    <div class="card-body" style="position: relative; z-index: 1;">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <h5 class="text-white mb-1"><i class="bi bi-funnel me-2"></i>Filter Booking Data</h5>
+                <p class="text-white-50 mb-0 small">Analyze booking sources by date range and specific agents</p>
+            </div>
+            <div class="col-md-7">
+                <form method="get" class="d-flex gap-2 align-items-end" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="start_date" class="form-label text-white small fw-medium mb-1">Start Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="start_date" name="start_date" 
+                               value="{{ start_date|date:'Y-m-d' }}" 
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="end_date" class="form-label text-white small fw-medium mb-1">End Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="end_date" name="end_date" 
+                               value="{{ end_date|date:'Y-m-d' }}"
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="agent" class="form-label text-white small fw-medium mb-1">Booking Source</label>
+                        <select class="form-select border-0 shadow-sm" id="agent" name="agent"
+                                style="background: rgba(255,255,255,0.95) !important; 
+                                       backdrop-filter: blur(15px) !important; 
+                                       -webkit-backdrop-filter: blur(15px) !important;
+                                       height: 48px !important; 
+                                       color: #333 !important; 
+                                       border: 1px solid rgba(255,255,255,0.2) !important;
+                                       box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                            <option value="" style="color: #666;">All Sources</option>
+                            {% for agent in agents %}
+                                <option value="{{ agent.id }}" {% if selected_agent == agent.id|stringformat:"s" %}selected{% endif %}>{{ agent.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2" style="flex-shrink: 0; min-width: 100px;">
+                        <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Apply Filters">
+                            <i class="bi bi-search"></i> Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Metrics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon bookings mx-auto">
+                <i class="bi bi-calendar-check"></i>
+            </div>
+            <div class="fs-6 text-muted">Total Bookings</div>
+            <div class="fs-2 fw-bold">{{ total_reservations }}</div>
+            <div class="text-muted small">{{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon conversion mx-auto">
+                <i class="bi bi-chart-line"></i>
+            </div>
+            <div class="fs-6 text-muted">Potential Revenue</div>
+            <div class="fs-2 fw-bold">{{ potential_revenue|idr_currency }}</div>
+            <div class="text-muted small">All bookings</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon revenue mx-auto">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="fs-6 text-muted">Actual Revenue</div>
+            <div class="fs-2 fw-bold">{{ actual_revenue|idr_currency }}</div>
+            <div class="text-muted small">Confirmed bookings</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon cancellation mx-auto">
+                <i class="bi bi-percent"></i>
+            </div>
+            <div class="fs-6 text-muted">Conversion Rate</div>
+            <div class="fs-2 fw-bold">{{ overall_conversion_rate|floatformat:1 }}%</div>
+            <div class="text-muted small">Potential to actual</div>
+        </div>
+    </div>
+</div>
+
+<!-- Source Performance Table -->
+<h3 class="mt-4 mb-3">Source Performance Analysis</h3>
+<div class="card shadow-sm border-0 rounded-3 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <tr>
+                        <th class="border-0 py-3 px-4">Booking Source</th>
+                        <th class="border-0 py-3 text-center">Bookings</th>
+                        <th class="border-0 py-3 text-center">Potential Revenue</th>
+                        <th class="border-0 py-3 text-center">Actual Revenue</th>
+                        <th class="border-0 py-3 text-center">Market Share</th>
+                        <th class="border-0 py-3 text-center">Revenue Share</th>
+                        <th class="border-0 py-3 text-center">Conversion Rate</th>
+                        <th class="border-0 py-3 text-center">Avg. Booking Value</th>
+                        <th class="border-0 py-3 text-center">ADR</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source_name, data in agent_performance %}
+                    <tr>
+                        <td class="px-4 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if source_name == "Direct/Unspecified" %}
+                                        <i class="bi bi-house-door text-primary fs-5"></i>
+                                    {% else %}
+                                        <i class="bi bi-building text-success fs-5"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">{{ source_name }}</div>
+                                    {% if data.performance_score >= 80 %}
+                                        <span class="performance-badge badge-excellent">Excellent</span>
+                                    {% elif data.performance_score >= 65 %}
+                                        <span class="performance-badge badge-good">Good</span>
+                                    {% elif data.performance_score >= 45 %}
+                                        <span class="performance-badge badge-average">Average</span>
+                                    {% else %}
+                                        <span class="performance-badge badge-poor">Poor</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.reservations }}</div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.potential_revenue|idr_currency }}</div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.actual_revenue|idr_currency }}</div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.market_share|floatformat:1 }}%</div>
+                            <div class="progress mt-1" style="height: 4px;">
+                                <div class="progress-bar" style="width: {{ data.market_share }}%"></div>
+                            </div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.revenue_share|floatformat:1 }}%</div>
+                            <div class="progress mt-1" style="height: 4px;">
+                                <div class="progress-bar bg-success" style="width: {{ data.revenue_share }}%"></div>
+                            </div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.conversion_rate|floatformat:1 }}%</div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.avg_booking_value|idr_currency }}</div>
+                        </td>
+                        <td class="text-center py-3">
+                            <div class="fw-bold">{{ data.adr|idr_currency }}</div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            No booking data available for the selected period
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performers -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h4 class="mb-3">🏆 Top Sources by Revenue</h4>
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                {% for source_name, data in top_by_revenue %}
+                <div class="d-flex justify-content-between align-items-center mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <div class="fw-semibold">{{ source_name }}</div>
+                            <div class="text-muted small">{{ data.reservations }} bookings</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">{{ data.actual_revenue|idr_currency }}</div>
+                        <div class="text-muted small">{{ data.revenue_share|floatformat:1 }}% share</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-graph-down fs-2 d-block mb-2"></i>
+                    No revenue data available
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <h4 class="mb-3">📈 Top Sources by Volume</h4>
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                {% for source_name, data in top_by_volume %}
+                <div class="d-flex justify-content-between align-items-center mb-3 {% if not forloop.last %}border-bottom pb-3{% endif %}">
+                    <div class="d-flex align-items-center">
+                        <div>
+                            <div class="fw-semibold">{{ source_name }}</div>
+                            <div class="text-muted small">{{ data.conversion_rate|floatformat:1 }}% conversion</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">{{ data.reservations }} bookings</div>
+                        <div class="text-muted small">{{ data.market_share|floatformat:1 }}% share</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-3">
+                    <i class="bi bi-calendar-x fs-2 d-block mb-2"></i>
+                    No booking data available
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Trends Chart -->
+<h3 class="mt-4 mb-3">Monthly Booking Trends by Source</h3>
+<div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+    <div class="chart-container trend-chart">
+        <canvas id="monthlyTrendsChart"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Monthly Trends Chart
+const monthlyTrendsCtx = document.getElementById('monthlyTrendsChart').getContext('2d');
+const monthlyTrendsData = {{ monthly_trends|safe }};
+
+// Prepare data for Chart.js
+const months = Object.keys(monthlyTrendsData);
+const sources = new Set();
+
+// Collect all unique sources
+months.forEach(month => {
+    Object.keys(monthlyTrendsData[month]).forEach(source => {
+        sources.add(source);
+    });
+});
+
+const sourceArray = Array.from(sources);
+const colors = [
+    'rgba(102, 126, 234, 0.8)',
+    'rgba(40, 167, 69, 0.8)',
+    'rgba(255, 193, 7, 0.8)',
+    'rgba(220, 53, 69, 0.8)',
+    'rgba(23, 162, 184, 0.8)',
+    'rgba(108, 117, 125, 0.8)',
+    'rgba(253, 126, 20, 0.8)',
+    'rgba(111, 66, 193, 0.8)'
+];
+
+const datasets = sourceArray.map((source, index) => ({
+    label: source,
+    data: months.map(month => monthlyTrendsData[month][source] || 0),
+    backgroundColor: colors[index % colors.length],
+    borderColor: colors[index % colors.length].replace('0.8', '1'),
+    borderWidth: 2,
+    tension: 0.4
+}));
+
+new Chart(monthlyTrendsCtx, {
+    type: 'line',
+    data: {
+        labels: months,
+        datasets: datasets
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Booking Trends by Source (Last 6 Months)',
+                font: {
+                    size: 16,
+                    weight: 'bold'
+                }
+            },
+            legend: {
+                position: 'top',
+                labels: {
+                    usePointStyle: true,
+                    padding: 20
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Number of Bookings'
+                },
+                grid: {
+                    color: 'rgba(0,0,0,0.1)'
+                }
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Month'
+                },
+                grid: {
+                    color: 'rgba(0,0,0,0.1)'
+                }
+            }
+        },
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        }
+    }
+});
+</script>
+{% endblock %}

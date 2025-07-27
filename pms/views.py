@@ -1013,6 +1013,754 @@ def occupancy_report(request):
     return render(request, 'pms/reports/occupancy_report.html', context)
 
 
+def forecast_report(request):
+    """View for generating forecast and trends analysis with industry best practices"""
+    from django.db.models import Count, Avg, Sum, Q
+    from collections import defaultdict
+    import calendar
+    
+    # Get date range parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    forecast_period = request.GET.get('forecast_period', '30')  # Default 30 days
+    
+    # Industry best practice: Dynamic historical period based on forecast length
+    today = date.today()
+    forecast_days = int(forecast_period)
+    
+    # Calculate optimal historical period (3-5x forecast period, minimum 90 days)
+    if forecast_days <= 30:
+        # Short-term forecast: 1 year history optimal
+        optimal_history_days = max(365, forecast_days * 4)
+    elif forecast_days <= 90:
+        # Medium-term forecast: 2 years history optimal  
+        optimal_history_days = max(730, forecast_days * 4)
+    else:
+        # Long-term forecast: 3 years history optimal
+        optimal_history_days = max(1095, forecast_days * 3)
+    
+    if not start_date_str:
+        # Use optimal historical period
+        start_date = today - timedelta(days=optimal_history_days)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        end_date = today
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Calculate forecast end date
+    forecast_end_date = today + timedelta(days=forecast_days)
+    
+    # Calculate actual historical period used
+    historical_days = (end_date - start_date).days
+    
+    # Get historical data for analysis
+    historical_reservations = Reservation.objects.filter(
+        check_in__range=[start_date, end_date],
+        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+    )
+    
+    # Monthly trends analysis (last 12 months)
+    monthly_trends = []
+    for i in range(12):
+        month_start = today.replace(day=1) - timedelta(days=30*i)
+        month_start = month_start.replace(day=1)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1, day=1) - timedelta(days=1)
+        
+        month_reservations = Reservation.objects.filter(
+            check_in__range=[month_start, month_end],
+            status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+        )
+        
+        month_revenue = float(sum(r.total_amount for r in month_reservations))
+        month_nights = sum((r.check_out - r.check_in).days for r in month_reservations)
+        
+        # Calculate occupancy for the month
+        total_rooms = Room.objects.count()
+        days_in_month = (month_end - month_start).days + 1
+        total_room_nights = total_rooms * days_in_month
+        occupancy_rate = (month_nights / total_room_nights * 100) if total_room_nights > 0 else 0
+        
+        monthly_trends.append({
+            'month': month_start.strftime('%b %Y'),
+            'month_date': month_start,
+            'reservations': month_reservations.count(),
+            'revenue': month_revenue,
+            'nights': month_nights,
+            'occupancy': occupancy_rate,
+            'adr': month_revenue / month_nights if month_nights > 0 else 0
+        })
+    
+    monthly_trends.reverse()  # Show oldest to newest
+    
+    # Seasonal analysis (by quarter)
+    seasonal_data = {}
+    quarters = {
+        'Q1': [1, 2, 3],
+        'Q2': [4, 5, 6], 
+        'Q3': [7, 8, 9],
+        'Q4': [10, 11, 12]
+    }
+    
+    for quarter, months in quarters.items():
+        quarter_reservations = historical_reservations.filter(
+            check_in__month__in=months
+        )
+        quarter_revenue = float(sum(r.total_amount for r in quarter_reservations))
+        quarter_nights = sum((r.check_out - r.check_in).days for r in quarter_reservations)
+        
+        seasonal_data[quarter] = {
+            'reservations': quarter_reservations.count(),
+            'revenue': quarter_revenue,
+            'nights': quarter_nights,
+            'avg_adr': quarter_revenue / quarter_nights if quarter_nights > 0 else 0
+        }
+    
+    # Day of week analysis
+    weekday_analysis = {}
+    weekday_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for i, day_name in enumerate(weekday_names):
+        day_reservations = [r for r in historical_reservations if r.check_in.weekday() == i]
+        day_revenue = float(sum(r.total_amount for r in day_reservations))
+        
+        weekday_analysis[day_name] = {
+            'reservations': len(day_reservations),
+            'revenue': day_revenue,
+            'avg_revenue': day_revenue / len(day_reservations) if day_reservations else 0
+        }
+    
+    # Calculate forecast metrics based on historical trends with enhanced confidence
+    # Use adaptive moving average based on forecast period
+    if forecast_days <= 30:
+        # Short-term: Use last 2-3 months
+        recent_months = monthly_trends[-2:] if len(monthly_trends) >= 2 else monthly_trends
+    elif forecast_days <= 90:
+        # Medium-term: Use last 3-6 months
+        recent_months = monthly_trends[-4:] if len(monthly_trends) >= 4 else monthly_trends
+    else:
+        # Long-term: Use last 6-12 months
+        recent_months = monthly_trends[-8:] if len(monthly_trends) >= 8 else monthly_trends
+    
+    avg_monthly_reservations = sum(m['reservations'] for m in recent_months) / len(recent_months) if recent_months else 0
+    avg_monthly_revenue = sum(m['revenue'] for m in recent_months) / len(recent_months) if recent_months else 0
+    avg_monthly_occupancy = sum(m['occupancy'] for m in recent_months) / len(recent_months) if recent_months else 0
+    
+    # Project forecast for the selected period
+    forecast_multiplier = forecast_days / 30  # Scale based on forecast period
+    
+    # Enhanced confidence calculation based on industry standards
+    def calculate_confidence_level(historical_days, forecast_days, data_points):
+        # Rule: Historical data should be 3-5x forecast period
+        ratio = historical_days / forecast_days if forecast_days > 0 else 0
+        
+        # Data quality based on number of months with data
+        data_quality = min(data_points / 12, 1.0)  # Normalize to 12 months
+        
+        if ratio >= 5 and data_quality >= 0.75:
+            return 'High'
+        elif ratio >= 3 and data_quality >= 0.5:
+            return 'Medium'  
+        elif ratio >= 2 and data_quality >= 0.25:
+            return 'Low'
+        else:
+            return 'Very Low'
+    
+    # Seasonal adjustment for glamping business
+    current_month = today.month
+    forecast_month = forecast_end_date.month
+    
+    # Define seasonal patterns for glamping
+    peak_season = [6, 7, 8, 12]      # Jun, Jul, Aug, Dec
+    shoulder_season = [4, 5, 9, 10]   # Apr, May, Sep, Oct  
+    low_season = [1, 2, 3, 11]       # Jan, Feb, Mar, Nov
+    
+    base_confidence = calculate_confidence_level(historical_days, forecast_days, len(recent_months))
+    
+    # Adjust confidence based on seasonal patterns
+    seasonal_adjustment = 0
+    if current_month in peak_season and forecast_month in peak_season:
+        seasonal_adjustment = 0.1  # Higher confidence in peak-to-peak
+    elif current_month in low_season and forecast_month in peak_season:
+        seasonal_adjustment = -0.1  # Lower confidence crossing seasons
+    
+    confidence_levels = ['Very Low', 'Low', 'Medium', 'High']
+    current_index = confidence_levels.index(base_confidence)
+    
+    if seasonal_adjustment > 0 and current_index < len(confidence_levels) - 1:
+        adjusted_confidence = confidence_levels[current_index + 1]
+    elif seasonal_adjustment < 0 and current_index > 0:
+        adjusted_confidence = confidence_levels[current_index - 1]
+    else:
+        adjusted_confidence = base_confidence
+    
+    forecast_metrics = {
+        'period_days': forecast_days,
+        'end_date': forecast_end_date,
+        'projected_reservations': int(avg_monthly_reservations * forecast_multiplier),
+        'projected_revenue': avg_monthly_revenue * forecast_multiplier,
+        'projected_occupancy': avg_monthly_occupancy,
+        'confidence_level': adjusted_confidence,
+        'historical_days': historical_days,
+        'data_quality': len(recent_months),
+        'seasonal_context': 'Peak Season' if forecast_month in peak_season else 'Shoulder Season' if forecast_month in shoulder_season else 'Low Season'
+    }
+    
+    # Growth rate analysis
+    if len(monthly_trends) >= 2:
+        recent_revenue = monthly_trends[-1]['revenue']
+        previous_revenue = monthly_trends[-2]['revenue']
+        revenue_growth = ((recent_revenue - previous_revenue) / previous_revenue * 100) if previous_revenue > 0 else 0
+        
+        recent_occupancy = monthly_trends[-1]['occupancy']
+        previous_occupancy = monthly_trends[-2]['occupancy']
+        occupancy_growth = recent_occupancy - previous_occupancy
+    else:
+        revenue_growth = 0
+        occupancy_growth = 0
+    
+    # Key performance indicators
+    total_rooms = Room.objects.count()
+    current_month_start = today.replace(day=1)
+    current_month_reservations = Reservation.objects.filter(
+        check_in__gte=current_month_start,
+        check_in__lt=today,
+        status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out']
+    )
+    
+    current_month_revenue = float(sum(r.total_amount for r in current_month_reservations))
+    current_month_nights = sum((r.check_out - r.check_in).days for r in current_month_reservations)
+    
+    # Upcoming reservations (next 30 days)
+    upcoming_reservations = Reservation.objects.filter(
+        check_in__range=[today, today + timedelta(days=30)],
+        status__in=['confirmed', 'expected_arrival']
+    )
+    
+    upcoming_revenue = float(sum(r.total_amount for r in upcoming_reservations))
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'forecast_period': forecast_period,
+        'forecast_end_date': forecast_end_date,
+        'monthly_trends': monthly_trends,
+        'seasonal_data': seasonal_data,
+        'weekday_analysis': weekday_analysis,
+        'forecast_metrics': forecast_metrics,
+        'revenue_growth': revenue_growth,
+        'occupancy_growth': occupancy_growth,
+        'current_month_revenue': current_month_revenue,
+        'current_month_reservations': current_month_reservations.count(),
+        'upcoming_reservations': upcoming_reservations.count(),
+        'upcoming_revenue': upcoming_revenue,
+        'total_rooms': total_rooms,
+    }
+    
+    return render(request, 'pms/reports/forecast_report.html', context)
+
+
+def operational_report(request):
+    """View for generating operational reports - housekeeping, maintenance, and operational KPIs"""
+    from django.db.models import Count, Q, Avg
+    from collections import defaultdict
+    
+    # Get date range parameters (consistent with other reports)
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    # Default to current week if no dates provided
+    today = date.today()
+    if not start_date_str:
+        # Default to start of current week (Monday)
+        start_date = today - timedelta(days=today.weekday())
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        # Default to end of current week (Sunday)
+        end_date = start_date + timedelta(days=6)
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Calculate date range
+    date_range = (end_date - start_date).days + 1
+    dates = [start_date + timedelta(days=i) for i in range(date_range)]
+    
+    # Room Status Overview
+    room_status_counts = {}
+    for status_code, status_name in Room.STATUS_CHOICES:
+        count = Room.objects.filter(status=status_code).count()
+        room_status_counts[status_name] = count
+    
+    total_rooms = Room.objects.count()
+    
+    # Housekeeping Metrics
+    rooms_needing_cleaning = Room.objects.filter(status='vacant_dirty').count()
+    rooms_out_of_order = Room.objects.filter(status='out_of_order').count()
+    rooms_in_maintenance = Room.objects.filter(status='maintenance').count()
+    rooms_ready = Room.objects.filter(status='vacant_clean').count()
+    
+    # Calculate housekeeping efficiency
+    housekeeping_efficiency = (rooms_ready / total_rooms * 100) if total_rooms > 0 else 0
+    
+    # Today's Operations (for the most recent date in range)
+    latest_date = end_date
+    today_arrivals = Reservation.objects.filter(
+        check_in=latest_date,
+        status__in=['confirmed', 'expected_arrival', 'in_house']
+    ).select_related('guest', 'room')
+    
+    today_departures = Reservation.objects.filter(
+        check_out=latest_date,
+        status__in=['in_house', 'expected_departure', 'checked_out']
+    ).select_related('guest', 'room')
+    
+    # Period Operations Summary (for entire date range)
+    period_arrivals = Reservation.objects.filter(
+        check_in__range=[start_date, end_date],
+        status__in=['confirmed', 'expected_arrival', 'in_house', 'checked_out']
+    )
+    
+    period_departures = Reservation.objects.filter(
+        check_out__range=[start_date, end_date],
+        status__in=['in_house', 'expected_departure', 'checked_out']
+    )
+    
+    # Check-in/Check-out Performance for the period
+    checked_in_period = Reservation.objects.filter(
+        check_in__range=[start_date, end_date],
+        status__in=['in_house', 'checked_out']
+    ).count()
+    
+    checked_out_period = Reservation.objects.filter(
+        check_out__range=[start_date, end_date],
+        status='checked_out'
+    ).count()
+    
+    # No-shows and cancellations for the period
+    no_shows_period = Reservation.objects.filter(
+        check_in__range=[start_date, end_date],
+        status='no_show'
+    ).count()
+    
+    cancellations_period = Reservation.objects.filter(
+        check_in__range=[start_date, end_date],
+        status='canceled'
+    ).count()
+    
+    # Calculate operational KPIs for the period
+    total_expected_arrivals = period_arrivals.count()
+    total_expected_departures = period_departures.count()
+    
+    arrival_completion_rate = (checked_in_period / total_expected_arrivals * 100) if total_expected_arrivals > 0 else 0
+    departure_completion_rate = (checked_out_period / total_expected_departures * 100) if total_expected_departures > 0 else 0
+    no_show_rate = (no_shows_period / total_expected_arrivals * 100) if total_expected_arrivals > 0 else 0
+    
+    # Room Turnover Analysis for the period
+    rooms_turned_over = Room.objects.filter(
+        reservation__check_out__range=[start_date, end_date],
+        reservation__status='checked_out'
+    ).distinct().count()
+    
+    # Daily Operational Trends for the selected period
+    daily_trends = []
+    for current_date in dates:
+        daily_arrivals = Reservation.objects.filter(
+            check_in=current_date,
+            status__in=['confirmed', 'expected_arrival', 'in_house', 'checked_out']
+        ).count()
+        
+        daily_departures = Reservation.objects.filter(
+            check_out=current_date,
+            status__in=['in_house', 'expected_departure', 'checked_out']
+        ).count()
+        
+        daily_no_shows = Reservation.objects.filter(
+            check_in=current_date,
+            status='no_show'
+        ).count()
+        
+        daily_trends.append({
+            'date': current_date,
+            'arrivals': daily_arrivals,
+            'departures': daily_departures,
+            'no_shows': daily_no_shows
+        })
+    
+    # Room Type Performance
+    room_type_performance = {}
+    for room_type_code, room_type_name in Room.ROOM_TYPES:
+        type_rooms = Room.objects.filter(room_type=room_type_code)
+        type_total = type_rooms.count()
+        type_occupied = type_rooms.filter(status='occupied').count()
+        type_dirty = type_rooms.filter(status='vacant_dirty').count()
+        type_maintenance = type_rooms.filter(status__in=['maintenance', 'out_of_order']).count()
+        
+        room_type_performance[room_type_name] = {
+            'total': type_total,
+            'occupied': type_occupied,
+            'dirty': type_dirty,
+            'maintenance': type_maintenance,
+            'ready': type_total - type_occupied - type_dirty - type_maintenance
+        }
+    
+    # Payment Method Analysis for the period
+    payment_method_stats = defaultdict(int)
+    period_reservations = Reservation.objects.filter(
+        check_in__range=[start_date, end_date]
+    ).select_related('payment_method')
+    
+    for reservation in period_reservations:
+        if reservation.payment_method:
+            payment_method_stats[reservation.payment_method.name] += 1
+        else:
+            payment_method_stats['Not Specified'] += 1
+    
+    # Agent Performance for the period
+    agent_stats = defaultdict(int)
+    for reservation in period_reservations:
+        if reservation.agent:
+            agent_stats[reservation.agent.name] += 1
+        else:
+            agent_stats['Direct Booking'] += 1
+    
+    # Critical Alerts
+    alerts = []
+    
+    # High number of dirty rooms
+    if rooms_needing_cleaning > total_rooms * 0.3:  # More than 30% dirty
+        alerts.append({
+            'type': 'warning',
+            'message': f'High number of rooms needing cleaning: {rooms_needing_cleaning} rooms'
+        })
+    
+    # Rooms out of order
+    if rooms_out_of_order > 0:
+        alerts.append({
+            'type': 'danger',
+            'message': f'{rooms_out_of_order} room(s) are out of order'
+        })
+    
+    # High no-show rate
+    if no_show_rate > 10:  # More than 10% no-show rate
+        alerts.append({
+            'type': 'warning',
+            'message': f'High no-show rate: {no_show_rate:.1f}%'
+        })
+    
+    # Low housekeeping efficiency
+    if housekeeping_efficiency < 70:  # Less than 70% rooms ready
+        alerts.append({
+            'type': 'warning',
+            'message': f'Low housekeeping efficiency: {housekeeping_efficiency:.1f}% rooms ready'
+        })
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'room_status_counts': room_status_counts,
+        'total_rooms': total_rooms,
+        'rooms_needing_cleaning': rooms_needing_cleaning,
+        'rooms_out_of_order': rooms_out_of_order,
+        'rooms_in_maintenance': rooms_in_maintenance,
+        'rooms_ready': rooms_ready,
+        'housekeeping_efficiency': housekeeping_efficiency,
+        'today_arrivals': today_arrivals,
+        'today_departures': today_departures,
+        'checked_in_period': checked_in_period,
+        'checked_out_period': checked_out_period,
+        'no_shows_period': no_shows_period,
+        'cancellations_period': cancellations_period,
+        'total_expected_arrivals': total_expected_arrivals,
+        'total_expected_departures': total_expected_departures,
+        'arrival_completion_rate': arrival_completion_rate,
+        'departure_completion_rate': departure_completion_rate,
+        'no_show_rate': no_show_rate,
+        'rooms_turned_over': rooms_turned_over,
+        'daily_trends': daily_trends,
+        'room_type_performance': room_type_performance,
+        'payment_method_stats': dict(payment_method_stats),
+        'agent_stats': dict(agent_stats),
+        'alerts': alerts,
+    }
+    
+    return render(request, 'pms/reports/operational_report.html', context)
+
+
+def booking_sources_report(request):
+    """View for generating booking sources and channel performance reports"""
+    
+    def calculate_performance_score(conversion_rate, booking_count, revenue, total_bookings, total_revenue):
+        """
+        Calculate a comprehensive performance score based on multiple factors:
+        - Conversion Rate (40% weight)
+        - Volume Significance (30% weight) 
+        - Revenue Contribution (20% weight)
+        - Statistical Reliability (10% weight)
+        """
+        # Convert decimal values to float to avoid type errors
+        revenue = float(revenue) if revenue else 0
+        total_revenue = float(total_revenue) if total_revenue else 0
+        
+        # Conversion Rate Score (0-100)
+        conversion_score = min(conversion_rate, 100)
+        
+        # Volume Significance Score (0-100)
+        # Higher booking count gets higher score, with diminishing returns
+        volume_percentage = (booking_count / total_bookings * 100) if total_bookings > 0 else 0
+        volume_score = min(volume_percentage * 2, 100)  # Scale up to make volume more impactful
+        
+        # Revenue Contribution Score (0-100)
+        revenue_percentage = (revenue / total_revenue * 100) if total_revenue > 0 else 0
+        revenue_score = min(revenue_percentage * 1.5, 100)  # Scale up revenue impact
+        
+        # Statistical Reliability Score (0-100)
+        # Penalize very small sample sizes
+        if booking_count >= 10:
+            reliability_score = 100
+        elif booking_count >= 5:
+            reliability_score = 80
+        elif booking_count >= 3:
+            reliability_score = 60
+        elif booking_count >= 2:
+            reliability_score = 40
+        else:
+            reliability_score = 20  # Single booking gets low reliability
+        
+        # Weighted average
+        final_score = (
+            conversion_score * 0.4 +
+            volume_score * 0.3 +
+            revenue_score * 0.2 +
+            reliability_score * 0.1
+        )
+        
+        return final_score
+    
+    # Get date range parameters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    agent_filter = request.GET.get('agent', '')
+    
+    # Default to current month if no dates provided
+    today = date.today()
+    if not start_date_str:
+        start_date = date(today.year, today.month, 1)
+    else:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    
+    if not end_date_str:
+        last_day = monthrange(today.year, today.month)[1]
+        end_date = date(today.year, today.month, last_day)
+    else:
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    
+    # Get reservations in date range
+    reservations = Reservation.objects.filter(
+        check_in__gte=start_date,
+        check_in__lte=end_date
+    )
+    
+    if agent_filter:
+        reservations = reservations.filter(agent__id=agent_filter)
+    
+    total_reservations = reservations.count()
+    
+    # Calculate Potential Revenue (all bookings regardless of status)
+    potential_revenue = sum(res.total_amount for res in reservations if res.total_amount)
+    
+    # Calculate Actual Revenue (only revenue-generating statuses, including no_show since they typically still pay)
+    actual_revenue_statuses = ['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+    actual_revenue = sum(
+        res.total_amount for res in reservations.filter(status__in=actual_revenue_statuses) 
+        if res.total_amount
+    )
+    
+    # Agent/Source Performance Analysis
+    agent_performance = {}
+    agents = Agent.objects.filter(is_active=True)
+    
+    for agent in agents:
+        agent_reservations = reservations.filter(agent=agent)
+        agent_count = agent_reservations.count()
+        
+        # Calculate both potential and actual revenue for this agent
+        agent_potential_revenue = sum(res.total_amount for res in agent_reservations if res.total_amount)
+        agent_actual_revenue = sum(
+            res.total_amount for res in agent_reservations.filter(status__in=actual_revenue_statuses) 
+            if res.total_amount
+        )
+        
+        agent_nights = sum((res.check_out - res.check_in).days for res in agent_reservations)
+        
+        # Calculate conversion metrics (no_show now counts as confirmed since they generate revenue)
+        confirmed_reservations = agent_reservations.filter(
+            status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+        ).count()
+        canceled_reservations = agent_reservations.filter(status='canceled').count()
+        no_show_reservations = agent_reservations.filter(status='no_show').count()
+        
+        conversion_rate = (confirmed_reservations / agent_count * 100) if agent_count > 0 else 0
+        cancellation_rate = (canceled_reservations / agent_count * 100) if agent_count > 0 else 0
+        no_show_rate = (no_show_reservations / agent_count * 100) if agent_count > 0 else 0
+        
+        # Calculate average booking value and ADR based on actual revenue
+        avg_booking_value = agent_actual_revenue / agent_count if agent_count > 0 else 0
+        adr = agent_actual_revenue / agent_nights if agent_nights > 0 else 0
+        
+        if agent_count > 0:  # Only include agents with bookings
+            # Calculate performance score based on multiple factors
+            performance_score = calculate_performance_score(
+                conversion_rate, agent_count, agent_actual_revenue, 
+                total_reservations, actual_revenue
+            )
+            
+            agent_performance[agent.name] = {
+                'agent_id': agent.id,
+                'reservations': agent_count,
+                'potential_revenue': agent_potential_revenue,
+                'actual_revenue': agent_actual_revenue,
+                'revenue': agent_actual_revenue,  # Keep for backward compatibility
+                'nights': agent_nights,
+                'conversion_rate': conversion_rate,
+                'cancellation_rate': cancellation_rate,
+                'no_show_rate': no_show_rate,
+                'avg_booking_value': avg_booking_value,
+                'adr': adr,
+                'market_share': (agent_count / total_reservations * 100) if total_reservations > 0 else 0,
+                'revenue_share': (agent_actual_revenue / actual_revenue * 100) if actual_revenue > 0 else 0,
+                'potential_revenue_share': (agent_potential_revenue / potential_revenue * 100) if potential_revenue > 0 else 0,
+                'performance_score': performance_score
+            }
+    
+    # Handle reservations without agent
+    no_agent_reservations = reservations.filter(agent__isnull=True)
+    no_agent_count = no_agent_reservations.count()
+    if no_agent_count > 0:
+        no_agent_potential_revenue = sum(res.total_amount for res in no_agent_reservations if res.total_amount)
+        no_agent_actual_revenue = sum(
+            res.total_amount for res in no_agent_reservations.filter(status__in=actual_revenue_statuses) 
+            if res.total_amount
+        )
+        no_agent_nights = sum((res.check_out - res.check_in).days for res in no_agent_reservations)
+        
+        confirmed_no_agent = no_agent_reservations.filter(
+            status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+        ).count()
+        canceled_no_agent = no_agent_reservations.filter(status='canceled').count()
+        no_show_no_agent = no_agent_reservations.filter(status='no_show').count()
+        
+        direct_conversion_rate = (confirmed_no_agent / no_agent_count * 100) if no_agent_count > 0 else 0
+        
+        # Calculate performance score for direct bookings
+        direct_performance_score = calculate_performance_score(
+            direct_conversion_rate, no_agent_count, no_agent_actual_revenue,
+            total_reservations, actual_revenue
+        )
+        
+        agent_performance['Direct/Unspecified'] = {
+            'agent_id': None,
+            'reservations': no_agent_count,
+            'potential_revenue': no_agent_potential_revenue,
+            'actual_revenue': no_agent_actual_revenue,
+            'revenue': no_agent_actual_revenue,  # Keep for backward compatibility
+            'nights': no_agent_nights,
+            'conversion_rate': direct_conversion_rate,
+            'cancellation_rate': (canceled_no_agent / no_agent_count * 100) if no_agent_count > 0 else 0,
+            'no_show_rate': (no_show_no_agent / no_agent_count * 100) if no_agent_count > 0 else 0,
+            'avg_booking_value': no_agent_actual_revenue / no_agent_count if no_agent_count > 0 else 0,
+            'adr': no_agent_actual_revenue / no_agent_nights if no_agent_nights > 0 else 0,
+            'market_share': (no_agent_count / total_reservations * 100) if total_reservations > 0 else 0,
+            'revenue_share': (no_agent_actual_revenue / actual_revenue * 100) if actual_revenue > 0 else 0,
+            'potential_revenue_share': (no_agent_potential_revenue / potential_revenue * 100) if potential_revenue > 0 else 0,
+            'performance_score': direct_performance_score
+        }
+    
+    # Sort by revenue (descending)
+    sorted_agent_performance = sorted(agent_performance.items(), key=lambda x: x[1]['revenue'], reverse=True)
+    
+    # Monthly booking trends by source
+    monthly_trends = {}
+    for i in range(6):  # Last 6 months
+        if today.month - i > 0:
+            month_start = today.replace(day=1, month=today.month - i)
+        else:
+            year_offset = (i - today.month) // 12 + 1
+            month_offset = (i - today.month) % 12
+            new_month = 12 - month_offset if month_offset > 0 else 12
+            month_start = today.replace(day=1, year=today.year - year_offset, month=new_month)
+        
+        last_day = monthrange(month_start.year, month_start.month)[1]
+        month_end = month_start.replace(day=last_day)
+        
+        month_reservations = Reservation.objects.filter(
+            check_in__gte=month_start,
+            check_in__lte=month_end
+        )
+        
+        month_label = month_start.strftime('%b %Y')
+        monthly_trends[month_label] = {}
+        
+        for agent in agents:
+            agent_month_count = month_reservations.filter(agent=agent).count()
+            if agent_month_count > 0:
+                monthly_trends[month_label][agent.name] = agent_month_count
+        
+        # Direct bookings
+        direct_month_count = month_reservations.filter(agent__isnull=True).count()
+        if direct_month_count > 0:
+            monthly_trends[month_label]['Direct/Unspecified'] = direct_month_count
+    
+    # Reverse to show oldest to newest
+    monthly_trends = dict(reversed(list(monthly_trends.items())))
+    
+    # Top performing sources summary
+    top_by_revenue = sorted_agent_performance[:5] if len(sorted_agent_performance) >= 5 else sorted_agent_performance
+    top_by_volume = sorted(agent_performance.items(), key=lambda x: x[1]['reservations'], reverse=True)[:5]
+    
+    # Calculate overall metrics
+    overall_conversion_rate = 0
+    overall_cancellation_rate = 0
+    overall_no_show_rate = 0
+    
+    if total_reservations > 0:
+        confirmed_total = reservations.filter(
+            status__in=['confirmed', 'in_house', 'expected_arrival', 'expected_departure', 'checked_out', 'no_show']
+        ).count()
+        canceled_total = reservations.filter(status='canceled').count()
+        no_show_total = reservations.filter(status='no_show').count()
+        
+        overall_conversion_rate = (confirmed_total / total_reservations * 100)
+        overall_cancellation_rate = (canceled_total / total_reservations * 100)
+        overall_no_show_rate = (no_show_total / total_reservations * 100)
+    
+    context = {
+        'start_date': start_date,
+        'end_date': end_date,
+        'total_reservations': total_reservations,
+        'potential_revenue': potential_revenue,
+        'actual_revenue': actual_revenue,
+        'total_revenue': potential_revenue,  # Keep for backward compatibility
+        'agent_performance': sorted_agent_performance,
+        'monthly_trends': monthly_trends,
+        'top_by_revenue': top_by_revenue,
+        'top_by_volume': top_by_volume,
+        'overall_conversion_rate': overall_conversion_rate,
+        'overall_cancellation_rate': overall_cancellation_rate,
+        'overall_no_show_rate': overall_no_show_rate,
+        'agents': agents,
+        'selected_agent': agent_filter
+    }
+    
+    return render(request, 'pms/reports/booking_sources_report.html', context)
+
+
 def guest_analytics(request):
     """View for generating detailed guest analytics reports"""
     from django.db.models import Count, Avg, Q, F

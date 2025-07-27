@@ -191,46 +191,52 @@
         </div>
     </a>
     
-    <!-- Booking Source Report Card (Coming Soon) -->
-    <div class="card report-card coming-soon">
-        <div class="card-body">
-            <div class="report-icon">
-                <i class="bi bi-graph-down"></i>
-            </div>
-            <div class="report-title">Booking Sources</div>
-            <div class="report-description">
-                Track reservation sources, channel performance, and 
-                conversion rates across different booking platforms.
+    <!-- Booking Sources Report Card -->
+    <a href="{% url 'booking_sources_report' %}" class="text-decoration-none">
+        <div class="card report-card">
+            <div class="card-body">
+                <div class="report-icon">
+                    <i class="bi bi-funnel-fill"></i>
+                </div>
+                <div class="report-title">Booking Sources</div>
+                <div class="report-description">
+                    Track reservation sources, channel performance, and 
+                    conversion rates across different booking platforms.
+                </div>
             </div>
         </div>
-    </div>
+    </a>
     
-    <!-- Operational Report Card (Coming Soon) -->
-    <div class="card report-card coming-soon">
-        <div class="card-body">
-            <div class="report-icon">
-                <i class="bi bi-gear-fill"></i>
-            </div>
-            <div class="report-title">Operational Report</div>
-            <div class="report-description">
-                Monitor housekeeping efficiency, maintenance schedules, 
-                and operational KPIs for better hotel management.
+    <!-- Operational Report Card -->
+    <a href="{% url 'operational_report' %}" class="text-decoration-none">
+        <div class="card report-card">
+            <div class="card-body">
+                <div class="report-icon">
+                    <i class="bi bi-gear-fill"></i>
+                </div>
+                <div class="report-title">Operational Report</div>
+                <div class="report-description">
+                    Monitor housekeeping efficiency, maintenance schedules, 
+                    and operational KPIs for better hotel management.
+                </div>
             </div>
         </div>
-    </div>
+    </a>
     
-    <!-- Forecast Report Card (Coming Soon) -->
-    <div class="card report-card coming-soon">
-        <div class="card-body">
-            <div class="report-icon">
-                <i class="bi bi-graph-up-arrow"></i>
-            </div>
-            <div class="report-title">Forecast & Trends</div>
-            <div class="report-description">
-                Predictive analytics for occupancy, revenue forecasting, 
-                and seasonal trend analysis for strategic planning.
+    <!-- Forecast Report Card -->
+    <a href="{% url 'forecast_report' %}" class="text-decoration-none">
+        <div class="card report-card">
+            <div class="card-body">
+                <div class="report-icon">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div class="report-title">Forecast & Trends</div>
+                <div class="report-description">
+                    Predictive analytics for occupancy, revenue forecasting, 
+                    and seasonal trend analysis for strategic planning.
+                </div>
             </div>
         </div>
-    </div>
+    </a>
 </div>
 {% endblock %}

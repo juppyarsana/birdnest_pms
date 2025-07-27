@@ -6,11 +6,33 @@
 {% block extra_css %}
 <style>
     .stat-card {
-        border-radius: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        margin-bottom: 1.5rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
         border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+        padding: 1.5rem;
+        min-height: 180px;
+        height: 100%;
     }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
     .chart-container {
         height: 300px;
         margin-bottom: 2rem;
@@ -27,27 +49,36 @@
     .occupancy-low {
         background-color: #dc3545;
     }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon.overall { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .metric-icon.peak { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
+    .metric-icon.lowest { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800">Occupancy Report</h1>
-            <p class="mb-0 text-muted">Detailed occupancy analysis and insights</p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Back to Reports
-            </a>
-            <button class="btn btn-outline-secondary" onclick="window.print()">
-                <i class="bi bi-printer"></i> Print Report
-            </button>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">📊 Occupancy Report</h2>
+        <p class="text-muted mb-0">Detailed occupancy analysis and insights</p>
     </div>
+    <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
     
     <!-- Filter Section -->
     <div class="card shadow-sm border-0 rounded-3 mb-4" 
@@ -114,29 +145,38 @@
     </div>
     
     <!-- Summary Cards -->
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card stat-card text-center p-3">
-                <div class="fs-6 text-muted">Overall Occupancy</div>
-                <div class="fs-2 fw-bold">{{ overall_occupancy|floatformat:1 }}%</div>
-                <div class="text-muted">{{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</div>
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card text-center">
+                <div class="metric-icon overall mx-auto">
+                    <i class="bi bi-bar-chart-fill"></i>
+                </div>
+                <div class="fs-6 text-muted mb-2">Overall Occupancy</div>
+                <div class="fs-2 fw-bold mb-3">{{ overall_occupancy|floatformat:1 }}%</div>
+                <div class="text-muted small">{{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }}</div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card stat-card text-center p-3">
-                <div class="fs-6 text-muted">Peak Occupancy Day</div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card text-center">
+                <div class="metric-icon peak mx-auto">
+                    <i class="bi bi-arrow-up-circle-fill"></i>
+                </div>
+                <div class="fs-6 text-muted mb-2">Peak Occupancy</div>
                 {% with peak_day=daily_occupancy|dictsort:"percentage"|last %}
-                <div class="fs-2 fw-bold">{{ peak_day.percentage|floatformat:1 }}%</div>
-                <div class="text-muted">{{ peak_day.date|date:"l, M d, Y" }}</div>
+                <div class="fs-2 fw-bold mb-3">{{ peak_day.percentage|floatformat:1 }}%</div>
+                <div class="text-muted small">{{ peak_day.date|date:"M d, Y" }}</div>
                 {% endwith %}
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card stat-card text-center p-3">
-                <div class="fs-6 text-muted">Lowest Occupancy Day</div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card text-center">
+                <div class="metric-icon lowest mx-auto">
+                    <i class="bi bi-arrow-down-circle-fill"></i>
+                </div>
+                <div class="fs-6 text-muted mb-2">Lowest Occupancy</div>
                 {% with lowest_day=daily_occupancy|dictsort:"percentage"|first %}
-                <div class="fs-2 fw-bold">{{ lowest_day.percentage|floatformat:1 }}%</div>
-                <div class="text-muted">{{ lowest_day.date|date:"l, M d, Y" }}</div>
+                <div class="fs-2 fw-bold mb-3">{{ lowest_day.percentage|floatformat:1 }}%</div>
+                <div class="text-muted small">{{ lowest_day.date|date:"M d, Y" }}</div>
                 {% endwith %}
             </div>
         </div>
@@ -275,7 +315,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <script>
     // Daily Occupancy Chart

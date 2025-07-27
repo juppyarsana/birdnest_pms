@@ -1,0 +1,25 @@
+{{ hotel_name }}
+Reservation Confirmation Pending
+
+Dear {{ guest.name }},
+
+Thank you for your reservation request. We have received your booking and it is currently PENDING confirmation.
+
+Reservation Details:
+- Guest Name: {{ guest.name }}
+- Room: {{ room.room_number }} ({{ room.get_room_type_display }})
+- Check-in: {{ reservation.check_in|date:"F d, Y" }}
+- Check-out: {{ reservation.check_out|date:"F d, Y" }}
+- Number of Guests: {{ reservation.num_guests }}
+- Total Amount: ${{ reservation.total_amount|floatformat:2 }}
+- Status: {{ reservation.get_status_display }}
+
+We will review your reservation and send you a confirmation email shortly. If you have any questions or need to make changes, please contact us.
+
+Thank you for choosing {{ hotel_name }}!
+
+Best regards,
+{{ hotel_name }} Team
+
+{% if hotel_contact %}Contact: {{ hotel_contact }}{% endif %}
+{% if hotel_address %}Address: {{ hotel_address }}{% endif %}

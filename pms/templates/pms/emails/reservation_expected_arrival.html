@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Expected Arrival</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #e7f3ff;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .reservation-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .status-badge {
+            background-color: #007bff;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .welcome-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ hotel_name }}</h1>
+        <h2>🏨 Welcome! Your Arrival is Expected Today</h2>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ guest.name }},</p>
+        
+        <p>Welcome to {{ hotel_name }}! We're excited to inform you that your arrival is expected today. Your room is ready and we can't wait to welcome you!</p>
+        
+        <div class="reservation-details">
+            <h3>Your Reservation Details:</h3>
+            <p><strong>Guest Name:</strong> {{ guest.name }}</p>
+            <p><strong>Room:</strong> {{ room.room_number }} ({{ room.get_room_type_display }})</p>
+            <p><strong>Check-in:</strong> {{ reservation.check_in|date:"F d, Y" }} (Today!)</p>
+            <p><strong>Check-out:</strong> {{ reservation.check_out|date:"F d, Y" }}</p>
+            <p><strong>Number of Guests:</strong> {{ reservation.num_guests }}</p>
+            <p><strong>Total Amount:</strong> ${{ reservation.total_amount|floatformat:2 }}</p>
+            <p><strong>Status:</strong> <span class="status-badge">{{ reservation.get_status_display }}</span></p>
+        </div>
+        
+        <div class="welcome-info">
+            <h4>Check-in Information:</h4>
+            <ul>
+                <li><strong>Check-in Time:</strong> 2:00 PM - 10:00 PM</li>
+                <li><strong>What to Bring:</strong> Valid photo ID and confirmation details</li>
+                <li><strong>Early Arrival:</strong> If you arrive before 2:00 PM, we'll do our best to accommodate you</li>
+                <li><strong>Late Arrival:</strong> Please contact us if you'll arrive after 10:00 PM</li>
+            </ul>
+        </div>
+        
+        <p>Our team is ready to provide you with exceptional service and ensure your stay is comfortable and memorable. If you have any questions or special requests, please don't hesitate to contact us.</p>
+        
+        <p>Safe travels, and we look forward to welcoming you soon!</p>
+        
+        <p>Warm regards,<br>
+        {{ hotel_name }} Team</p>
+    </div>
+    
+    <div class="footer">
+        {% if hotel_contact %}
+        <p>Contact: {{ hotel_contact }}</p>
+        {% endif %}
+        {% if hotel_address %}
+        <p>Address: {{ hotel_address }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,646 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Operational Report - Hotel PMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+        height: 140px;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stat-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.3rem;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chart-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .chart-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)" /></svg>') repeat;
+        pointer-events: none;
+    }
+    
+    .page-header h1 {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .page-header p {
+        position: relative;
+        z-index: 1;
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead th {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        font-weight: 600;
+        padding: 1rem;
+    }
+    
+    .table tbody td {
+        padding: 1rem;
+        border-color: #f8f9fa;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+    
+    .metric-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: white;
+        margin-bottom: 0.8rem;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-occupied { background: #e3f2fd; color: #1976d2; }
+    .status-vacant-clean { background: #e8f5e8; color: #388e3c; }
+    .status-vacant-dirty { background: #fff3e0; color: #f57c00; }
+    .status-maintenance { background: #fce4ec; color: #c2185b; }
+    .status-out-of-order { background: #ffebee; color: #d32f2f; }
+    
+    .alert-card {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 1rem;
+    }
+    
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .room-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .trend-chart {
+        height: 300px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">⚙️ Operational Report</h2>
+        <p class="text-muted mb-0">Monitor housekeeping efficiency, maintenance schedules, and operational KPIs</p>
+    </div>
+    <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card shadow-sm border-0 rounded-3 mb-4" 
+     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><defs><pattern id=&quot;dots&quot; width=&quot;20&quot; height=&quot;20&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;1.5&quot; fill=&quot;%23ffffff&quot; opacity=&quot;0.1&quot;/></pattern></defs><rect width=&quot;100&quot; height=&quot;100&quot; fill=&quot;url(%23dots)&quot;/></svg>') repeat; 
+                pointer-events: none;"></div>
+    <div class="card-body" style="position: relative; z-index: 1;">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <h5 class="text-white mb-1"><i class="bi bi-funnel me-2"></i>Filter Operational Data</h5>
+                <p class="text-white-50 mb-0 small">Customize your operational analysis by date range</p>
+            </div>
+            <div class="col-md-7">
+                <form method="get" class="d-flex gap-2 align-items-end" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="start_date" class="form-label text-white small fw-medium mb-1">Start Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="start_date" name="start_date" 
+                               value="{{ start_date|date:'Y-m-d' }}" 
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="end_date" class="form-label text-white small fw-medium mb-1">End Date</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="end_date" name="end_date" 
+                               value="{{ end_date|date:'Y-m-d' }}"
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div class="d-flex gap-2" style="flex-shrink: 0; min-width: 100px;">
+                        <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Apply Filters">
+                            <i class="bi bi-search"></i> Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Critical Alerts -->
+{% if alerts %}
+<div class="mb-4">
+    <h4 class="mb-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>Critical Alerts</h4>
+    {% for alert in alerts %}
+    <div class="alert alert-{{ alert.type }} alert-card">
+        <i class="bi bi-{% if alert.type == 'danger' %}exclamation-circle-fill{% else %}exclamation-triangle-fill{% endif %} me-2"></i>
+        {{ alert.message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Key Performance Indicators -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100" style="padding: 1.5rem; min-height: 180px;">
+            <div class="metric-icon mx-auto mb-3" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);">
+                <i class="bi bi-house-check-fill"></i>
+            </div>
+            <div class="fs-6 text-muted mb-2">Housekeeping Efficiency</div>
+            <div class="fs-2 fw-bold mb-2">{{ housekeeping_efficiency|floatformat:1 }}%</div>
+            <div class="text-muted small">{{ start_date|date:"M d" }} - {{ end_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100" style="padding: 1.5rem; min-height: 180px;">
+            <div class="metric-icon mx-auto mb-3" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
+                <i class="bi bi-door-open-fill"></i>
+            </div>
+            <div class="fs-6 text-muted mb-2">Arrival Completion Rate</div>
+            <div class="fs-2 fw-bold mb-2">{{ arrival_completion_rate|floatformat:1 }}%</div>
+            <div class="text-muted small">Check-in performance</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100" style="padding: 1.5rem; min-height: 180px;">
+            <div class="metric-icon mx-auto mb-3" style="background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);">
+                <i class="bi bi-door-closed-fill"></i>
+            </div>
+            <div class="fs-6 text-muted mb-2">Departure Completion Rate</div>
+            <div class="fs-2 fw-bold mb-2">{{ departure_completion_rate|floatformat:1 }}%</div>
+            <div class="text-muted small">Check-out performance</div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card text-center h-100" style="padding: 1.5rem; min-height: 180px;">
+            <div class="metric-icon mx-auto mb-3" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
+                <i class="bi bi-person-x-fill"></i>
+            </div>
+            <div class="fs-6 text-muted mb-2">No-Show Rate</div>
+            <div class="fs-2 fw-bold mb-2">{{ no_show_rate|floatformat:1 }}%</div>
+            <div class="text-muted small">Guest attendance rate</div>
+        </div>
+    </div>
+</div>
+
+<!-- Room Status Overview -->
+<h3 class="mt-4 mb-3">Room Status Overview</h3>
+<div class="card shadow-sm border-0 rounded-3 p-3 mb-4">
+    <div class="room-status-grid">
+        {% for status_name, count in room_status_counts.items %}
+        <div class="text-center">
+            <div class="stat-value">{{ count }}</div>
+            <div class="status-badge status-{{ status_name|lower|cut:' '|cut:'-' }}">{{ status_name }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Latest Day Operations -->
+<h3 class="mt-4 mb-3">Latest Day Operations</h3>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Latest Day Arrivals ({{ today_arrivals.count }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if today_arrivals %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3">Guest</th>
+                                <th class="px-3">Room</th>
+                                <th class="px-3">Status</th>
+                                <th class="px-3">Check-in Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for arrival in today_arrivals %}
+                            <tr class="border-bottom">
+                                <td class="px-3 fw-medium">{{ arrival.guest.name }}</td>
+                                <td class="px-3">{{ arrival.room.room_number }}</td>
+                                <td class="px-3">
+                                    <span class="badge bg-{% if arrival.status == 'in_house' %}success{% elif arrival.status == 'expected_arrival' %}warning{% else %}secondary{% endif %}">
+                                        {{ arrival.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="px-3">{{ arrival.check_in_time|default:"Not set" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
+                    No arrivals scheduled for the latest day
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-calendar-x me-2"></i>Latest Day Departures ({{ today_departures.count }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if today_departures %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3">Guest</th>
+                                <th class="px-3">Room</th>
+                                <th class="px-3">Status</th>
+                                <th class="px-3">Check-out</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for departure in today_departures %}
+                            <tr class="border-bottom">
+                                <td class="px-3 fw-medium">{{ departure.guest.name }}</td>
+                                <td class="px-3">{{ departure.room.room_number }}</td>
+                                <td class="px-3">
+                                    <span class="badge bg-{% if departure.status == 'checked_out' %}success{% elif departure.status == 'expected_departure' %}warning{% else %}secondary{% endif %}">
+                                        {{ departure.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="px-3">{{ departure.check_out }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-x display-4 d-block mb-2"></i>
+                    No departures scheduled for the latest day
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Room Type Performance -->
+<h3 class="mt-4 mb-3">Room Type Performance</h3>
+<div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-3">Room Type</th>
+                        <th class="px-3">Total Rooms</th>
+                        <th class="px-3">Occupied</th>
+                        <th class="px-3">Ready</th>
+                        <th class="px-3">Dirty</th>
+                        <th class="px-3">Maintenance</th>
+                        <th class="px-3">Efficiency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for room_type, performance in room_type_performance.items %}
+                    <tr class="border-bottom">
+                        <td class="px-3 fw-medium">{{ room_type }}</td>
+                        <td class="px-3">{{ performance.total }}</td>
+                        <td class="px-3">{{ performance.occupied }}</td>
+                        <td class="px-3">{{ performance.ready }}</td>
+                        <td class="px-3">{{ performance.dirty }}</td>
+                        <td class="px-3">{{ performance.maintenance }}</td>
+                        <td class="px-3">
+                            {% if performance.total > 0 %}
+                                {% widthratio performance.ready performance.total 100 as efficiency %}
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ efficiency }}%"></div>
+                                </div>
+                                <small class="text-muted">{{ efficiency }}%</small>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Daily Trends -->
+<h3 class="mt-4 mb-3">Daily Operational Trends</h3>
+<div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="px-3">Date</th>
+                        <th class="px-3">Arrivals</th>
+                        <th class="px-3">Departures</th>
+                        <th class="px-3">No-Shows</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trend in daily_trends %}
+                    <tr class="border-bottom">
+                        <td class="px-3 fw-medium">{{ trend.date|date:"M d, Y" }}</td>
+                        <td class="px-3">{{ trend.arrivals }}</td>
+                        <td class="px-3">{{ trend.departures }}</td>
+                        <td class="px-3">{{ trend.no_shows }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Methods and Booking Sources -->
+<h3 class="mt-4 mb-3">Payment Methods and Booking Sources</h3>
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Period Payment Methods</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if payment_method_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3">Payment Method</th>
+                                <th class="px-3">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for method, count in payment_method_stats.items %}
+                            <tr class="border-bottom">
+                                <td class="px-3 fw-medium">{{ method }}</td>
+                                <td class="px-3">{{ count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted p-4">
+                    <i class="bi bi-credit-card display-4 d-block mb-2"></i>
+                    No payment data for this period
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Period Booking Sources</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if agent_stats %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-3">Source</th>
+                                <th class="px-3">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for agent, count in agent_stats.items %}
+                            <tr class="border-bottom">
+                                <td class="px-3 fw-medium">{{ agent }}</td>
+                                <td class="px-3">{{ count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted p-4">
+                    <i class="bi bi-people display-4 d-block mb-2"></i>
+                    No booking source data for this period
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Operational Summary -->
+<h3 class="mt-4 mb-3">Operational Summary</h3>
+<div class="card shadow-sm border-0 rounded-3 p-4 mb-4">
+    <div class="text-center mb-3">
+        <h5 class="text-muted">{{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}</h5>
+    </div>
+    <div class="row text-center">
+        <div class="col-md-3">
+            <div class="fs-2 fw-bold text-primary">{{ checked_in_period }}</div>
+            <div class="text-muted small">Checked In</div>
+        </div>
+        <div class="col-md-3">
+            <div class="fs-2 fw-bold text-success">{{ checked_out_period }}</div>
+            <div class="text-muted small">Checked Out</div>
+        </div>
+        <div class="col-md-3">
+            <div class="fs-2 fw-bold text-warning">{{ no_shows_period }}</div>
+            <div class="text-muted small">No-Shows</div>
+        </div>
+        <div class="col-md-3">
+            <div class="fs-2 fw-bold text-danger">{{ cancellations_period }}</div>
+            <div class="text-muted small">Cancellations</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

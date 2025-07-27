@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Room, Guest, Reservation, HotelSettings, Nationality, PaymentMethod, Agent
+from .models import Room, Guest, Reservation, HotelSettings, Nationality, PaymentMethod, Agent, EmailNotificationSettings, EmailLog
 from django.contrib.humanize.templatetags.humanize import intcomma
 
 class RoomAdmin(admin.ModelAdmin):
@@ -78,6 +78,57 @@ class HotelSettingsAdmin(admin.ModelAdmin):
         # Prevent deletion of the settings
         return False
 
+
+class EmailNotificationSettingsAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'email_notifications_enabled', 'hotel_name', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Global Settings', {
+            'fields': ('email_notifications_enabled',)
+        }),
+        ('Notification Types', {
+            'fields': (
+                'send_pending_notifications',
+                'send_confirmed_notifications', 
+                'send_expected_arrival_notifications',
+                'send_expected_departure_notifications'
+            )
+        }),
+        ('Hotel Information', {
+            'fields': ('hotel_name', 'hotel_contact', 'hotel_address')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Only allow one settings instance
+        return not EmailNotificationSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the settings
+        return False
+
+
+class EmailLogAdmin(admin.ModelAdmin):
+    list_display = ('reservation', 'notification_type', 'recipient_email', 'status', 'sent_at')
+    list_filter = ('status', 'notification_type', 'sent_at')
+    search_fields = ('reservation__guest__name', 'recipient_email', 'reservation__room__room_number')
+    readonly_fields = ('reservation', 'notification_type', 'recipient_email', 'status', 'error_message', 'sent_at')
+    ordering = ('-sent_at',)
+    
+    def has_add_permission(self, request):
+        # Email logs are created automatically
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        # Email logs should not be editable
+        return False
+
+
 admin.site.register(Room, RoomAdmin)
 admin.site.register(Nationality, NationalityAdmin)
 admin.site.register(PaymentMethod, PaymentMethodAdmin)
@@ -85,3 +136,5 @@ admin.site.register(Agent, AgentAdmin)
 admin.site.register(Guest, GuestAdmin)
 admin.site.register(Reservation, ReservationAdmin)
 admin.site.register(HotelSettings, HotelSettingsAdmin)
+admin.site.register(EmailNotificationSettings, EmailNotificationSettingsAdmin)
+admin.site.register(EmailLog, EmailLogAdmin)

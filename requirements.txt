@@ -3,3 +3,4 @@ gunicorn
 mysqlclient
 python-dotenv
 django-widget-tweaks
+requests

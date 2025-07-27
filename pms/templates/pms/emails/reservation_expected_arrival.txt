@@ -1,0 +1,31 @@
+{{ hotel_name }}
+🏨 Welcome! Your Arrival is Expected Today
+
+Dear {{ guest.name }},
+
+Welcome to {{ hotel_name }}! We're excited to inform you that your arrival is expected today. Your room is ready and we can't wait to welcome you!
+
+Your Reservation Details:
+- Guest Name: {{ guest.name }}
+- Room: {{ room.room_number }} ({{ room.get_room_type_display }})
+- Check-in: {{ reservation.check_in|date:"F d, Y" }} (Today!)
+- Check-out: {{ reservation.check_out|date:"F d, Y" }}
+- Number of Guests: {{ reservation.num_guests }}
+- Total Amount: ${{ reservation.total_amount|floatformat:2 }}
+- Status: {{ reservation.get_status_display }}
+
+Check-in Information:
+- Check-in Time: 2:00 PM - 10:00 PM
+- What to Bring: Valid photo ID and confirmation details
+- Early Arrival: If you arrive before 2:00 PM, we'll do our best to accommodate you
+- Late Arrival: Please contact us if you'll arrive after 10:00 PM
+
+Our team is ready to provide you with exceptional service and ensure your stay is comfortable and memorable. If you have any questions or special requests, please don't hesitate to contact us.
+
+Safe travels, and we look forward to welcoming you soon!
+
+Warm regards,
+{{ hotel_name }} Team
+
+{% if hotel_contact %}Contact: {{ hotel_contact }}{% endif %}
+{% if hotel_address %}Address: {{ hotel_address }}{% endif %}

@@ -1,0 +1,32 @@
+{{ hotel_name }}
+🕐 Check-out Reminder
+
+Dear {{ guest.name }},
+
+We hope you've enjoyed your stay with us at {{ hotel_name }}! This is a friendly reminder that your check-out is scheduled for today.
+
+Your Reservation Details:
+- Guest Name: {{ guest.name }}
+- Room: {{ room.room_number }} ({{ room.get_room_type_display }})
+- Check-in: {{ reservation.check_in|date:"F d, Y" }}
+- Check-out: {{ reservation.check_out|date:"F d, Y" }} (Today!)
+- Number of Guests: {{ reservation.num_guests }}
+- Total Amount: ${{ reservation.total_amount|floatformat:2 }}
+- Status: {{ reservation.get_status_display }}
+
+Check-out Information:
+- Check-out Time: 12:00 PM (Noon)
+- Late Check-out: Available upon request (additional charges may apply)
+- Luggage Storage: We can store your luggage if you need to explore after check-out
+- Final Bill: Please settle any outstanding charges at the front desk
+- Room Key: Please return your room key at check-out
+
+If you need assistance with transportation, recommendations for your onward journey, or have any other requests, our front desk team is here to help.
+
+Thank you for choosing {{ hotel_name }}. We hope you had a wonderful stay and look forward to welcoming you back in the future!
+
+Best regards,
+{{ hotel_name }} Team
+
+{% if hotel_contact %}Contact: {{ hotel_contact }}{% endif %}
+{% if hotel_address %}Address: {{ hotel_address }}{% endif %}

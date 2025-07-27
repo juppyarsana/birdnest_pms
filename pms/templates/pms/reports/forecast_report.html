@@ -1,0 +1,691 @@
+{% extends 'base.html' %}
+{% load currency_filters %}
+
+{% block title %}Forecast & Trends Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+        padding: 1.5rem;
+        text-align: center;
+        height: 180px;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .metric-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon.forecast {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .metric-icon.growth {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    }
+    
+    .metric-icon.revenue {
+        background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+    }
+    
+    .metric-icon.occupancy {
+        background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1.5" fill="%23ffffff" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)" /></svg>') repeat;
+        pointer-events: none;
+    }
+    
+    .page-header h2 {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+    }
+    
+    .page-header p {
+        position: relative;
+        z-index: 1;
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .filter-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border: none;
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .filter-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="15" height="15" patternUnits="userSpaceOnUse"><circle cx="7.5" cy="7.5" r="1" fill="%23667eea" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)" /></svg>') repeat;
+        pointer-events: none;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 15px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .form-control {
+        border-radius: 15px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .table-container {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+    
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table th {
+        border-top: none;
+        border-bottom: 2px solid #e9ecef;
+        font-weight: 600;
+        color: #495057;
+        padding: 1rem;
+    }
+    
+    .table td {
+        padding: 1rem;
+        vertical-align: middle;
+        border-top: 1px solid #f8f9fa;
+    }
+    
+    .progress {
+        height: 8px;
+        border-radius: 10px;
+        background-color: #f8f9fa;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+    }
+    
+    .confidence-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .confidence-veryhigh {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+    }
+    
+    .confidence-high {
+        background: linear-gradient(135deg, #17a2b8, #20c997);
+        color: white;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+    }
+    
+    .confidence-medium {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+        color: #212529;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+    }
+    
+    .confidence-low {
+        background: linear-gradient(135deg, #fd7e14, #dc3545);
+        color: white;
+        box-shadow: 0 2px 8px rgba(253, 126, 20, 0.3);
+    }
+    
+    .confidence-verylow {
+        background: linear-gradient(135deg, #dc3545, #6f42c1);
+        color: white;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+    }
+    
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .trend-up {
+        background: rgba(76, 175, 80, 0.1);
+        color: #4CAF50;
+    }
+    
+    .trend-down {
+        background: rgba(244, 67, 54, 0.1);
+        color: #f44336;
+    }
+    
+    .trend-neutral {
+        background: rgba(158, 158, 158, 0.1);
+        color: #9e9e9e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">🔮 Forecast & Trends Report</h2>
+        <p class="text-muted mb-0">Predictive analytics and seasonal insights for strategic planning</p>
+    </div>
+    <a href="{% url 'reports_home' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Reports
+    </a>
+</div>
+
+<!-- Filter Section -->
+<div class="card shadow-sm border-0 rounded-3 mb-4" 
+     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            position: relative; overflow: hidden;">
+    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                background: url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><defs><pattern id=&quot;dots&quot; width=&quot;20&quot; height=&quot;20&quot; patternUnits=&quot;userSpaceOnUse&quot;><circle cx=&quot;10&quot; cy=&quot;10&quot; r=&quot;1.5&quot; fill=&quot;%23ffffff&quot; opacity=&quot;0.1&quot;/></pattern></defs><rect width=&quot;100&quot; height=&quot;100&quot; fill=&quot;url(%23dots)&quot;/></svg>') repeat; 
+                pointer-events: none;"></div>
+    <div class="card-body" style="position: relative; z-index: 1;">
+        <div class="row align-items-center">
+            <div class="col-md-5">
+                <h5 class="text-white mb-1"><i class="bi bi-funnel me-2"></i>Filter Forecast Data</h5>
+                <p class="text-white-50 mb-0 small">Customize your forecast analysis by historical period and forecast range</p>
+            </div>
+            <div class="col-md-7">
+                <form method="get" class="d-flex gap-2 align-items-end" style="padding-left: 20px; padding-right: 30px; position: relative;">
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="start_date" class="form-label text-white small fw-medium mb-1">Historical Start</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="start_date" name="start_date" 
+                               value="{{ start_date|date:'Y-m-d' }}" 
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="end_date" class="form-label text-white small fw-medium mb-1">Historical End</label>
+                        <input type="date" class="form-control border-0 shadow-sm" id="end_date" name="end_date" 
+                               value="{{ end_date|date:'Y-m-d' }}"
+                               style="background: rgba(255,255,255,0.95) !important; 
+                                      backdrop-filter: blur(15px) !important; 
+                                      -webkit-backdrop-filter: blur(15px) !important;
+                                      height: 48px !important; 
+                                      color: #333 !important; 
+                                      border: 1px solid rgba(255,255,255,0.2) !important;
+                                      box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                    </div>
+                    <div style="flex: 1; min-width: 120px; max-width: 160px;">
+                        <label for="forecast_period" class="form-label text-white small fw-medium mb-1">Forecast Period</label>
+                        <select class="form-select border-0 shadow-sm" id="forecast_period" name="forecast_period"
+                                style="background: rgba(255,255,255,0.95) !important; 
+                                       backdrop-filter: blur(15px) !important; 
+                                       -webkit-backdrop-filter: blur(15px) !important;
+                                       height: 48px !important; 
+                                       color: #333 !important; 
+                                       border: 1px solid rgba(255,255,255,0.2) !important;
+                                       box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;">
+                            <!-- Operational Planning -->
+                            <optgroup label="📅 Operational Planning">
+                                <option value="7" {% if forecast_period == "7" %}selected{% endif %}>1 Week</option>
+                                <option value="14" {% if forecast_period == "14" %}selected{% endif %}>2 Weeks</option>
+                                <option value="30" {% if forecast_period == "30" %}selected{% endif %}>1 Month</option>
+                            </optgroup>
+                            
+                            <!-- Tactical Planning -->
+                            <optgroup label="🎯 Tactical Planning">
+                                <option value="60" {% if forecast_period == "60" %}selected{% endif %}>2 Months</option>
+                                <option value="90" {% if forecast_period == "90" %}selected{% endif %}>1 Quarter</option>
+                                <option value="120" {% if forecast_period == "120" %}selected{% endif %}>4 Months</option>
+                            </optgroup>
+                            
+                            <!-- Strategic Planning -->
+                            <optgroup label="🚀 Strategic Planning">
+                                <option value="180" {% if forecast_period == "180" %}selected{% endif %}>6 Months</option>
+                                <option value="365" {% if forecast_period == "365" %}selected{% endif %}>1 Year</option>
+                                <option value="730" {% if forecast_period == "730" %}selected{% endif %}>2 Years</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2" style="flex-shrink: 0; min-width: 100px;">
+                        <button type="submit" class="btn btn-light shadow-sm border-0" style="height: 48px; padding: 0 16px;" title="Generate Forecast">
+                            <i class="bi bi-graph-up"></i> Apply
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Forecast Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon forecast mx-auto">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div class="fs-6 text-muted">Projected Reservations</div>
+            <div class="fs-2 fw-bold">{{ forecast_metrics.projected_reservations }}</div>
+            <div class="text-muted small">Next {{ forecast_metrics.period_days }} days</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon revenue mx-auto">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="fs-6 text-muted">Projected Revenue</div>
+            <div class="fs-2 fw-bold">{{ forecast_metrics.projected_revenue|idr_currency }}</div>
+            <div class="text-muted small">Until {{ forecast_metrics.end_date|date:"M d, Y" }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon occupancy mx-auto">
+                <i class="bi bi-bar-chart-fill"></i>
+            </div>
+            <div class="fs-6 text-muted">Projected Occupancy</div>
+            <div class="fs-2 fw-bold">{{ forecast_metrics.projected_occupancy|floatformat:1 }}%</div>
+            <div class="text-muted small">Based on trends</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card text-center p-3">
+            <div class="metric-icon growth mx-auto">
+                <i class="bi bi-speedometer2"></i>
+            </div>
+            <div class="fs-6 text-muted">Confidence Level</div>
+            <div class="fs-2 fw-bold">
+                <span class="confidence-badge confidence-{{ forecast_metrics.confidence_level|lower|cut:' ' }}">
+                    {{ forecast_metrics.confidence_level }}
+                </span>
+            </div>
+            <div class="text-muted small">{{ forecast_metrics.seasonal_context }} • {{ forecast_metrics.historical_days }} days data</div>
+        </div>
+    </div>
+</div>
+
+<!-- Growth Indicators -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h4 class="mb-3">📈 Growth Indicators</h4>
+            <div class="row">
+                <div class="col-6">
+                    <div class="text-center">
+                        <h5>Revenue Growth</h5>
+                        <div class="trend-indicator {% if revenue_growth > 0 %}trend-up{% elif revenue_growth < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                            {% if revenue_growth > 0 %}
+                                <i class="bi bi-arrow-up me-1"></i>+{{ revenue_growth|floatformat:1 }}%
+                            {% elif revenue_growth < 0 %}
+                                <i class="bi bi-arrow-down me-1"></i>{{ revenue_growth|floatformat:1 }}%
+                            {% else %}
+                                <i class="bi bi-dash me-1"></i>0%
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">Month-over-month</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <h5>Occupancy Growth</h5>
+                        <div class="trend-indicator {% if occupancy_growth > 0 %}trend-up{% elif occupancy_growth < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                            {% if occupancy_growth > 0 %}
+                                <i class="bi bi-arrow-up me-1"></i>+{{ occupancy_growth|floatformat:1 }}%
+                            {% elif occupancy_growth < 0 %}
+                                <i class="bi bi-arrow-down me-1"></i>{{ occupancy_growth|floatformat:1 }}%
+                            {% else %}
+                                <i class="bi bi-dash me-1"></i>0%
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">Month-over-month</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h4 class="mb-3">📊 Current Performance</h4>
+            <div class="row">
+                <div class="col-6">
+                    <div class="text-center">
+                        <h5>This Month</h5>
+                        <h3 class="text-primary">{{ current_month_reservations }}</h3>
+                        <small class="text-muted">Reservations</small>
+                        <br>
+                        <strong>{{ current_month_revenue|idr_currency }}</strong>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-center">
+                        <h5>Next 30 Days</h5>
+                        <h3 class="text-success">{{ upcoming_reservations }}</h3>
+                        <small class="text-muted">Confirmed bookings</small>
+                        <br>
+                        <strong>{{ upcoming_revenue|idr_currency }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Trends Chart -->
+<h3 class="mt-4 mb-3">📈 Monthly Trends Analysis</h3>
+<div class="chart-container">
+    <canvas id="monthlyTrendsChart" height="250"></canvas>
+</div>
+
+<!-- Seasonal Analysis -->
+<h3 class="mt-4 mb-3">🌍 Seasonal Performance Analysis</h3>
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Quarter</th>
+                <th>Reservations</th>
+                <th>Revenue</th>
+                <th>Room Nights</th>
+                <th>Average ADR</th>
+                <th>Performance</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for quarter, data in seasonal_data.items %}
+            <tr>
+                <td><strong>{{ quarter }}</strong></td>
+                <td>{{ data.reservations }}</td>
+                <td>{{ data.revenue|idr_currency }}</td>
+                <td>{{ data.nights }}</td>
+                <td>{{ data.avg_adr|idr_currency }}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" style="width: {% widthratio data.revenue 100000 100 %}%"></div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Day of Week Analysis -->
+<h3 class="mt-4 mb-3">📅 Day of Week Performance</h3>
+<div class="chart-container">
+    <canvas id="weekdayChart" height="300"></canvas>
+</div>
+
+<!-- Weekday Performance Table -->
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Day of Week</th>
+                <th>Total Reservations</th>
+                <th>Total Revenue</th>
+                <th>Average Revenue per Booking</th>
+                <th>Performance Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for day, data in weekday_analysis.items %}
+            <tr>
+                <td><strong>{{ day }}</strong></td>
+                <td>{{ data.reservations }}</td>
+                <td>{{ data.revenue|idr_currency }}</td>
+                <td>{{ data.avg_revenue|idr_currency }}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: {% widthratio data.revenue 10000 100 %}%"></div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Monthly Trends Chart
+const monthlyCtx = document.getElementById('monthlyTrendsChart').getContext('2d');
+new Chart(monthlyCtx, {
+    type: 'line',
+    data: {
+        labels: [{% for trend in monthly_trends %}'{{ trend.month }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Revenue',
+            data: [{% for trend in monthly_trends %}{{ trend.revenue }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgba(102, 126, 234, 1)',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            yAxisID: 'y'
+        }, {
+            label: 'Reservations',
+            data: [{% for trend in monthly_trends %}{{ trend.reservations }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgba(118, 75, 162, 1)',
+            backgroundColor: 'rgba(118, 75, 162, 0.1)',
+            tension: 0.4,
+            yAxisID: 'y1'
+        }, {
+            label: 'Occupancy %',
+            data: [{% for trend in monthly_trends %}{{ trend.occupancy }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            borderColor: 'rgba(255, 154, 158, 1)',
+            backgroundColor: 'rgba(255, 154, 158, 0.1)',
+            tension: 0.4,
+            yAxisID: 'y2'
+        }]
+    },
+    options: {
+        responsive: true,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: 'Monthly Performance Trends (Last 12 Months)',
+                font: {
+                    size: 16,
+                    weight: 'bold'
+                }
+            },
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            x: {
+                display: true,
+                title: {
+                    display: true,
+                    text: 'Month'
+                }
+            },
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Revenue ($)'
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Reservations'
+                },
+                grid: {
+                    drawOnChartArea: false,
+                },
+            },
+            y2: {
+                type: 'linear',
+                display: false,
+                title: {
+                    display: true,
+                    text: 'Occupancy %'
+                }
+            }
+        }
+    }
+});
+
+// Weekday Performance Chart
+const weekdayCtx = document.getElementById('weekdayChart').getContext('2d');
+new Chart(weekdayCtx, {
+    type: 'bar',
+    data: {
+        labels: [{% for day, data in weekday_analysis.items %}'{{ day }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Revenue',
+            data: [{% for day, data in weekday_analysis.items %}{{ data.revenue }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(102, 126, 234, 0.8)',
+            borderColor: 'rgba(102, 126, 234, 1)',
+            borderWidth: 1
+        }, {
+            label: 'Reservations',
+            data: [{% for day, data in weekday_analysis.items %}{{ data.reservations }}{% if not forloop.last %},{% endif %}{% endfor %}],
+            backgroundColor: 'rgba(118, 75, 162, 0.8)',
+            borderColor: 'rgba(118, 75, 162, 1)',
+            borderWidth: 1,
+            yAxisID: 'y1'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Performance by Day of Week',
+                font: {
+                    size: 16,
+                    weight: 'bold'
+                }
+            },
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Revenue ($)'
+                }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Reservations'
+                },
+                grid: {
+                    drawOnChartArea: false,
+                },
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

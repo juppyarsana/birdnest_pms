@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation Pending</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .content {
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .reservation-details {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .status-badge {
+            background-color: #ffc107;
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ hotel_name }}</h1>
+        <h2>Reservation Confirmation Pending</h2>
+    </div>
+    
+    <div class="content">
+        <p>Dear {{ guest.name }},</p>
+        
+        <p>Thank you for your reservation request. We have received your booking and it is currently <span class="status-badge">PENDING</span> confirmation.</p>
+        
+        <div class="reservation-details">
+            <h3>Reservation Details:</h3>
+            <p><strong>Guest Name:</strong> {{ guest.name }}</p>
+            <p><strong>Room:</strong> {{ room.room_number }} ({{ room.get_room_type_display }})</p>
+            <p><strong>Check-in:</strong> {{ reservation.check_in|date:"F d, Y" }}</p>
+            <p><strong>Check-out:</strong> {{ reservation.check_out|date:"F d, Y" }}</p>
+            <p><strong>Number of Guests:</strong> {{ reservation.num_guests }}</p>
+            <p><strong>Total Amount:</strong> ${{ reservation.total_amount|floatformat:2 }}</p>
+            <p><strong>Status:</strong> <span class="status-badge">{{ reservation.get_status_display }}</span></p>
+        </div>
+        
+        <p>We will review your reservation and send you a confirmation email shortly. If you have any questions or need to make changes, please contact us.</p>
+        
+        <p>Thank you for choosing {{ hotel_name }}!</p>
+        
+        <p>Best regards,<br>
+        {{ hotel_name }} Team</p>
+    </div>
+    
+    <div class="footer">
+        {% if hotel_contact %}
+        <p>Contact: {{ hotel_contact }}</p>
+        {% endif %}
+        {% if hotel_address %}
+        <p>Address: {{ hotel_address }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
