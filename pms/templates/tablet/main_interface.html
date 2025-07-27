@@ -1,0 +1,1227 @@
+{% load currency_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Tablet - Room {{ room.room_number }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .tablet-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .welcome-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .control-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .control-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .device-button {
+            width: 100%;
+            height: 80px;
+            border-radius: 15px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .device-button.on {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+        }
+        
+        .device-button.off {
+            background: linear-gradient(45deg, #6c757d, #495057);
+            color: white;
+        }
+        
+        .device-button:hover {
+            transform: scale(1.02);
+        }
+        
+        .device-button:disabled {
+            opacity: 0.8;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .device-button.loading {
+            background: linear-gradient(45deg, #ffc107, #fd7e14) !important;
+            color: white !important;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .device-button.sending {
+            background: linear-gradient(45deg, #17a2b8, #007bff) !important;
+            color: white !important;
+            animation: pulse 1s infinite;
+        }
+        
+        .device-button.success {
+            background: linear-gradient(45deg, #28a745, #20c997) !important;
+            color: white !important;
+        }
+        
+        .device-button.error {
+            background: linear-gradient(45deg, #dc3545, #c82333) !important;
+            color: white !important;
+            animation: shake 0.5s;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .rgb-controls {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        
+        .color-slider {
+            margin-bottom: 15px;
+        }
+        
+        .color-preview {
+            width: 100%;
+            height: 60px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            margin-bottom: 15px;
+        }
+        
+        .ac-controls {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        
+        .temp-display {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            color: #007bff;
+            margin: 20px 0;
+        }
+        
+        .info-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        
+        .attraction-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-online {
+            background-color: #28a745;
+        }
+        
+        .status-offline {
+            background-color: #dc3545;
+        }
+        
+        .nav-tabs .nav-link {
+            border-radius: 10px 10px 0 0;
+            margin-right: 5px;
+            font-weight: 600;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border-color: transparent;
+        }
+        
+        @media (max-width: 768px) {
+            .tablet-container {
+                padding: 10px;
+            }
+            
+            .device-button {
+                height: 60px;
+                font-size: 14px;
+            }
+            
+            .temp-display {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="tablet-container">
+        <!-- Welcome Section -->
+        <div class="welcome-card">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-3">
+                        <i class="bi bi-house-door"></i>
+                        Room {{ room.room_number }}
+                        {% if current_reservation %}
+                            - Welcome, {{ guest_name }}!
+                        {% endif %}
+                    </h1>
+                    {% if current_reservation %}
+                        <p class="lead mb-2">
+                            <i class="bi bi-calendar-check"></i>
+                            Check-out: {{ check_out_date|date:"M d, Y" }}
+                        </p>
+                        <p class="text-muted">
+                            <i class="bi bi-bed"></i>
+                            {{ room.get_room_type_display }} • {{ room.max_occupancy }} guests
+                        </p>
+                    {% else %}
+                        <p class="lead">Smart Room Controls</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <span class="status-indicator {% if tablet.last_ping %}status-online{% else %}status-offline{% endif %}"></span>
+                        <small class="text-muted">
+                            {% if tablet.last_ping %}Connected{% else %}Offline{% endif %}
+                        </small>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">{{ tablet.esp32_ip }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Tabs -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="controls-tab" data-bs-toggle="tab" data-bs-target="#controls" type="button" role="tab">
+                    <i class="bi bi-sliders"></i> Room Controls
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
+                    <i class="bi bi-info-circle"></i> Stay Info
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="attractions-tab" data-bs-toggle="tab" data-bs-target="#attractions" type="button" role="tab">
+                    <i class="bi bi-geo-alt"></i> Local Attractions
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabContent">
+            <!-- Room Controls Tab -->
+            <div class="tab-pane fade show active" id="controls" role="tabpanel">
+                <div class="row">
+                    <!-- Lighting Controls -->
+                    <div class="col-lg-6">
+                        <div class="control-card">
+                            <h4 class="mb-4"><i class="bi bi-lightbulb"></i> Lighting Controls</h4>
+                            
+                            <button class="device-button {{ device_state.front_light }}" 
+                                    onclick="toggleLight('front_light')" 
+                                    id="front_light_btn">
+                                <i class="bi bi-lightbulb"></i>
+                                Front Light
+                            </button>
+                            
+                            <button class="device-button {{ device_state.back_light }}" 
+                                    onclick="toggleLight('back_light')" 
+                                    id="back_light_btn">
+                                <i class="bi bi-lightbulb"></i>
+                                Back Light
+                            </button>
+                            
+                            <button class="device-button {{ device_state.main_light }}" 
+                                    onclick="toggleLight('main_light')" 
+                                    id="main_light_btn">
+                                <i class="bi bi-lightbulb-fill"></i>
+                                Main Light
+                            </button>
+                            
+                            <button class="device-button {{ device_state.sport_light }}" 
+                                    onclick="toggleLight('sport_light')" 
+                                    id="sport_light_btn">
+                                <i class="bi bi-brightness-high"></i>
+                                Sport Light
+                            </button>
+                        </div>
+
+                        <!-- RGB Light Controls -->
+                        <div class="control-card">
+                            <h4 class="mb-4"><i class="bi bi-palette"></i> RGB Mood Lighting</h4>
+                            
+                            <button class="device-button {% if device_state.rgb_light %}on{% else %}off{% endif %}" 
+                                    onclick="toggleRGB()" 
+                                    id="rgb_power_btn">
+                                <i class="bi bi-palette"></i>
+                                RGB Light
+                            </button>
+                            
+                            <div class="rgb-controls" id="rgb_controls" {% if not device_state.rgb_light %}style="display: none;"{% endif %}>
+                                <div class="color-preview" id="color_preview"></div>
+                                
+                                {% with rgb_values=device_state.rgb_color|hex_to_rgb %}
+                                <div class="color-slider">
+                                    <label class="form-label">Red</label>
+                                    <input type="range" class="form-range" min="0" max="255" 
+                                           value="{{ rgb_values.r }}" id="red_slider" 
+                                           oninput="updateRGBPreview()">
+                                    <span id="red_value">{{ rgb_values.r }}</span>
+                                </div>
+                                
+                                <div class="color-slider">
+                                    <label class="form-label">Green</label>
+                                    <input type="range" class="form-range" min="0" max="255" 
+                                           value="{{ rgb_values.g }}" id="green_slider" 
+                                           oninput="updateRGBPreview()">
+                                    <span id="green_value">{{ rgb_values.g }}</span>
+                                </div>
+                                
+                                <div class="color-slider">
+                                    <label class="form-label">Blue</label>
+                                    <input type="range" class="form-range" min="0" max="255" 
+                                           value="{{ rgb_values.b }}" id="blue_slider" 
+                                           oninput="updateRGBPreview()">
+                                    <span id="blue_value">{{ rgb_values.b }}</span>
+                                </div>
+                                {% endwith %}
+                                
+                                <div class="color-slider">
+                                    <label class="form-label">Brightness</label>
+                                    <input type="range" class="form-range" min="0" max="100" 
+                                           value="{{ device_state.rgb_brightness }}" id="brightness_slider" 
+                                           oninput="updateRGBPreview()">
+                                    <span id="brightness_value">{{ device_state.rgb_brightness }}%</span>
+                                </div>
+                                
+                                <button class="btn btn-primary w-100" onclick="applyRGBSettings()">
+                                    Apply RGB Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AC Controls -->
+                    <div class="col-lg-6">
+                        <div class="control-card">
+                            <h4 class="mb-4"><i class="bi bi-thermometer-half"></i> Air Conditioning</h4>
+                            
+                            <button class="device-button {% if device_state.ac_power %}on{% else %}off{% endif %}" 
+                                    onclick="toggleAC()" 
+                                    id="ac_power_btn">
+                                <i class="bi bi-snow"></i>
+                                Air Conditioning
+                            </button>
+                            
+                            <div class="ac-controls" id="ac_controls" {% if not device_state.ac_power %}style="display: none;"{% endif %}>
+                                <div class="temp-display" id="temp_display">
+                                    {{ device_state.ac_temperature }}°C
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-primary w-100" onclick="adjustTemp(-1)">
+                                            <i class="bi bi-dash-lg"></i>
+                                        </button>
+                                    </div>
+                                    <div class="col-6">
+                                        <button class="btn btn-outline-primary w-100" onclick="adjustTemp(1)">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Mode</label>
+                                    <select class="form-select" id="ac_mode" onchange="updateACSettings()">
+                                        <option value="cool" {% if device_state.ac_mode == 'cool' %}selected{% endif %}>Cool</option>
+                                        <option value="fan" {% if device_state.ac_mode == 'fan' %}selected{% endif %}>Fan</option>
+                                        <option value="dry" {% if device_state.ac_mode == 'dry' %}selected{% endif %}>Dry</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Fan Speed</label>
+                                    <input type="range" class="form-range" min="1" max="5" 
+                                           value="{{ device_state.ac_fan_speed }}" id="fan_speed_slider" 
+                                           oninput="updateFanSpeed()">
+                                    <div class="d-flex justify-content-between">
+                                        <small>Low</small>
+                                        <span id="fan_speed_value">{{ device_state.ac_fan_speed }}</span>
+                                        <small>High</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stay Info Tab -->
+            <div class="tab-pane fade" id="info" role="tabpanel">
+                <div class="row">
+                    <div class="col-lg-8">
+                        {% if current_reservation %}
+                        <div class="info-section">
+                            <h4><i class="bi bi-person-badge"></i> Your Stay Details</h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Guest Name:</strong> {{ guest_name }}</p>
+                                    <p><strong>Room Type:</strong> {{ room.get_room_type_display }}</p>
+                                    <p><strong>Check-in:</strong> {{ current_reservation.check_in|date:"M d, Y" }}</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Check-out:</strong> {{ check_out_date|date:"M d, Y" }}</p>
+                                    <p><strong>Total Nights:</strong> {{ current_reservation.check_out|timeuntil:current_reservation.check_in }}</p>
+                                    <p><strong>Max Occupancy:</strong> {{ room.max_occupancy }} guests</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="info-section">
+                            <h4><i class="bi bi-building"></i> Hotel Information</h4>
+                            <p><strong>Hotel:</strong> Bird Nest PMS</p>
+                            <p><strong>Contact:</strong> +62 123 456 7890 | info@birdnestpms.com</p>
+                            <p><strong>Address:</strong> Jl. Example Street No. 123, Bali, Indonesia</p>
+                            <p><strong>WiFi:</strong> BirdNest_Guest | Password: welcome123</p>
+                        </div>
+
+                        {% for content in tablet_content %}
+                        <div class="info-section">
+                            <h5><i class="bi bi-info-circle"></i> {{ content.title }}</h5>
+                            <p>{{ content.content|linebreaks }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="info-section">
+                            <h5><i class="bi bi-cloud-sun"></i> Weather</h5>
+                            <p>Kintamani, Bali</p>
+                            <p class="h4">26°C</p>
+                            <p>Partly Cloudy</p>
+                            <small class="text-muted">Perfect weather for Mount Batur trekking!</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attractions Tab -->
+            <div class="tab-pane fade" id="attractions" role="tabpanel">
+                {% for category, attractions in attractions_by_category.items %}
+                <div class="info-section">
+                    <h4><i class="bi bi-geo-alt"></i> {{ category|title }}</h4>
+                    {% for attraction in attractions %}
+                    <div class="attraction-card">
+                        <h6>{{ attraction.name }}</h6>
+                        <p class="mb-2">{{ attraction.description }}</p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small><i class="bi bi-geo"></i> {{ attraction.distance_km }} km away</small><br>
+                                <small><i class="bi bi-clock"></i> {{ attraction.estimated_duration }}</small>
+                            </div>
+                            <div class="col-md-6">
+                                {% if attraction.price_range %}
+                                <small><i class="bi bi-currency-dollar"></i> {{ attraction.price_range }}</small><br>
+                                {% endif %}
+                                {% if attraction.opening_hours %}
+                                <small><i class="bi bi-calendar"></i> {{ attraction.opening_hours }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if attraction.tips %}
+                        <div class="mt-2">
+                            <small class="text-muted"><i class="bi bi-lightbulb"></i> {{ attraction.tips }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let currentTemp = {{ device_state.ac_temperature }};
+        {% with rgb_values=device_state.rgb_color|hex_to_rgb %}
+        let currentRed = {{ rgb_values.r }};
+        let currentGreen = {{ rgb_values.g }};
+        let currentBlue = {{ rgb_values.b }};
+        {% endwith %}
+        let currentBrightness = {{ device_state.rgb_brightness }};
+        let isRGBOn = {{ device_state.rgb_light|yesno:"true,false" }};
+        
+        // ESP32 Configuration from database
+        const esp32Config = {
+            front_light: {
+                enabled: {{ esp32_config.front_light_enabled|yesno:"true,false" }},
+                parameter: "{{ esp32_config.front_light_parameter_name }}",
+                endpoint: "{{ esp32_config.front_light_endpoint }}",
+                on_command: "{{ esp32_config.front_light_on_command }}",
+                off_command: "{{ esp32_config.front_light_off_command }}"
+            },
+            back_light: {
+                enabled: {{ esp32_config.back_light_enabled|yesno:"true,false" }},
+                parameter: "{{ esp32_config.back_light_parameter_name }}",
+                endpoint: "{{ esp32_config.back_light_endpoint }}",
+                on_command: "{{ esp32_config.back_light_on_command }}",
+                off_command: "{{ esp32_config.back_light_off_command }}"
+            },
+            main_light: {
+                enabled: {{ esp32_config.main_light_enabled|yesno:"true,false" }},
+                parameter: "{{ esp32_config.main_light_parameter_name }}",
+                endpoint: "{{ esp32_config.main_light_endpoint }}",
+                on_command: "{{ esp32_config.main_light_on_command }}",
+                off_command: "{{ esp32_config.main_light_off_command }}"
+            },
+            sport_light: {
+                enabled: {{ esp32_config.sport_light_enabled|yesno:"true,false" }},
+                parameter: "{{ esp32_config.sport_light_parameter_name }}",
+                endpoint: "{{ esp32_config.sport_light_endpoint }}",
+                on_command: "{{ esp32_config.sport_light_on_command }}",
+                off_command: "{{ esp32_config.sport_light_off_command }}"
+            }
+        };
+
+        // Initialize RGB preview
+        updateRGBPreview();
+
+        // Light control functions
+        function toggleLight(lightType) {
+            if (lightType === 'front_light') {
+                // ESP32-specific front light control
+                toggleFrontLight();
+            } else if (lightType === 'back_light') {
+                // ESP32-specific back light control  
+                toggleBackLight();
+            } else if (lightType === 'main_light') {
+                // Detailed main light control
+                toggleMainLight();
+            } else if (lightType === 'sport_light') {
+                // Detailed sport light control
+                toggleSportLight();
+            } else {
+                // Standard light control for other lights (fallback)
+                const button = document.getElementById(lightType + '_btn');
+                const currentState = button.classList.contains('on') ? 'on' : 'off';
+                const newState = currentState === 'on' ? 'off' : 'on';
+                
+                sendDeviceCommand('light', {
+                    light_type: lightType,
+                    state: newState
+                }, function(success, data) {
+                    if (success) {
+                        button.className = 'device-button ' + newState;
+                    }
+                });
+            }
+        }
+
+        // ESP32-specific front light control
+         function toggleFrontLight() {
+             const button = document.getElementById('front_light_btn');
+             const originalContent = button.innerHTML;
+             const paramName = esp32Config.front_light.parameter;
+             
+             // Show loading state
+             button.innerHTML = '<i class="bi bi-hourglass-split"></i> Getting Status...';
+             button.disabled = true;
+             
+             // First get current status from ESP32
+             getESP32Status(function(success, esp32State) {
+                 if (success) {
+                     // Determine current state using dynamic parameter name
+                     let currentState = 0;
+                     if (typeof esp32State === 'object') {
+                         // Check for both uppercase and lowercase keys
+                         if (esp32State[paramName] !== undefined) {
+                             currentState = parseInt(esp32State[paramName]);
+                         } else if (esp32State[paramName.toUpperCase()] !== undefined) {
+                             currentState = parseInt(esp32State[paramName.toUpperCase()]);
+                         } else if (esp32State[paramName.toLowerCase()] !== undefined) {
+                             currentState = parseInt(esp32State[paramName.toLowerCase()]);
+                         }
+                     } else if (typeof esp32State === 'string') {
+                         currentState = esp32State.includes(`"${paramName}":"1"`) || 
+                                       esp32State.includes(`"${paramName.toUpperCase()}":"1"`) || 
+                                       esp32State.includes(`"${paramName.toLowerCase()}":"1"`) ||
+                                       esp32State.includes(`${paramName}=1`) || 
+                                       esp32State.includes(`${paramName.toUpperCase()}=1`) ||
+                                       esp32State.includes(`${paramName.toLowerCase()}=1`) ? 1 : 0;
+                     }
+                     
+                     // Update button state based on ESP32 response
+                     button.className = 'device-button ' + (currentState === 1 ? 'on' : 'off');
+                     
+                     // Show sending command state
+                     button.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Sending Command...';
+                     
+                     // Send toggle command
+                     sendDeviceCommand('light', {
+                         light_type: 'front_light'
+                     }, function(success, data) {
+                         if (success) {
+                             // Show success state briefly
+                             button.innerHTML = '<i class="bi bi-check-circle"></i> Command Sent!';
+                             
+                             // Toggle button state after a brief delay
+                             setTimeout(function() {
+                                 const newState = currentState === 1 ? 'off' : 'on';
+                                 button.className = 'device-button ' + newState;
+                                 button.innerHTML = originalContent;
+                                 button.disabled = false;
+                             }, 1000);
+                         } else {
+                             // Show error state briefly
+                             button.innerHTML = '<i class="bi bi-exclamation-circle"></i> Command Failed!';
+                             setTimeout(function() {
+                                 button.innerHTML = originalContent;
+                                 button.disabled = false;
+                             }, 2000);
+                         }
+                     });
+                 } else {
+                     console.error('Failed to get ESP32 status:', esp32State);
+                     // Show error state
+                     button.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Status Error!';
+                     setTimeout(function() {
+                         button.innerHTML = originalContent;
+                         button.disabled = false;
+                     }, 2000);
+                     alert('Failed to get device status. Please try again.');
+                 }
+             });
+         }
+
+        // Detailed main light control
+        function toggleMainLight() {
+            const button = document.getElementById('main_light_btn');
+            const originalContent = button.innerHTML;
+            
+            // Show loading state
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> Getting Status...';
+            button.disabled = true;
+            
+            // Check if main light uses ESP32
+            if (esp32Config.main_light.enabled) {
+                const paramName = esp32Config.main_light.parameter;
+                
+                // First get current status from ESP32
+                getESP32Status(function(success, esp32State) {
+                    if (success) {
+                        // Determine current state using dynamic parameter name
+                        let currentState = 0;
+                        if (typeof esp32State === 'object') {
+                            // Check for both uppercase and lowercase keys
+                            if (esp32State[paramName] !== undefined) {
+                                currentState = parseInt(esp32State[paramName]);
+                            } else if (esp32State[paramName.toUpperCase()] !== undefined) {
+                                currentState = parseInt(esp32State[paramName.toUpperCase()]);
+                            } else if (esp32State[paramName.toLowerCase()] !== undefined) {
+                                currentState = parseInt(esp32State[paramName.toLowerCase()]);
+                            }
+                        } else if (typeof esp32State === 'string') {
+                            currentState = esp32State.includes(`"${paramName}":"1"`) || 
+                                          esp32State.includes(`"${paramName.toUpperCase()}":"1"`) || 
+                                          esp32State.includes(`"${paramName.toLowerCase()}":"1"`) ||
+                                          esp32State.includes(`${paramName}=1`) || 
+                                          esp32State.includes(`${paramName.toUpperCase()}=1`) ||
+                                          esp32State.includes(`${paramName.toLowerCase()}=1`) ? 1 : 0;
+                        }
+                        
+                        // Update button state based on ESP32 response
+                        button.className = 'device-button ' + (currentState === 1 ? 'on' : 'off');
+                        
+                        // Show sending command state
+                        button.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Sending Command...';
+                        
+                        // Send toggle command
+                        sendDeviceCommand('light', {
+                            light_type: 'main_light'
+                        }, function(success, data) {
+                            if (success) {
+                                // Show success state briefly
+                                button.innerHTML = '<i class="bi bi-check-circle"></i> Command Sent!';
+                                
+                                // Toggle button state after a brief delay
+                                setTimeout(function() {
+                                    const newState = currentState === 1 ? 'off' : 'on';
+                                    button.className = 'device-button ' + newState;
+                                    button.innerHTML = originalContent;
+                                    button.disabled = false;
+                                }, 1000);
+                            } else {
+                                // Show error state briefly
+                                button.innerHTML = '<i class="bi bi-exclamation-circle"></i> Command Failed!';
+                                setTimeout(function() {
+                                    button.innerHTML = originalContent;
+                                    button.disabled = false;
+                                }, 2000);
+                            }
+                        });
+                    } else {
+                        console.error('Failed to get ESP32 status:', esp32State);
+                        // Show error state
+                        button.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Status Error!';
+                        setTimeout(function() {
+                            button.innerHTML = originalContent;
+                            button.disabled = false;
+                        }, 2000);
+                        alert('Failed to get device status. Please try again.');
+                    }
+                });
+            } else {
+                // Use standard device state for non-ESP32 lights
+                const currentState = button.classList.contains('on') ? 1 : 0;
+                
+                // Show sending command state
+                button.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Sending Command...';
+                
+                // Send toggle command
+                sendDeviceCommand('light', {
+                    light_type: 'main_light',
+                    state: currentState === 1 ? 'off' : 'on'
+                }, function(success, data) {
+                    if (success) {
+                        // Show success state briefly
+                        button.innerHTML = '<i class="bi bi-check-circle"></i> Command Sent!';
+                        
+                        // Toggle button state after a brief delay
+                        setTimeout(function() {
+                            const newState = currentState === 1 ? 'off' : 'on';
+                            button.className = 'device-button ' + newState;
+                            button.innerHTML = originalContent;
+                            button.disabled = false;
+                        }, 1000);
+                    } else {
+                        // Show error state briefly
+                        button.innerHTML = '<i class="bi bi-exclamation-circle"></i> Command Failed!';
+                        setTimeout(function() {
+                            button.innerHTML = originalContent;
+                            button.disabled = false;
+                        }, 2000);
+                    }
+                });
+            }
+        }
+
+        // Detailed sport light control
+        function toggleSportLight() {
+            const button = document.getElementById('sport_light_btn');
+            const originalContent = button.innerHTML;
+            
+            // Show loading state
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> Getting Status...';
+            button.disabled = true;
+            
+            // Check if sport light uses ESP32
+            if (esp32Config.sport_light.enabled) {
+                const paramName = esp32Config.sport_light.parameter;
+                
+                // First get current status from ESP32
+                getESP32Status(function(success, esp32State) {
+                    if (success) {
+                        // Determine current state using dynamic parameter name
+                        let currentState = 0;
+                        if (typeof esp32State === 'object') {
+                            // Check for both uppercase and lowercase keys
+                            if (esp32State[paramName] !== undefined) {
+                                currentState = parseInt(esp32State[paramName]);
+                            } else if (esp32State[paramName.toUpperCase()] !== undefined) {
+                                currentState = parseInt(esp32State[paramName.toUpperCase()]);
+                            } else if (esp32State[paramName.toLowerCase()] !== undefined) {
+                                currentState = parseInt(esp32State[paramName.toLowerCase()]);
+                            }
+                        } else if (typeof esp32State === 'string') {
+                            currentState = esp32State.includes(`"${paramName}":"1"`) || 
+                                          esp32State.includes(`"${paramName.toUpperCase()}":"1"`) || 
+                                          esp32State.includes(`"${paramName.toLowerCase()}":"1"`) ||
+                                          esp32State.includes(`${paramName}=1`) || 
+                                          esp32State.includes(`${paramName.toUpperCase()}=1`) ||
+                                          esp32State.includes(`${paramName.toLowerCase()}=1`) ? 1 : 0;
+                        }
+                        
+                        // Update button state based on ESP32 response
+                        button.className = 'device-button ' + (currentState === 1 ? 'on' : 'off');
+                        
+                        // Show sending command state
+                        button.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Sending Command...';
+                        
+                        // Send toggle command
+                        sendDeviceCommand('light', {
+                            light_type: 'sport_light'
+                        }, function(success, data) {
+                            if (success) {
+                                // Show success state briefly
+                                button.innerHTML = '<i class="bi bi-check-circle"></i> Command Sent!';
+                                
+                                // Toggle button state after a brief delay
+                                setTimeout(function() {
+                                    const newState = currentState === 1 ? 'off' : 'on';
+                                    button.className = 'device-button ' + newState;
+                                    button.innerHTML = originalContent;
+                                    button.disabled = false;
+                                }, 1000);
+                            } else {
+                                // Show error state briefly
+                                button.innerHTML = '<i class="bi bi-exclamation-circle"></i> Command Failed!';
+                                setTimeout(function() {
+                                    button.innerHTML = originalContent;
+                                    button.disabled = false;
+                                }, 2000);
+                            }
+                        });
+                    } else {
+                        console.error('Failed to get ESP32 status:', esp32State);
+                        // Show error state
+                        button.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Status Error!';
+                        setTimeout(function() {
+                            button.innerHTML = originalContent;
+                            button.disabled = false;
+                        }, 2000);
+                        alert('Failed to get device status. Please try again.');
+                    }
+                });
+            } else {
+                // Use standard device state for non-ESP32 lights
+                const currentState = button.classList.contains('on') ? 1 : 0;
+                
+                // Show sending command state
+                button.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Sending Command...';
+                
+                // Send toggle command
+                sendDeviceCommand('light', {
+                    light_type: 'sport_light',
+                    state: currentState === 1 ? 'off' : 'on'
+                }, function(success, data) {
+                    if (success) {
+                        // Show success state briefly
+                        button.innerHTML = '<i class="bi bi-check-circle"></i> Command Sent!';
+                        
+                        // Toggle button state after a brief delay
+                        setTimeout(function() {
+                            const newState = currentState === 1 ? 'off' : 'on';
+                            button.className = 'device-button ' + newState;
+                            button.innerHTML = originalContent;
+                            button.disabled = false;
+                        }, 1000);
+                    } else {
+                        // Show error state briefly
+                        button.innerHTML = '<i class="bi bi-exclamation-circle"></i> Command Failed!';
+                        setTimeout(function() {
+                            button.innerHTML = originalContent;
+                            button.disabled = false;
+                        }, 2000);
+                    }
+                });
+            }
+        }
+
+        // ESP32-specific back light control
+        function toggleBackLight() {
+            const button = document.getElementById('back_light_btn');
+            const originalContent = button.innerHTML;
+            const paramName = esp32Config.back_light.parameter;
+            
+            // Show loading state
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> Getting Status...';
+            button.disabled = true;
+            
+            // First get current status from ESP32
+            getESP32Status(function(success, esp32State) {
+                if (success) {
+                    // Determine current state using dynamic parameter name
+                    let currentState = 0;
+                    if (typeof esp32State === 'object') {
+                        // Check for both uppercase and lowercase keys
+                        if (esp32State[paramName] !== undefined) {
+                            currentState = parseInt(esp32State[paramName]);
+                        } else if (esp32State[paramName.toUpperCase()] !== undefined) {
+                            currentState = parseInt(esp32State[paramName.toUpperCase()]);
+                        } else if (esp32State[paramName.toLowerCase()] !== undefined) {
+                            currentState = parseInt(esp32State[paramName.toLowerCase()]);
+                        }
+                    } else if (typeof esp32State === 'string') {
+                        currentState = esp32State.includes(`"${paramName}":"1"`) || 
+                                      esp32State.includes(`"${paramName.toUpperCase()}":"1"`) || 
+                                      esp32State.includes(`"${paramName.toLowerCase()}":"1"`) ||
+                                      esp32State.includes(`${paramName}=1`) || 
+                                      esp32State.includes(`${paramName.toUpperCase()}=1`) ||
+                                      esp32State.includes(`${paramName.toLowerCase()}=1`) ? 1 : 0;
+                    }
+                    
+                    // Update button state based on ESP32 response
+                    button.className = 'device-button ' + (currentState === 1 ? 'on' : 'off');
+                    
+                    // Show sending command state
+                    button.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Sending Command...';
+                    
+                    // Send toggle command
+                    sendDeviceCommand('light', {
+                        light_type: 'back_light'
+                    }, function(success, data) {
+                        if (success) {
+                            // Show success state briefly
+                            button.innerHTML = '<i class="bi bi-check-circle"></i> Command Sent!';
+                            
+                            // Toggle button state after a brief delay
+                            setTimeout(function() {
+                                const newState = currentState === 1 ? 'off' : 'on';
+                                button.className = 'device-button ' + newState;
+                                button.innerHTML = originalContent;
+                                button.disabled = false;
+                            }, 1000);
+                        } else {
+                            // Show error state briefly
+                            button.innerHTML = '<i class="bi bi-exclamation-circle"></i> Command Failed!';
+                            setTimeout(function() {
+                                button.innerHTML = originalContent;
+                                button.disabled = false;
+                            }, 2000);
+                        }
+                    });
+                } else {
+                    console.error('Failed to get ESP32 status:', esp32State);
+                    // Show error state
+                    button.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Status Error!';
+                    setTimeout(function() {
+                        button.innerHTML = originalContent;
+                        button.disabled = false;
+                    }, 2000);
+                    alert('Failed to get device status. Please try again.');
+                }
+            });
+        }
+
+        // Get ESP32 status function
+        function getESP32Status(callback) {
+            fetch(`/tablet/api/esp32-status/{{ room.room_number }}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    callback(true, data.esp32_state);
+                } else {
+                    callback(false, data.message);
+                }
+            })
+            .catch(error => {
+                console.error('ESP32 status error:', error);
+                callback(false, 'Connection error');
+            });
+        }
+
+        // Update ESP32 device status
+         function updateESP32Status() {
+             getESP32Status(function(success, esp32State) {
+                 if (success) {
+                     // Update front light button using dynamic parameter name
+                     const frontButton = document.getElementById('front_light_btn');
+                     const frontParamName = esp32Config.front_light.parameter;
+                     let frontCurrentState = 0;
+                     if (typeof esp32State === 'object') {
+                         // Check for both uppercase and lowercase keys
+                         if (esp32State[frontParamName] !== undefined) {
+                             frontCurrentState = parseInt(esp32State[frontParamName]);
+                         } else if (esp32State[frontParamName.toUpperCase()] !== undefined) {
+                             frontCurrentState = parseInt(esp32State[frontParamName.toUpperCase()]);
+                         } else if (esp32State[frontParamName.toLowerCase()] !== undefined) {
+                             frontCurrentState = parseInt(esp32State[frontParamName.toLowerCase()]);
+                         }
+                     } else if (typeof esp32State === 'string') {
+                         frontCurrentState = esp32State.includes(`"${frontParamName}":"1"`) || 
+                                           esp32State.includes(`"${frontParamName.toUpperCase()}":"1"`) || 
+                                           esp32State.includes(`"${frontParamName.toLowerCase()}":"1"`) ||
+                                           esp32State.includes(`${frontParamName}=1`) || 
+                                           esp32State.includes(`${frontParamName.toUpperCase()}=1`) ||
+                                           esp32State.includes(`${frontParamName.toLowerCase()}=1`) ? 1 : 0;
+                     }
+                     frontButton.className = 'device-button ' + (frontCurrentState === 1 ? 'on' : 'off');
+                     
+                     // Update back light button using dynamic parameter name
+                     const backButton = document.getElementById('back_light_btn');
+                     const backParamName = esp32Config.back_light.parameter;
+                     let backCurrentState = 0;
+                     if (typeof esp32State === 'object') {
+                         // Check for both uppercase and lowercase keys
+                         if (esp32State[backParamName] !== undefined) {
+                             backCurrentState = parseInt(esp32State[backParamName]);
+                         } else if (esp32State[backParamName.toUpperCase()] !== undefined) {
+                             backCurrentState = parseInt(esp32State[backParamName.toUpperCase()]);
+                         } else if (esp32State[backParamName.toLowerCase()] !== undefined) {
+                             backCurrentState = parseInt(esp32State[backParamName.toLowerCase()]);
+                         }
+                     } else if (typeof esp32State === 'string') {
+                         backCurrentState = esp32State.includes(`"${backParamName}":"1"`) || 
+                                           esp32State.includes(`"${backParamName.toUpperCase()}":"1"`) || 
+                                           esp32State.includes(`"${backParamName.toLowerCase()}":"1"`) ||
+                                           esp32State.includes(`${backParamName}=1`) || 
+                                           esp32State.includes(`${backParamName.toUpperCase()}=1`) ||
+                                           esp32State.includes(`${backParamName.toLowerCase()}=1`) ? 1 : 0;
+                     }
+                     backButton.className = 'device-button ' + (backCurrentState === 1 ? 'on' : 'off');
+                     
+                     // Update main light button if ESP32-enabled
+                     if (esp32Config.main_light.enabled) {
+                         const mainButton = document.getElementById('main_light_btn');
+                         const mainParamName = esp32Config.main_light.parameter;
+                         let mainCurrentState = 0;
+                         if (typeof esp32State === 'object') {
+                             // Check for both uppercase and lowercase keys
+                             if (esp32State[mainParamName] !== undefined) {
+                                 mainCurrentState = parseInt(esp32State[mainParamName]);
+                             } else if (esp32State[mainParamName.toUpperCase()] !== undefined) {
+                                 mainCurrentState = parseInt(esp32State[mainParamName.toUpperCase()]);
+                             } else if (esp32State[mainParamName.toLowerCase()] !== undefined) {
+                                 mainCurrentState = parseInt(esp32State[mainParamName.toLowerCase()]);
+                             }
+                         } else if (typeof esp32State === 'string') {
+                             mainCurrentState = esp32State.includes(`"${mainParamName}":"1"`) || 
+                                               esp32State.includes(`"${mainParamName.toUpperCase()}":"1"`) || 
+                                               esp32State.includes(`"${mainParamName.toLowerCase()}":"1"`) ||
+                                               esp32State.includes(`${mainParamName}=1`) || 
+                                               esp32State.includes(`${mainParamName.toUpperCase()}=1`) ||
+                                               esp32State.includes(`${mainParamName.toLowerCase()}=1`) ? 1 : 0;
+                         }
+                         mainButton.className = 'device-button ' + (mainCurrentState === 1 ? 'on' : 'off');
+                     }
+                     
+                     // Update sport light button if ESP32-enabled
+                     if (esp32Config.sport_light.enabled) {
+                         const sportButton = document.getElementById('sport_light_btn');
+                         const sportParamName = esp32Config.sport_light.parameter;
+                         let sportCurrentState = 0;
+                         if (typeof esp32State === 'object') {
+                             // Check for both uppercase and lowercase keys
+                             if (esp32State[sportParamName] !== undefined) {
+                                 sportCurrentState = parseInt(esp32State[sportParamName]);
+                             } else if (esp32State[sportParamName.toUpperCase()] !== undefined) {
+                                 sportCurrentState = parseInt(esp32State[sportParamName.toUpperCase()]);
+                             } else if (esp32State[sportParamName.toLowerCase()] !== undefined) {
+                                 sportCurrentState = parseInt(esp32State[sportParamName.toLowerCase()]);
+                             }
+                         } else if (typeof esp32State === 'string') {
+                             sportCurrentState = esp32State.includes(`"${sportParamName}":"1"`) || 
+                                                esp32State.includes(`"${sportParamName.toUpperCase()}":"1"`) || 
+                                                esp32State.includes(`"${sportParamName.toLowerCase()}":"1"`) ||
+                                                esp32State.includes(`${sportParamName}=1`) || 
+                                                esp32State.includes(`${sportParamName.toUpperCase()}=1`) ||
+                                                esp32State.includes(`${sportParamName.toLowerCase()}=1`) ? 1 : 0;
+                         }
+                         sportButton.className = 'device-button ' + (sportCurrentState === 1 ? 'on' : 'off');
+                     }
+                     
+                     // ESP32 status updated successfully
+                 } else {
+                     console.error('Failed to update ESP32 status:', esp32State);
+                 }
+             });
+         }
+
+        // RGB control functions
+        function toggleRGB() {
+            const button = document.getElementById('rgb_power_btn');
+            const controls = document.getElementById('rgb_controls');
+            const currentState = button.classList.contains('on');
+            const newState = !currentState;
+            
+            sendDeviceCommand('rgb', {
+                power: newState,
+                red: currentRed,
+                green: currentGreen,
+                blue: currentBlue,
+                brightness: currentBrightness
+            }, function(success, data) {
+                if (success) {
+                    button.className = 'device-button ' + (newState ? 'on' : 'off');
+                    controls.style.display = newState ? 'block' : 'none';
+                }
+            });
+        }
+
+        function updateRGBPreview() {
+            currentRed = document.getElementById('red_slider').value;
+            currentGreen = document.getElementById('green_slider').value;
+            currentBlue = document.getElementById('blue_slider').value;
+            currentBrightness = document.getElementById('brightness_slider').value;
+            
+            document.getElementById('red_value').textContent = currentRed;
+            document.getElementById('green_value').textContent = currentGreen;
+            document.getElementById('blue_value').textContent = currentBlue;
+            document.getElementById('brightness_value').textContent = currentBrightness + '%';
+            
+            const brightness = currentBrightness / 100;
+            const r = Math.round(currentRed * brightness);
+            const g = Math.round(currentGreen * brightness);
+            const b = Math.round(currentBlue * brightness);
+            
+            document.getElementById('color_preview').style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function applyRGBSettings() {
+            sendDeviceCommand('rgb', {
+                power: true,
+                red: currentRed,
+                green: currentGreen,
+                blue: currentBlue,
+                brightness: currentBrightness
+            });
+        }
+
+        // AC control functions
+        function toggleAC() {
+            const button = document.getElementById('ac_power_btn');
+            const controls = document.getElementById('ac_controls');
+            const currentState = button.classList.contains('on');
+            const newState = !currentState;
+            
+            sendDeviceCommand('ac', {
+                power: newState,
+                mode: document.getElementById('ac_mode').value,
+                temperature: currentTemp,
+                fan_speed: document.getElementById('fan_speed_slider').value
+            }, function(success, data) {
+                if (success) {
+                    button.className = 'device-button ' + (newState ? 'on' : 'off');
+                    controls.style.display = newState ? 'block' : 'none';
+                }
+            });
+        }
+
+        function adjustTemp(delta) {
+            currentTemp = Math.max(16, Math.min(30, currentTemp + delta));
+            document.getElementById('temp_display').textContent = currentTemp + '°C';
+            updateACSettings();
+        }
+
+        function updateFanSpeed() {
+            const fanSpeed = document.getElementById('fan_speed_slider').value;
+            document.getElementById('fan_speed_value').textContent = fanSpeed;
+            updateACSettings();
+        }
+
+        function updateACSettings() {
+            sendDeviceCommand('ac', {
+                power: true,
+                mode: document.getElementById('ac_mode').value,
+                temperature: currentTemp,
+                fan_speed: document.getElementById('fan_speed_slider').value
+            });
+        }
+
+        // Generic device command function
+        function sendDeviceCommand(deviceType, params, callback) {
+            fetch(`/tablet/api/control/{{ room.room_number }}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device_type: deviceType,
+                    ...params
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Command sent successfully
+                    if (callback) callback(true, data);
+                } else {
+                    console.error('Command failed:', data.message);
+                    alert('Command failed: ' + data.message);
+                    if (callback) callback(false, data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Connection error. Please try again.');
+                if (callback) callback(false, null);
+            });
+        }
+
+        // Auto-refresh device status every 30 seconds
+        setInterval(function() {
+            fetch(`/tablet/api/status/{{ room.room_number }}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Device status updated
+                }
+            })
+            .catch(error => console.error('Status update failed:', error));
+        }, 30000);
+
+        // Auto-refresh ESP32 status every 1 minute
+        setInterval(function() {
+            updateESP32Status();
+        }, 60000);
+
+        // Initial ESP32 status update on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Wait a bit for page to fully load, then update ESP32 status
+            setTimeout(updateESP32Status, 2000);
+        });
+    </script>
+</body>
+</html>

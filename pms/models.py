@@ -354,38 +354,29 @@ class Reservation(models.Model):
     def update_status(self):
         """Automatically update status based on current date."""
         today = date.today()
-        print(f"Debug: Updating status for reservation {self.id}")
-        print(f"Debug: Current status: {self.status}")
-        print(f"Debug: Check-in date: {self.check_in}, Today: {today}")
         
         # Only update status for non-terminal states
         if self.status in ['checked_out', 'canceled', 'no_show']:
-            print(f"Debug: Status is terminal, no update needed")
             return
         
         # Handle no-shows: If check-in date has passed and status is still 'confirmed' or 'expected_arrival'
         if (self.check_in < today and 
             self.status in ['confirmed', 'expected_arrival']):
-            print(f"Debug: Marking as no-show")
             self.status = 'no_show'
             self.save()
             return
     
         # Handle expected_arrival: If today is check-in date and status is confirmed
         if self.status == 'confirmed' and self.check_in == today:
-            print(f"Debug: Marking as expected arrival")
             self.status = 'expected_arrival'
             self.save()
             return
         
         # Handle expected_departure: If today is check-out date and status is in_house
         if self.status == 'in_house' and self.check_out == today:
-            print(f"Debug: Marking as expected departure")
             self.status = 'expected_departure'
             self.save()
             return
-        
-        print(f"Debug: No status update needed")
 
     def has_overlap(self):
         """Check if there are any overlapping active reservations for the same room."""
@@ -526,3 +517,240 @@ class EmailLog(models.Model):
     
     def __str__(self):
         return f"{self.notification_type} - {self.recipient_email} - {self.status}"
+
+
+# Tablet and IoT Device Models
+class TabletDevice(models.Model):
+    """Model to manage tablet devices and their ESP32 controllers"""
+    room = models.OneToOneField(Room, on_delete=models.CASCADE, related_name='tablet')
+    tablet_id = models.CharField(max_length=50, unique=True, help_text="Unique identifier for the tablet")
+    esp32_ip = models.GenericIPAddressField(help_text="IP address of the ESP32 controller")
+    is_active = models.BooleanField(default=True)
+    last_ping = models.DateTimeField(null=True, blank=True, help_text="Last successful ping to ESP32")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Tablet Device"
+        verbose_name_plural = "Tablet Devices"
+
+    def __str__(self):
+        return f"Tablet {self.tablet_id} - Room {self.room.room_number}"
+
+
+class RoomDeviceState(models.Model):
+    """Model to track the current state of room devices (lights, AC, etc.)"""
+    room = models.OneToOneField(Room, on_delete=models.CASCADE, related_name='device_state')
+    
+    # Light controls
+    front_light = models.BooleanField(default=False)
+    back_light = models.BooleanField(default=False)
+    main_light = models.BooleanField(default=False)
+    sport_light = models.BooleanField(default=False)
+    
+    # RGB light controls
+    rgb_light = models.BooleanField(default=False)
+    rgb_color = models.CharField(max_length=7, default='#FFFFFF', help_text="Hex color code")
+    rgb_brightness = models.IntegerField(default=100, help_text="Brightness percentage (0-100)")
+    
+    # AC controls
+    ac_power = models.BooleanField(default=False)
+    ac_mode = models.CharField(
+        max_length=10,
+        choices=[
+            ('cool', 'Cool'),
+            ('heat', 'Heat'),
+            ('fan', 'Fan'),
+            ('auto', 'Auto'),
+        ],
+        default='cool'
+    )
+    ac_temperature = models.IntegerField(default=24, help_text="Temperature in Celsius")
+    ac_fan_speed = models.CharField(
+        max_length=10,
+        choices=[
+            ('low', 'Low'),
+            ('medium', 'Medium'),
+            ('high', 'High'),
+            ('auto', 'Auto'),
+        ],
+        default='auto'
+    )
+    
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Room Device State"
+        verbose_name_plural = "Room Device States"
+
+    def __str__(self):
+        return f"Device State - Room {self.room.room_number}"
+
+
+class ESP32ButtonConfig(models.Model):
+    """Model to configure ESP32 button parameters for each room"""
+    room = models.OneToOneField(Room, on_delete=models.CASCADE, related_name='esp32_config')
+    
+    # Front Light Button Configuration
+    front_light_enabled = models.BooleanField(default=True, help_text="Enable/disable front light button")
+    front_light_endpoint = models.CharField(max_length=100, default='/front_light', help_text="ESP32 endpoint for front light")
+    front_light_parameter_name = models.CharField(max_length=50, default='tv', help_text="Parameter name for front light (e.g., tv, light, relay1)")
+    front_light_on_command = models.CharField(max_length=50, default='on', help_text="Command to turn on front light")
+    front_light_off_command = models.CharField(max_length=50, default='off', help_text="Command to turn off front light")
+    
+    # Back Light Button Configuration
+    back_light_enabled = models.BooleanField(default=True, help_text="Enable/disable back light button")
+    back_light_endpoint = models.CharField(max_length=100, default='/back_light', help_text="ESP32 endpoint for back light")
+    back_light_parameter_name = models.CharField(max_length=50, default='tv', help_text="Parameter name for back light (e.g., tv, light, relay2)")
+    back_light_on_command = models.CharField(max_length=50, default='on', help_text="Command to turn on back light")
+    back_light_off_command = models.CharField(max_length=50, default='off', help_text="Command to turn off back light")
+    
+    # Main Light Button Configuration
+    main_light_enabled = models.BooleanField(default=True, help_text="Enable/disable main light button")
+    main_light_endpoint = models.CharField(max_length=100, default='/main_light', help_text="ESP32 endpoint for main light")
+    main_light_parameter_name = models.CharField(max_length=50, default='main', help_text="Parameter name for main light (e.g., main, light, relay3)")
+    main_light_on_command = models.CharField(max_length=50, default='on', help_text="Command to turn on main light")
+    main_light_off_command = models.CharField(max_length=50, default='off', help_text="Command to turn off main light")
+    
+    # Sport Light Button Configuration
+    sport_light_enabled = models.BooleanField(default=True, help_text="Enable/disable sport light button")
+    sport_light_endpoint = models.CharField(max_length=100, default='/sport_light', help_text="ESP32 endpoint for sport light")
+    sport_light_parameter_name = models.CharField(max_length=50, default='sport', help_text="Parameter name for sport light (e.g., sport, light, relay4)")
+    sport_light_on_command = models.CharField(max_length=50, default='on', help_text="Command to turn on sport light")
+    sport_light_off_command = models.CharField(max_length=50, default='off', help_text="Command to turn off sport light")
+    
+    # RGB Light Configuration
+    rgb_light_enabled = models.BooleanField(default=True, help_text="Enable/disable RGB light controls")
+    rgb_endpoint = models.CharField(max_length=100, default='/rgb', help_text="ESP32 endpoint for RGB light")
+    
+    # AC Configuration
+    ac_enabled = models.BooleanField(default=True, help_text="Enable/disable AC controls")
+    ac_endpoint = models.CharField(max_length=100, default='/ac', help_text="ESP32 endpoint for AC")
+    
+    # General ESP32 Settings
+    status_endpoint = models.CharField(max_length=100, default='/status', help_text="ESP32 endpoint to get device status")
+    timeout_seconds = models.IntegerField(default=5, help_text="Request timeout in seconds")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "ESP32 Button Configuration"
+        verbose_name_plural = "ESP32 Button Configurations"
+
+    def __str__(self):
+        return f"ESP32 Config - Room {self.room.room_number}"
+
+    @classmethod
+    def get_config_for_room(cls, room):
+        """Get or create ESP32 configuration for a room"""
+        config, created = cls.objects.get_or_create(
+            room=room,
+            defaults={
+                'front_light_enabled': True,
+                'front_light_endpoint': '/front_light',
+                'front_light_on_command': 'on',
+                'front_light_off_command': 'off',
+                'back_light_enabled': True,
+                'back_light_endpoint': '/back_light',
+                'back_light_on_command': 'on',
+                'back_light_off_command': 'off',
+                'main_light_enabled': True,
+                'main_light_endpoint': '/main_light',
+                'main_light_on_command': 'on',
+                'main_light_off_command': 'off',
+                'sport_light_enabled': True,
+                'sport_light_endpoint': '/sport_light',
+                'sport_light_on_command': 'on',
+                'sport_light_off_command': 'off',
+                'rgb_light_enabled': True,
+                'rgb_endpoint': '/rgb',
+                'ac_enabled': True,
+                'ac_endpoint': '/ac',
+                'status_endpoint': '/status',
+                'timeout_seconds': 5,
+            }
+        )
+        return config
+
+
+class AttractionInfo(models.Model):
+    """Model to store information about local attractions"""
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(
+        max_length=50,
+        choices=[
+            ('nature', 'Nature'),
+            ('culture', 'Culture'),
+            ('adventure', 'Adventure'),
+            ('dining', 'Dining'),
+            ('shopping', 'Shopping'),
+            ('wellness', 'Wellness'),
+        ]
+    )
+    distance_km = models.FloatField(help_text="Distance from hotel in kilometers")
+    estimated_time = models.CharField(max_length=50, help_text="Estimated travel time")
+    image_url = models.URLField(blank=True, help_text="URL to attraction image")
+    website_url = models.URLField(blank=True, help_text="Official website URL")
+    is_active = models.BooleanField(default=True)
+    priority = models.IntegerField(default=0, help_text="Display priority (higher numbers shown first)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Attraction Info"
+        verbose_name_plural = "Attraction Info"
+        ordering = ['-priority', 'distance_km']
+
+    def __str__(self):
+        return f"{self.name} ({self.category})"
+
+
+class TabletContent(models.Model):
+    """Model to manage dynamic content displayed on tablets"""
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    content_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('welcome', 'Welcome Message'),
+            ('announcement', 'Announcement'),
+            ('promotion', 'Promotion'),
+            ('service', 'Service Info'),
+            ('emergency', 'Emergency Info'),
+        ]
+    )
+    target_rooms = models.ManyToManyField(Room, blank=True, help_text="Leave empty to show on all tablets")
+    is_active = models.BooleanField(default=True)
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    priority = models.IntegerField(default=0, help_text="Display priority (higher numbers shown first)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Tablet Content"
+        verbose_name_plural = "Tablet Content"
+        ordering = ['-priority', '-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.content_type})"
+
+    def is_currently_active(self):
+        """Check if content should be displayed based on date range"""
+        from django.utils import timezone
+        now = timezone.now()
+        
+        if not self.is_active:
+            return False
+        
+        if self.start_date and now < self.start_date:
+            return False
+        
+        if self.end_date and now > self.end_date:
+            return False
+        
+        return True

@@ -6,10 +6,10 @@ from calendar import monthrange
 from .models import Room, Reservation, HotelSettings, Guest, PaymentMethod, Agent
 from .forms import ReservationForm, CheckInGuestForm, ConfirmReservationForm
 from django.views.decorators.http import require_GET
+from django.db import models
 
 def reservations_list(request):
     """View to display all reservations with appropriate actions"""
-    print("Debug: Accessing reservations list view")
     
     # Get sort and filter parameters from request
     sort_field = request.GET.get('sort', 'check_in')
@@ -22,17 +22,14 @@ def reservations_list(request):
     
     # Update all reservation statuses before displaying
     reservations = Reservation.objects.all()
-    print(f"Debug: Found {len(reservations)} reservations")
     
     for reservation in reservations:
         old_status = reservation.status
         reservation.update_status()
-        print(f"Debug: Reservation {reservation.id} status: {old_status} -> {reservation.status}")
 
     # Apply status filter
     if status_filter:
         reservations = reservations.filter(status=status_filter)
-        print(f"Debug: Filtered by status '{status_filter}', found {len(reservations)} reservations")
 
     # Apply date filter
     if date_filter == 'today':
@@ -41,15 +38,12 @@ def reservations_list(request):
             check_in__lte=today,
             check_out__gt=today
         )
-        print(f"Debug: Filtered by today's date, found {len(reservations)} reservations")
     elif date_filter == 'checking_in_today':
         today = date.today()
         reservations = reservations.filter(check_in=today)
-        print(f"Debug: Filtered by check-in today, found {len(reservations)} reservations")
     elif date_filter == 'checking_out_today':
         today = date.today()
         reservations = reservations.filter(check_out=today)
-        print(f"Debug: Filtered by check-out today, found {len(reservations)} reservations")
 
     # Apply search filter if provided
     if search_query:
@@ -60,7 +54,6 @@ def reservations_list(request):
             Q(room__room_number__icontains=search_query) |
             Q(guest__phone__icontains=search_query)
         )
-        print(f"Debug: Filtered by search '{search_query}', found {len(reservations)} reservations")
 
     # Define valid sort fields and their corresponding model fields
     valid_sort_fields = {
@@ -99,7 +92,6 @@ def reservations_list(request):
         'current_search_query': search_query,
         'all_statuses': all_statuses
     }
-    print("Debug: Rendering reservations list template")
     return render(request, 'pms/reservations.html', context)
 
 # View for check-in process
@@ -107,15 +99,12 @@ def checkin_reservation(request, reservation_id):
     """View for check-in process with time restrictions"""
     try:
         reservation = get_object_or_404(Reservation, id=reservation_id)
-        print(f"Debug: Found reservation {reservation_id} with status {reservation.status}")
         
         # Update reservation status before proceeding
         old_status = reservation.status
         reservation.update_status()
-        print(f"Debug: Status updated from {old_status} to {reservation.status}")
         
         if reservation.status != 'expected_arrival':
-            print(f"Debug: Invalid status for check-in: {reservation.status}")
             messages.error(request, 'This reservation cannot be checked in at this time.')
             return redirect('reservations_list')
         
@@ -141,7 +130,6 @@ def checkin_reservation(request, reservation_id):
         
         # Add warning messages but don't redirect
         if not room_ready:
-            print(f"Debug: Room {reservation.room.room_number} is not ready for check-in. Status: {reservation.room.status}")
             messages.warning(
                 request,
                 f'⚠️ Room {reservation.room.room_number} is not ready for check-in. '
@@ -150,7 +138,6 @@ def checkin_reservation(request, reservation_id):
             )
         
         if not time_allowed:
-            print(f"Debug: Check-in not allowed at {current_time}")
             messages.warning(
                 request,
                 f'⚠️ Check-in is only allowed between {settings.earliest_check_in_time.strftime("%I:%M %p")} '
@@ -178,10 +165,8 @@ def checkin_reservation(request, reservation_id):
                 # Re-render the form with error
                 form = CheckInGuestForm(request.POST, instance=guest)
             else:
-                print("Debug: Processing POST request")
                 form = CheckInGuestForm(request.POST, instance=guest)
                 if form.is_valid():
-                    print("Debug: Form is valid, saving guest info")
                     form.save()
                     reservation.status = 'in_house'
                     reservation.check_in_time = current_time
@@ -190,10 +175,7 @@ def checkin_reservation(request, reservation_id):
                     reservation.room.update_status()
                     messages.success(request, f'Successfully checked in {guest.name}')
                     return redirect('dashboard')
-                else:
-                    print(f"Debug: Form validation errors: {form.errors}")
         else:
-            print("Debug: Initializing GET request form")
             form = CheckInGuestForm(instance=guest)
         
         context = {
@@ -205,15 +187,9 @@ def checkin_reservation(request, reservation_id):
             'time_allowed': time_allowed,
             'can_checkin': room_ready and time_allowed
         }
-        print("Debug: Rendering check-in form")
         response = render(request, 'pms/checkin.html', context)
-        print("Debug: Response status code:", response.status_code)
         return response
     except Exception as e:
-        print(f"Debug: Error occurred: {str(e)}")
-        print(f"Debug: Error type: {type(e).__name__}")
-        import traceback
-        print(f"Debug: Traceback: {traceback.format_exc()}")
         messages.error(request, 'An error occurred during check-in')
         return redirect('reservations_list')
 
@@ -1229,6 +1205,334 @@ def occupancy_report(request):
     }
     
     return render(request, 'pms/reports/occupancy_report.html', context)
+
+
+# Tablet and IoT Device Views
+import requests
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+from .models import TabletDevice, RoomDeviceState, AttractionInfo, TabletContent
+
+
+class ESP32Controller:
+    """Service class to communicate with ESP32 devices"""
+    
+    def __init__(self, ip_address):
+        self.ip_address = ip_address
+        self.base_url = f"http://{ip_address}"
+        self.timeout = 5  # seconds
+    
+    def send_command(self, endpoint, params=None):
+        """Send HTTP command to ESP32"""
+        try:
+            url = f"{self.base_url}/{endpoint}"
+            response = requests.get(url, params=params, timeout=self.timeout)
+            return response.status_code == 200
+        except requests.RequestException:
+            return False
+    
+    def control_light(self, light_type, state):
+        """Control individual lights (front, back, main, sport)"""
+        light_map = {
+            'front': 'front_light',
+            'back': 'back_light', 
+            'main': 'main_light',
+            'sport': 'sport_light'
+        }
+        
+        if light_type in light_map:
+            params = {light_map[light_type]: 1 if state else 0}
+            return self.send_command('control', params)
+        return False
+    
+    def control_rgb_light(self, state, color=None, brightness=None):
+        """Control RGB light with color and brightness"""
+        params = {'rgb_light': 1 if state else 0}
+        
+        if state and color:
+            # Convert hex color to RGB values
+            color = color.lstrip('#')
+            if len(color) == 6:
+                r = int(color[0:2], 16)
+                g = int(color[2:4], 16)
+                b = int(color[4:6], 16)
+                params.update({'r': r, 'g': g, 'b': b})
+        
+        if state and brightness is not None:
+            params['brightness'] = max(0, min(100, brightness))
+        
+        return self.send_command('control', params)
+    
+    def control_ac(self, power, mode=None, temperature=None, fan_speed=None):
+        """Control AC system"""
+        params = {'ac_power': 1 if power else 0}
+        
+        if power:
+            if mode:
+                params['ac_mode'] = mode
+            if temperature is not None:
+                params['ac_temp'] = max(16, min(30, temperature))
+            if fan_speed:
+                params['ac_fan'] = fan_speed
+        
+        return self.send_command('control', params)
+    
+    def ping(self):
+        """Check if ESP32 is responsive"""
+        return self.send_command('ping')
+
+
+class TabletService:
+    """Service class for tablet operations"""
+    
+    @staticmethod
+    def get_tablet_for_room(room_number):
+        """Get tablet device for a specific room"""
+        try:
+            room = Room.objects.get(room_number=room_number)
+            return TabletDevice.objects.get(room=room)
+        except (Room.DoesNotExist, TabletDevice.DoesNotExist):
+            return None
+    
+    @staticmethod
+    def get_device_state(room):
+        """Get or create device state for a room"""
+        device_state, created = RoomDeviceState.objects.get_or_create(room=room)
+        return device_state
+    
+    @staticmethod
+    def update_device_state(room, device_type, **kwargs):
+        """Update device state in database"""
+        device_state = TabletService.get_device_state(room)
+        
+        for key, value in kwargs.items():
+            if hasattr(device_state, key):
+                setattr(device_state, key, value)
+        
+        device_state.save()
+        return device_state
+    
+    @staticmethod
+    def ping_device(tablet_device):
+        """Ping ESP32 device and update last_ping timestamp"""
+        controller = ESP32Controller(tablet_device.esp32_ip)
+        if controller.ping():
+            tablet_device.last_ping = timezone.now()
+            tablet_device.save()
+            return True
+        return False
+
+
+class TabletView(View):
+    """Main tablet interface view"""
+    
+    def get(self, request, room_number):
+        # Get room and tablet device
+        try:
+            room = Room.objects.get(room_number=room_number)
+            tablet = TabletDevice.objects.get(room=room)
+        except (Room.DoesNotExist, TabletDevice.DoesNotExist):
+            return render(request, 'tablet/error.html', {
+                'error': f'Tablet not configured for room {room_number}'
+            })
+        
+        # Get current reservation for the room
+        today = date.today()
+        current_reservation = Reservation.objects.filter(
+            room=room,
+            check_in__lte=today,
+            check_out__gt=today,
+            status__in=['in_house', 'expected_departure']
+        ).first()
+        
+        # Get device state
+        device_state = TabletService.get_device_state(room)
+        
+        # Get attractions
+        attractions = AttractionInfo.objects.filter(is_active=True)[:6]
+        
+        # Get dynamic content for this room
+        content_items = TabletContent.objects.filter(
+            is_active=True
+        ).filter(
+            models.Q(target_rooms=room) | models.Q(target_rooms__isnull=True)
+        )
+        
+        # Filter by date range
+        active_content = [item for item in content_items if item.is_currently_active()]
+        
+        # Ping device to check connectivity
+        is_connected = TabletService.ping_device(tablet)
+        
+        context = {
+            'room': room,
+            'tablet': tablet,
+            'reservation': current_reservation,
+            'device_state': device_state,
+            'attractions': attractions,
+            'content_items': active_content[:3],  # Show top 3 content items
+            'is_connected': is_connected,
+            'current_time': timezone.now(),
+        }
+        
+        return render(request, 'tablet/main_interface.html', context)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DeviceControlAPI(View):
+    """API endpoint for controlling room devices"""
+    
+    def post(self, request, room_number):
+        try:
+            room = Room.objects.get(room_number=room_number)
+            tablet = TabletDevice.objects.get(room=room)
+            controller = ESP32Controller(tablet.esp32_ip)
+            
+            import json
+            data = json.loads(request.body)
+            device_type = data.get('device_type')
+            action = data.get('action')
+            
+            success = False
+            
+            if device_type == 'light':
+                light_type = data.get('light_type')
+                state = data.get('state', False)
+                success = controller.control_light(light_type, state)
+                
+                if success:
+                    # Update database state
+                    field_name = f"{light_type}_light"
+                    TabletService.update_device_state(room, device_type, **{field_name: state})
+            
+            elif device_type == 'rgb':
+                state = data.get('state', False)
+                color = data.get('color')
+                brightness = data.get('brightness')
+                success = controller.control_rgb_light(state, color, brightness)
+                
+                if success:
+                    # Update database state
+                    update_data = {'rgb_light': state}
+                    if color:
+                        update_data['rgb_color'] = color
+                    if brightness is not None:
+                        update_data['rgb_brightness'] = brightness
+                    TabletService.update_device_state(room, device_type, **update_data)
+            
+            elif device_type == 'ac':
+                power = data.get('power', False)
+                mode = data.get('mode')
+                temperature = data.get('temperature')
+                fan_speed = data.get('fan_speed')
+                success = controller.control_ac(power, mode, temperature, fan_speed)
+                
+                if success:
+                    # Update database state
+                    update_data = {'ac_power': power}
+                    if mode:
+                        update_data['ac_mode'] = mode
+                    if temperature is not None:
+                        update_data['ac_temperature'] = temperature
+                    if fan_speed:
+                        update_data['ac_fan_speed'] = fan_speed
+                    TabletService.update_device_state(room, device_type, **update_data)
+            
+            return JsonResponse({
+                'success': success,
+                'message': 'Command sent successfully' if success else 'Failed to send command'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+
+
+def device_status_api(request, room_number):
+    """API endpoint to get current device status"""
+    try:
+        room = Room.objects.get(room_number=room_number)
+        device_state = TabletService.get_device_state(room)
+        
+        return JsonResponse({
+            'lights': {
+                'front': device_state.front_light,
+                'back': device_state.back_light,
+                'main': device_state.main_light,
+                'sport': device_state.sport_light,
+            },
+            'rgb': {
+                'power': device_state.rgb_light,
+                'color': device_state.rgb_color,
+                'brightness': device_state.rgb_brightness,
+            },
+            'ac': {
+                'power': device_state.ac_power,
+                'mode': device_state.ac_mode,
+                'temperature': device_state.ac_temperature,
+                'fan_speed': device_state.ac_fan_speed,
+            },
+            'last_updated': device_state.last_updated.isoformat()
+        })
+        
+    except Room.DoesNotExist:
+        return JsonResponse({'error': 'Room not found'}, status=404)
+
+
+def guest_info_api(request, room_number):
+    """API endpoint to get guest information"""
+    try:
+        room = Room.objects.get(room_number=room_number)
+        today = date.today()
+        
+        current_reservation = Reservation.objects.filter(
+            room=room,
+            check_in__lte=today,
+            check_out__gt=today,
+            status__in=['in_house', 'expected_departure']
+        ).first()
+        
+        if current_reservation:
+            return JsonResponse({
+                'guest_name': current_reservation.guest.name,
+                'check_in': current_reservation.check_in.isoformat(),
+                'check_out': current_reservation.check_out.isoformat(),
+                'num_guests': current_reservation.num_guests,
+                'room_type': current_reservation.room.get_room_type_display(),
+                'status': current_reservation.get_status_display(),
+            })
+        else:
+            return JsonResponse({
+                'message': 'No current guest in this room'
+            })
+            
+    except Room.DoesNotExist:
+        return JsonResponse({'error': 'Room not found'}, status=404)
+
+
+def attractions_api(request):
+    """API endpoint to get local attractions"""
+    attractions = AttractionInfo.objects.filter(is_active=True)
+    
+    attractions_data = []
+    for attraction in attractions:
+        attractions_data.append({
+            'name': attraction.name,
+            'description': attraction.description,
+            'category': attraction.get_category_display(),
+            'distance_km': attraction.distance_km,
+            'estimated_time': attraction.estimated_time,
+            'image_url': attraction.image_url,
+            'website_url': attraction.website_url,
+        })
+    
+    return JsonResponse({
+        'attractions': attractions_data
+    })
 
 
 def forecast_report(request):

@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from django.shortcuts import render
 # Update the imports to include revenue_report
 from .views import (
@@ -9,6 +9,7 @@ from .views import (
     guests, guest_detail, guest_list_json, check_reservation_conflict,
     check_available_rooms, occupancy_report, reports_home, revenue_report, guest_analytics, booking_sources_report, operational_report, forecast_report
 )
+from .tablet_urls import tablet_urlpatterns
 
 urlpatterns = [
     path('', dashboard, name='dashboard'),
@@ -37,8 +38,7 @@ urlpatterns = [
     path('reports/booking-sources/', booking_sources_report, name='booking_sources_report'),
     path('reports/operational/', operational_report, name='operational_report'),
     path('reports/forecast/', forecast_report, name='forecast_report'),
-]
+] + tablet_urlpatterns
 
-print("Debug: URL patterns loaded:")
-for pattern in urlpatterns:
-    print(f"Debug: {pattern.name} -> {pattern.pattern}")
+# Debug: Print all URL patterns for debugging
+# URL patterns loaded
