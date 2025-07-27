@@ -1,6 +1,6 @@
-Django
-gunicorn
-mysqlclient
-python-dotenv
-django-widget-tweaks
-requests
+Django>=5.0,<6.0
+gunicorn>=21.0,<22.0
+mysqlclient>=2.2,<3.0
+python-dotenv>=1.0,<2.0
+django-widget-tweaks>=1.5,<2.0
+requests>=2.31,<3.0
