@@ -1,3 +1,4 @@
+{% load currency_filters %}
 {{ hotel_name }}
 🎉 Reservation Confirmed!
 
@@ -11,7 +12,7 @@ Confirmed Reservation Details:
 - Check-in: {{ reservation.check_in|date:"F d, Y" }}
 - Check-out: {{ reservation.check_out|date:"F d, Y" }}
 - Number of Guests: {{ reservation.num_guests }}
-- Total Amount: ${{ reservation.total_amount|floatformat:2 }}
+- Total Amount: {{ reservation.total_amount|idr_currency }}
 - Status: {{ reservation.get_status_display }}
 
 Important Information:
