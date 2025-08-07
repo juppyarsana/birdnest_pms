@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <!-- Background (optional, can be removed for transparent) -->
+  <rect width="400" height="500" fill="transparent"/>
+  
+  <!-- Main frame/border -->
+  <path d="M50 120 L50 380 L350 380 L350 120 L320 120 L320 90 L300 70 L280 60 L250 50 L200 45 L150 50 L120 60 L100 70 L80 90 L50 120 Z" 
+        fill="none" stroke="#f5f5f5" stroke-width="8" stroke-linejoin="round"/>
+  
+  <!-- Winding path/river -->
+  <path d="M80 350 Q120 320 160 330 Q200 340 240 310 Q280 280 320 290 Q340 295 350 300" 
+        fill="none" stroke="#f5f5f5" stroke-width="6" stroke-linecap="round"/>
+  
+  <path d="M50 380 Q90 350 130 360 Q170 370 210 340 Q250 310 290 320 Q320 325 350 330" 
+        fill="none" stroke="#f5f5f5" stroke-width="6" stroke-linecap="round"/>
+  
+  <!-- Mountains/hills in background -->
+  <path d="M80 200 Q120 180 160 190 Q200 200 240 170 Q280 140 320 150 L350 160 L350 380 L50 380 L50 220 Q65 210 80 200 Z" 
+        fill="none" stroke="#f5f5f5" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Bird silhouette -->
+  <g transform="translate(200, 100)">
+    <!-- Bird body -->
+    <ellipse cx="0" cy="10" rx="25" ry="15" fill="#f5f5f5"/>
+    <!-- Bird head -->
+    <circle cx="-15" cy="0" r="12" fill="#f5f5f5"/>
+    <!-- Bird beak -->
+    <path d="M-25 0 L-35 -3 L-30 3 Z" fill="#f5f5f5"/>
+    <!-- Bird tail -->
+    <path d="M20 10 Q35 5 30 20 Q25 25 20 15 Z" fill="#f5f5f5"/>
+    <!-- Bird wing -->
+    <path d="M-5 5 Q10 0 15 10 Q10 20 -5 15 Z" fill="#f5f5f5"/>
+  </g>
+  
+  <!-- Sun/moon circle behind bird -->
+  <circle cx="200" cy="80" r="35" fill="none" stroke="#f5f5f5" stroke-width="6"/>
+  
+  <!-- Text -->
+  <text x="200" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#f5f5f5" letter-spacing="8px">
+    BIRD NEST
+  </text>
+  <text x="200" y="475" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="normal" fill="#f5f5f5" letter-spacing="4px">
+    ESCAPE IN NATURE
+  </text>
+</svg>

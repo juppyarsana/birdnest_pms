@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Room Configuration - Room {{ room.room_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+        }
+
+        .header-text h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, #fff, #e0e0e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-text p {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .config-form {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        .config-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            opacity: 0.8;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: white;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .endpoint-group {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .endpoint-title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .save-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.3);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-online {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+
+        .status-offline {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        .test-button {
+            padding: 8px 16px;
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid rgba(33, 150, 243, 0.3);
+            border-radius: 8px;
+            color: #2196F3;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 8px;
+        }
+
+        .test-button:hover {
+            background: rgba(33, 150, 243, 0.3);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header-text h1 {
+                font-size: 2rem;
+            }
+            
+            .config-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .config-section {
+                padding: 20px;
+            }
+        }
+
+        /* Tablet optimization for 1280x800 */
+        @media (min-width: 769px) and (max-width: 1366px) {
+            .container {
+                max-width: 1100px;
+                padding: 25px;
+            }
+            
+            .header {
+                padding: 25px;
+            }
+            
+            .header-text h1 {
+                font-size: 2.2rem;
+            }
+            
+            .config-grid {
+                gap: 25px;
+            }
+            
+            .config-section {
+                padding: 22px;
+            }
+            
+            .section-title {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="nestGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#4ecdc4;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="50" cy="35" r="25" fill="url(#nestGradient)" opacity="0.8"/>
+                    <ellipse cx="50" cy="65" rx="35" ry="20" fill="url(#nestGradient)" opacity="0.6"/>
+                    <circle cx="42" cy="30" r="3" fill="white"/>
+                    <circle cx="58" cy="30" r="3" fill="white"/>
+                    <path d="M 45 40 Q 50 45 55 40" stroke="white" stroke-width="2" fill="none"/>
+                    <text x="50" y="85" text-anchor="middle" fill="white" font-size="8" font-weight="bold">BIRDNEST</text>
+                </svg>
+                <div class="header-text">
+                    <h1>Smart Room Configuration</h1>
+                    <p>Room {{ room.room_number }} - {{ room.get_room_type_display }}</p>
+                    <div class="status-indicator {% if esp32.is_online %}status-online{% else %}status-offline{% endif %}">
+                        <div class="status-dot"></div>
+                        {% if esp32.is_online %}Device Online{% else %}Device Offline{% endif %}
+                    </div>
+                </div>
+            </div>
+            <a href="{% url 'iot:smart_room_control_room' room.room_number %}" class="back-button">
+                ← Back to Room Control
+            </a>
+        </div>
+
+        <form method="post" class="config-form">
+            {% csrf_token %}
+            
+            <div class="config-grid">
+                <!-- Device Connection Settings -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                        </svg>
+                        Device Connection
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ESP32 IP Address</label>
+                        <input type="text" name="ip_address" value="{{ esp32.ip_address }}" class="form-input" placeholder="192.168.1.100">
+                        <div class="help-text">Local network IP address of the ESP32 device</div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Username (Optional)</label>
+                            <input type="text" name="auth_username" value="{{ esp32.auth_username|default:'' }}" class="form-input" placeholder="Leave empty if no auth required">
+                            <div class="help-text">Basic authentication username (optional)</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Password (Optional)</label>
+                            <input type="password" name="auth_password" value="{{ esp32.auth_password|default:'' }}" class="form-input" placeholder="Leave empty if no auth required">
+                            <div class="help-text">Basic authentication password (optional)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lighting Configuration -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,10.68 7.95,12.16 9.35,13L10,13.5V16H14V13.5L14.65,13C16.05,12.16 17,10.68 17,9A5,5 0 0,0 12,4Z"/>
+                        </svg>
+                        Lighting Controls
+                    </h3>
+                    
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Outdoor Lights</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">ON Endpoint</label>
+                                <input type="text" name="outdoor_lights_on_endpoint" value="{{ config.outdoor_lights_on_endpoint }}" class="form-input" placeholder="light/outdoor/on">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">OFF Endpoint</label>
+                                <input type="text" name="outdoor_lights_off_endpoint" value="{{ config.outdoor_lights_off_endpoint }}" class="form-input" placeholder="light/outdoor/off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Main Light</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">ON Endpoint</label>
+                                <input type="text" name="main_light_on_endpoint" value="{{ config.main_light_on_endpoint }}" class="form-input" placeholder="light/main/on">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">OFF Endpoint</label>
+                                <input type="text" name="main_light_off_endpoint" value="{{ config.main_light_off_endpoint }}" class="form-input" placeholder="light/main/off">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Spot Light</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">ON Endpoint</label>
+                                <input type="text" name="spot_light_on_endpoint" value="{{ config.spot_light_on_endpoint }}" class="form-input" placeholder="light/spot/on">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">OFF Endpoint</label>
+                                <input type="text" name="spot_light_off_endpoint" value="{{ config.spot_light_off_endpoint }}" class="form-input" placeholder="light/spot/off">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mood Lighting Configuration -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,18C8.69,18 6,15.31 6,12C6,8.69 8.69,6 12,6C15.31,6 18,8.69 18,12C18,15.31 15.31,18 12,18M12,4C7.58,4 4,7.58 4,12C4,16.42 7.58,20 12,20C16.42,20 20,16.42 20,12C20,7.58 16.42,4 12,4M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2Z"/>
+                        </svg>
+                        Mood Lighting
+                    </h3>
+                    
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Mood Light</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">ON Endpoint</label>
+                                <input type="text" name="mood_light_on_endpoint" value="{{ config.mood_light_on_endpoint }}" class="form-input" placeholder="light/mood/on">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">OFF Endpoint</label>
+                                <input type="text" name="mood_light_off_endpoint" value="{{ config.mood_light_off_endpoint }}" class="form-input" placeholder="light/mood/off">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Color Control Endpoint</label>
+                            <input type="text" name="mood_light_color_endpoint" value="{{ config.mood_light_color_endpoint }}" class="form-input" placeholder="light/mood/color">
+                            <div class="help-text">Endpoint to control mood light color</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scene Configuration -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,2L13.09,8.26L22,9L13.09,9.74L12,16L10.91,9.74L2,9L10.91,8.26L12,2M12,21L10.91,14.74L2,14L10.91,13.26L12,7L13.09,13.26L22,14L13.09,14.74L12,21Z"/>
+                        </svg>
+                        Scene Controls
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Scene Endpoint (use {scene_name} placeholder)</label>
+                        <input type="text" name="scene_endpoint" value="{{ config.scene_endpoint }}" class="form-input" placeholder="scene/{scene_name}">
+                        <div class="help-text">Generic endpoint for all scenes. Use {scene_name} as placeholder for scene names (bright, dark, gloomy, movie)</div>
+                    </div>
+                </div>
+
+                <!-- Cooling Configuration -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7A1,1 0 0,1 12,8A1,1 0 0,1 11,7V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M21,14V12L19,10V11A5,5 0 0,1 14,16H13V18A1,1 0 0,1 12,19A1,1 0 0,1 11,18V16H10A5,5 0 0,1 5,11V10L3,12V14L5,16V15A3,3 0 0,0 8,18H16A3,3 0 0,0 19,15V16L21,14Z"/>
+                        </svg>
+                        Cooling Control
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">AC Power Endpoint</label>
+                        <input type="text" name="ac_power_endpoint" value="{{ config.ac_power_endpoint }}" class="form-input" placeholder="ac/power">
+                        <div class="help-text">Endpoint to control AC power on/off</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">AC Temperature Endpoint</label>
+                        <input type="text" name="ac_temperature_endpoint" value="{{ config.ac_temperature_endpoint }}" class="form-input" placeholder="ac/temperature">
+                        <div class="help-text">Endpoint to control AC temperature (16-30°C)</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">AC Mode Endpoint</label>
+                        <input type="text" name="ac_mode_endpoint" value="{{ config.ac_mode_endpoint }}" class="form-input" placeholder="ac/mode">
+                        <div class="help-text">Endpoint to control AC mode (cool, heat, fan, auto)</div>
+                    </div>
+                </div>
+
+                <!-- Alarm Configuration -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,20A7,7 0 0,1 5,13A7,7 0 0,1 12,6A7,7 0 0,1 19,13A7,7 0 0,1 12,20M12,4A9,9 0 0,0 3,13A9,9 0 0,0 12,22A9,9 0 0,0 21,13A9,9 0 0,0 12,4M12.5,8H11V14L15.75,16.85L16.5,15.62L12.5,13.25V8M7.88,3.39L6.6,1.86L2,5.71L3.29,7.24L7.88,3.39M22,5.72L17.4,1.86L16.11,3.39L20.71,7.25L22,5.72Z"/>
+                        </svg>
+                        Wake Up Alarm
+                    </h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Alarm Set Endpoint</label>
+                        <input type="text" name="alarm_set_endpoint" value="{{ config.alarm_set_endpoint }}" class="form-input" placeholder="alarm/set">
+                        <div class="help-text">Endpoint to set wake up alarm time</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Alarm Enable Endpoint</label>
+                        <input type="text" name="alarm_enable_endpoint" value="{{ config.alarm_enable_endpoint }}" class="form-input" placeholder="alarm/enable">
+                        <div class="help-text">Endpoint to enable wake up alarm</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Alarm Disable Endpoint</label>
+                        <input type="text" name="alarm_disable_endpoint" value="{{ config.alarm_disable_endpoint }}" class="form-input" placeholder="alarm/disable">
+                        <div class="help-text">Endpoint to disable wake up alarm</div>
+                    </div>
+                </div>
+
+
+
+                <!-- Custom Endpoints -->
+                <div class="config-section">
+                    <h3 class="section-title">
+                        <svg class="section-icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12A10,10 0 0,1 12,2M12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4M12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6Z"/>
+                        </svg>
+                        Custom Controls
+                    </h3>
+                    
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Custom Control 1</div>
+                        <div class="form-group">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" name="custom_endpoint_1_name" value="{{ config.custom_endpoint_1_name }}" class="form-input" placeholder="Custom Device 1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Endpoint</label>
+                            <input type="text" name="custom_endpoint_1" value="{{ config.custom_endpoint_1 }}" class="form-input" placeholder="custom/device1">
+                        </div>
+                    </div>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Custom Control 2</div>
+                        <div class="form-group">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" name="custom_endpoint_2_name" value="{{ config.custom_endpoint_2_name }}" class="form-input" placeholder="Custom Device 2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Endpoint</label>
+                            <input type="text" name="custom_endpoint_2" value="{{ config.custom_endpoint_2 }}" class="form-input" placeholder="custom/device2">
+                        </div>
+                    </div>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint-title">Custom Control 3</div>
+                        <div class="form-group">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" name="custom_endpoint_3_name" value="{{ config.custom_endpoint_3_name }}" class="form-input" placeholder="Custom Device 3">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Endpoint</label>
+                            <input type="text" name="custom_endpoint_3" value="{{ config.custom_endpoint_3 }}" class="form-input" placeholder="custom/device3">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="save-button">
+                💾 Save Configuration
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Add some interactivity for better UX
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-save indication
+            const form = document.querySelector('.config-form');
+            const inputs = form.querySelectorAll('input');
+            
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    this.style.borderColor = 'rgba(255, 193, 7, 0.5)';
+                    setTimeout(() => {
+                        this.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    }, 1000);
+                });
+            });
+
+            // Form validation
+            form.addEventListener('submit', function(e) {
+                console.log('Form submission started');
+                const ipInput = document.querySelector('input[name="ip_address"]');
+                const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+                
+                console.log('IP Address value:', ipInput.value);
+                
+                // Only validate if IP is not empty
+                if (ipInput.value.trim() && !ipPattern.test(ipInput.value)) {
+                    e.preventDefault();
+                    alert('Please enter a valid IP address');
+                    ipInput.focus();
+                    return false;
+                }
+                
+                console.log('Form validation passed, submitting...');
+            });
+        });
+    </script>
+</body>
+</html>

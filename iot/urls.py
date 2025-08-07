@@ -4,10 +4,18 @@ from . import views
 app_name = 'iot'
 
 urlpatterns = [
-    # Landing page for room access
-    path('', views.room_access, name='room_access'),
+    # Main landing page - redirects to smart interface
+    path('', views.smart_room_access, name='room_access'),
     
-    # Main tablet interface
+    # Legacy room access page (backup)
+    path('legacy/', views.room_access, name='legacy_room_access'),
+    
+    # Smart room access page (new modern UI)
+    path('smart/', views.smart_room_access, name='smart_room_access'),
+    path('smart/<str:room_number>/', views.smart_room_control, name='smart_room_control_room'),
+    path('smart/<str:room_number>/config/', views.smart_room_config, name='smart_room_config'),
+    
+    # Main tablet interface (existing)
     path('room/<str:room_number>/', views.room_control, name='room_control'),
     path('room/<str:room_number>/config/', views.esp32_configuration, name='esp32_configuration'),
     

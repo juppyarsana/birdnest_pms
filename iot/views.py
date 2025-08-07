@@ -10,8 +10,52 @@ from django.contrib import messages
 from django.shortcuts import redirect
 
 def room_access(request):
-    """Landing page for room access"""
+    """Landing page for room access (old interface)"""
     return render(request, 'iot/room_access.html')
+
+def smart_room_access(request):
+    """Smart room access page with modern UI"""
+    return render(request, 'iot/smart_room_access.html')
+
+def smart_room_control(request, room_number=None):
+    """Smart room control interface with modern UI"""
+    if room_number:
+        room = get_object_or_404(Room, room_number=room_number)
+        # Get current guest info if room is occupied
+        current_reservation = None
+        guest_name = "Guest"
+        
+        if room.status == 'occupied':
+            current_reservation = Reservation.objects.filter(
+                room=room, 
+                status='in_house'
+            ).first()
+            if current_reservation:
+                guest_name = current_reservation.guest.name
+                
+        # Get ESP32 device and configuration for direct control
+        esp32, created = ESP32Device.objects.get_or_create(
+            room=room,
+            defaults={'ip_address': '192.168.1.100'}
+        )
+        config, created = ESP32Configuration.objects.get_or_create(esp32_device=esp32)
+    else:
+        # Demo mode - no specific room
+        room = None
+        guest_name = "Guest Name"
+        current_reservation = None
+        esp32 = None
+        config = None
+    
+    context = {
+        'room': room,
+        'room_number': room_number or 'demo',
+        'guest_name': guest_name,
+        'current_reservation': current_reservation,
+        'esp32': esp32,
+        'config': config,
+    }
+    return render(request, 'iot/smart_room_control.html', context)
 
 def room_control(request, room_number):
     """Main tablet interface for room controls"""
@@ -312,9 +356,7 @@ def esp32_configuration(request, room_number):
     esp32, created = ESP32Device.objects.get_or_create(
         room=room,
         defaults={
-            'ip_address': '192.168.1.100',
-            'auth_username': 'admin',
-            'auth_password': 'orcatech'
+            'ip_address': '192.168.1.100'
         }
     )
     config, created = ESP32Configuration.objects.get_or_create(esp32_device=esp32)
@@ -385,3 +427,115 @@ def esp32_configuration(request, room_number):
         'config': config,
     }
     return render(request, 'iot/esp32_configuration.html', context)
+
+
+def smart_room_config(request, room_number):
+    """Modern configuration page for smart room system"""
+    room = get_object_or_404(Room, room_number=room_number)
+    esp32, created = ESP32Device.objects.get_or_create(
+        room=room,
+        defaults={
+            'ip_address': '192.168.1.100'
+        }
+    )
+    config, created = ESP32Configuration.objects.get_or_create(esp32_device=esp32)
+    
+    # Get current guest info if room is occupied
+    current_reservation = None
+    guest_name = "Guest"
+    
+    if room.status == 'occupied':
+        current_reservation = Reservation.objects.filter(
+            room=room, 
+            status__in=['confirmed', 'checked_in'],
+            check_in__lte=timezone.now().date(),
+            check_out__gte=timezone.now().date()
+        ).first()
+        
+        if current_reservation:
+            guest_name = current_reservation.guest.first_name
+    
+    if request.method == 'POST':
+        import json as json_module
+        from django.contrib import messages
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"POST request received for room {room_number}")
+        logger.info(f"POST data keys: {list(request.POST.keys())}")
+        logger.info(f"POST data values: {dict(request.POST)}")
+        
+        try:
+            # Update ESP32 device settings
+            old_ip = esp32.ip_address
+            old_username = esp32.auth_username
+            
+            esp32.ip_address = request.POST.get('ip_address', esp32.ip_address)
+            esp32.auth_username = request.POST.get('auth_username', esp32.auth_username)
+            esp32.auth_password = request.POST.get('auth_password', esp32.auth_password)
+            esp32.save()
+            logger.info(f"ESP32 device updated: IP changed from {old_ip} to {esp32.ip_address}, Auth={esp32.auth_username}")
+        except Exception as e:
+            logger.error(f"Error updating ESP32 device: {e}")
+            messages.error(request, f'Error updating device settings: {e}')
+            # Don't redirect on error, just continue to render the page
+        
+        # Helper function to parse JSON data
+        def parse_json_field(field_name, default={}):
+            try:
+                data = request.POST.get(field_name, '{}')
+                return json_module.loads(data) if data.strip() else default
+            except json_module.JSONDecodeError:
+                return default
+        
+        # Update configuration endpoints - Lighting Controls
+        config.outdoor_lights_on_endpoint = request.POST.get('outdoor_lights_on_endpoint', config.outdoor_lights_on_endpoint)
+        config.outdoor_lights_off_endpoint = request.POST.get('outdoor_lights_off_endpoint', config.outdoor_lights_off_endpoint)
+        config.main_light_on_endpoint = request.POST.get('main_light_on_endpoint', config.main_light_on_endpoint)
+        config.main_light_off_endpoint = request.POST.get('main_light_off_endpoint', config.main_light_off_endpoint)
+        config.spot_light_on_endpoint = request.POST.get('spot_light_on_endpoint', config.spot_light_on_endpoint)
+        config.spot_light_off_endpoint = request.POST.get('spot_light_off_endpoint', config.spot_light_off_endpoint)
+        
+        # Mood Lighting
+        config.mood_light_on_endpoint = request.POST.get('mood_light_on_endpoint', config.mood_light_on_endpoint)
+        config.mood_light_off_endpoint = request.POST.get('mood_light_off_endpoint', config.mood_light_off_endpoint)
+        config.mood_light_color_endpoint = request.POST.get('mood_light_color_endpoint', config.mood_light_color_endpoint)
+        
+        # Scene Controls (generic endpoint)
+        config.scene_endpoint = request.POST.get('scene_endpoint', config.scene_endpoint)
+        
+        # AC Controls
+        config.ac_power_endpoint = request.POST.get('ac_power_endpoint', config.ac_power_endpoint)
+        config.ac_temperature_endpoint = request.POST.get('ac_temperature_endpoint', config.ac_temperature_endpoint)
+        config.ac_mode_endpoint = request.POST.get('ac_mode_endpoint', config.ac_mode_endpoint)
+        
+        # Alarm Controls
+        config.alarm_set_endpoint = request.POST.get('alarm_set_endpoint', config.alarm_set_endpoint)
+        config.alarm_enable_endpoint = request.POST.get('alarm_enable_endpoint', config.alarm_enable_endpoint)
+        config.alarm_disable_endpoint = request.POST.get('alarm_disable_endpoint', config.alarm_disable_endpoint)
+        
+        # Custom endpoints
+        config.custom_endpoint_1 = request.POST.get('custom_endpoint_1', config.custom_endpoint_1)
+        config.custom_endpoint_1_name = request.POST.get('custom_endpoint_1_name', config.custom_endpoint_1_name)
+        config.custom_endpoint_2 = request.POST.get('custom_endpoint_2', config.custom_endpoint_2)
+        config.custom_endpoint_2_name = request.POST.get('custom_endpoint_2_name', config.custom_endpoint_2_name)
+        config.custom_endpoint_3 = request.POST.get('custom_endpoint_3', config.custom_endpoint_3)
+        config.custom_endpoint_3_name = request.POST.get('custom_endpoint_3_name', config.custom_endpoint_3_name)
+        
+        try:
+            config.save()
+            logger.info(f"Configuration saved successfully for room {room_number}")
+            messages.success(request, 'Smart room configuration updated successfully!')
+            # Don't redirect immediately, just render the page with success message
+        except Exception as e:
+            logger.error(f"Error saving configuration: {e}")
+            messages.error(request, f'Error saving configuration: {e}')
+    
+    context = {
+        'room': room,
+        'esp32': esp32,
+        'config': config,
+        'guest_name': guest_name,
+        'current_reservation': current_reservation,
+    }
+    return render(request, 'iot/smart_room_config.html', context)

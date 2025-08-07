@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Room Control</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    {% load static %}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .logo-header-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-container {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .birdnest-logo {
+            width: 60px;
+            height: 60px;
+            color: #ffffff;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .header-text h1 {
+            font-size: 2rem;
+            margin: 0;
+            color: #ffffff;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .room-info {
+            margin: 5px 0 0 0;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Configuration Button */
+        .config-button-container {
+            margin-left: auto;
+        }
+
+        .config-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .config-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .config-button svg {
+            transition: transform 0.3s ease;
+        }
+
+        .config-button:hover svg {
+            transform: rotate(90deg);
+        }
+
+        /* Main Content Grid */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            flex: 1;
+            margin-bottom: 40px;
+        }
+
+        /* Control Sections */
+        .control-section {
+            background: #2a2a2a;
+            border-radius: 24px;
+            padding: 30px;
+            height: fit-content;
+        }
+
+        /* Compact right column sections */
+        .control-section.compact {
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .control-section.compact .section-title {
+            font-size: 1.6rem;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+
+        /* Toggle Switches */
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 5px 0;
+        }
+
+        .control-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #ffffff;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background: #444;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(30px);
+        }
+
+        /* Color Picker */
+        .color-picker-container {
+            margin-top: 20px;
+        }
+
+        .color-slider {
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(to right, #ff0000, #ff8000, #ffff00, #80ff00, #00ff00, #00ff80, #00ffff, #0080ff, #0000ff, #8000ff, #ff00ff, #ff0080);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .color-slider::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: 70%;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            border: 3px solid #333;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        /* Temperature Control */
+        .temperature-section {
+            margin-top: 30px;
+        }
+
+        .temperature-section.compact {
+            margin-top: 10px;
+        }
+
+        .temperature-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .temperature-display.compact {
+            margin: 12px 0;
+        }
+
+        .temperature-value {
+            font-size: 3rem;
+            font-weight: 300;
+            color: #ffffff;
+        }
+
+        .temperature-display.compact .temperature-value {
+            font-size: 1.8rem;
+        }
+
+        .temperature-controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .temperature-controls.compact {
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .temp-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .temperature-controls.compact .temp-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+
+        .temp-btn:hover {
+            background: #555;
+            transform: scale(1.05);
+        }
+
+        .temp-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Scene Controls */
+        .scene-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .scene-btn {
+            padding: 15px 20px;
+            background: #444;
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scene-btn.active {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+        }
+
+        .scene-btn:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+
+        .scene-btn.active:hover {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+        }
+
+        /* Service Controls */
+        .service-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .service-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 22px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            color: #ffffff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .service-btn:hover {
+            background: #555;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .service-btn:active {
+            transform: translateY(0);
+        }
+
+        .service-btn i {
+            font-size: 1.2rem;
+            color: #ff6b35;
+        }
+
+        .service-btn span {
+            flex: 1;
+        }
+
+        /* Services Section Height Adjustment */
+        .services-section {
+            padding-bottom: 15px;
+        }
+
+        .services-section .service-controls {
+            margin-bottom: 10px;
+        }
+
+        /* Alarm Section Styles */
+        .alarm-time-setting {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .alarm-time-setting.compact {
+            margin-top: 8px;
+            padding: 10px;
+        }
+
+        .time-inputs {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .alarm-time-setting.compact .time-inputs {
+            margin-bottom: 8px;
+        }
+
+        .time-input {
+            width: 50px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .time-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+
+        .time-separator {
+            color: #ffffff;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0 4px;
+        }
+
+        .alarm-display {
+            text-align: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .alarm-time-setting.compact .alarm-display {
+            padding: 6px;
+        }
+
+        .alarm-time {
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .alarm-time-setting.compact .alarm-time {
+            font-size: 1rem;
+            margin-bottom: 2px;
+        }
+
+        /* Footer */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-top: 1px solid #333;
+            margin-top: auto;
+        }
+
+        .wifi-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .wifi-icon {
+            color: #4CAF50;
+        }
+
+        .time-date {
+            color: #888;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Tablet Optimization for 1280x800 */
+        @media (min-width: 769px) and (max-width: 1366px) {
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 15px 0;
+            }
+            
+            .logo-container {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .header-text h1 {
+                font-size: 1.8rem;
+            }
+            
+            .controls-grid {
+                gap: 25px;
+                margin-top: 25px;
+            }
+            
+            .control-section {
+                padding: 18px;
+            }
+            
+            .section-title {
+                font-size: 1.4rem;
+                margin-bottom: 15px;
+            }
+            
+            .scene-controls {
+                gap: 12px;
+            }
+            
+            .scene-btn {
+                padding: 12px 20px;
+                font-size: 0.95rem;
+            }
+            
+            .service-btn {
+                padding: 20px 15px;
+                font-size: 0.95rem;
+            }
+            
+            .temperature-value {
+                font-size: 2rem;
+            }
+            
+            .config-button {
+                padding: 10px 16px;
+                font-size: 0.85rem;
+            }
+            
+            .config-button svg {
+                width: 18px;
+                height: 18px;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+            
+            .guest-info h1 {
+                font-size: 2rem;
+            }
+            
+            .scene-controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 15px;
+            }
+            
+            .logo-header-group {
+                gap: 15px;
+            }
+            
+            .config-button {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .config-button svg {
+                width: 16px;
+                height: 16px;
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .section-title {
+                font-size: 1.5rem;
+            }
+            
+            .toggle-switch {
+                transform: scale(0.9);
+            }
+            
+            .temperature-value {
+                font-size: 2.5rem;
+            }
+            
+            .service-controls {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .service-btn {
+                font-size: 0.9rem;
+                padding: 12px 16px;
+            }
+            
+            .config-button {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+                gap: 6px;
+            }
+            
+            .config-button svg {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        /* Interactive Effects */
+        .control-section {
+            transition: all 0.3s ease;
+        }
+
+        .control-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2a2a2a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo-header-group">
+                    <div class="logo-container">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" class="birdnest-logo">
+                            <!-- Main frame/border -->
+                            <path d="M50 120 L50 380 L350 380 L350 120 L320 120 L320 90 L300 70 L280 60 L250 50 L200 45 L150 50 L120 60 L100 70 L80 90 L50 120 Z" 
+                                  fill="none" stroke="currentColor" stroke-width="8" stroke-linejoin="round"/>
+                            
+                            <!-- Winding path/river -->
+                            <path d="M80 350 Q120 320 160 330 Q200 340 240 310 Q280 280 320 290 Q340 295 350 300" 
+                                  fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                            
+                            <path d="M50 380 Q90 350 130 360 Q170 370 210 340 Q250 310 290 320 Q320 325 350 330" 
+                                  fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                            
+                            <!-- Mountains/hills in background -->
+                            <path d="M80 200 Q120 180 160 190 Q200 200 240 170 Q280 140 320 150 L350 160 L350 380 L50 380 L50 220 Q65 210 80 200 Z" 
+                                  fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                            
+                            <!-- Bird silhouette -->
+                            <g transform="translate(200, 100)">
+                                <!-- Bird body -->
+                                <ellipse cx="0" cy="10" rx="25" ry="15" fill="currentColor"/>
+                                <!-- Bird head -->
+                                <circle cx="-15" cy="0" r="12" fill="currentColor"/>
+                                <!-- Bird beak -->
+                                <path d="M-25 0 L-35 -3 L-30 3 Z" fill="currentColor"/>
+                                <!-- Bird tail -->
+                                <path d="M20 10 Q35 5 30 20 Q25 25 20 15 Z" fill="currentColor"/>
+                                <!-- Bird wing -->
+                                <path d="M-5 5 Q10 0 15 10 Q10 20 -5 15 Z" fill="currentColor"/>
+                            </g>
+                            
+                            <!-- Sun/moon circle behind bird -->
+                            <circle cx="200" cy="80" r="35" fill="none" stroke="currentColor" stroke-width="6"/>
+                            
+                            <!-- Text -->
+                            <text x="200" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="currentColor" letter-spacing="8px">
+                                BIRD NEST
+                            </text>
+                            <text x="200" y="475" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="normal" fill="currentColor" letter-spacing="4px">
+                                ESCAPE IN NATURE
+                            </text>
+                        </svg>
+                    </div>
+                    <div class="header-text">
+                        <h1>Smart Room Control</h1>
+                        <div class="room-info">
+                            {% if room_number %}
+                                Room {{ room_number }}
+                            {% else %}
+                                Demo Mode
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if room_number %}
+                <div class="config-button-container">
+                    <a href="{% url 'iot:smart_room_config' room_number %}" class="config-button">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                        </svg>
+                        Settings
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Main Controls Grid -->
+        <div class="controls-grid">
+            <!-- Left Column: Lighting, Mood & Scene -->
+            <div>
+                <!-- Lighting Controls -->
+                <div class="control-section">
+                    <h2 class="section-title">Lighting</h2>
+                    
+                    <div class="control-item">
+                        <span class="control-label">Outdoor Lights</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    
+                    <div class="control-item">
+                        <span class="control-label">Main Light</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    
+                    <div class="control-item">
+                        <span class="control-label">Spot Light</span>
+                        <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                    </div>
+                </div>
+
+                <!-- Mood Controls -->
+                <div class="control-section compact" style="margin-top: 20px;">
+                    <h2 class="section-title">Mood</h2>
+                    
+                    <div class="control-item">
+                        <span class="control-label">Mood Light</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    
+                    <div class="color-picker-container">
+                        <div class="color-slider" onclick="setColor(event)"></div>
+                    </div>
+                </div>
+
+                <!-- Scene Controls -->
+                <div class="control-section compact" style="margin-top: 20px;">
+                    <h2 class="section-title">Scene</h2>
+                    
+                    <div class="scene-controls">
+                        <button class="scene-btn active" onclick="setScene(this, 'bright')">Bright</button>
+                        <button class="scene-btn" onclick="setScene(this, 'dark')">Dark</button>
+                        <button class="scene-btn" onclick="setScene(this, 'gloomy')">Gloomy</button>
+                        <button class="scene-btn" onclick="setScene(this, 'movie')">Movie</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Cooling, Services & Alarm -->
+            <div>
+                <!-- Cooling Controls -->
+                 <div class="control-section compact">
+                     <h2 class="section-title">Cooling</h2>
+                     
+                     <div class="control-item">
+                         <span class="control-label">Cooling</span>
+                         <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                     </div>
+                     
+                     <div class="temperature-section compact">
+                         <div class="temperature-display compact">
+                             <div class="temperature-value" id="tempValue">22°C</div>
+                         </div>
+                         
+                         <div class="temperature-controls compact">
+                             <button class="temp-btn" onclick="adjustTemperature(-1)">
+                                 <i class="bi bi-arrow-up"></i>
+                             </button>
+                             <button class="temp-btn" onclick="adjustTemperature(1)">
+                                 <i class="bi bi-arrow-down"></i>
+                             </button>
+                         </div>
+                     </div>
+                 </div>
+
+                 <!-- Alarm Section -->
+                 <div class="control-section compact" style="margin-top: 15px;">
+                     <h2 class="section-title">Alarm</h2>
+                     
+                     <div class="control-item">
+                         <span class="control-label">Wake Up Alarm</span>
+                         <div class="toggle-switch" onclick="toggleAlarm(this)"></div>
+                     </div>
+                     
+                     <div class="alarm-time-setting compact">
+                         <div class="time-inputs">
+                             <input type="number" class="time-input" id="alarm-hour" min="0" max="23" value="07" onchange="updateAlarmTime()">
+                             <span class="time-separator">:</span>
+                             <input type="number" class="time-input" id="alarm-minute" min="0" max="59" value="00" onchange="updateAlarmTime()">
+                         </div>
+                         <div class="alarm-display">
+                             <span class="alarm-time" id="alarmTime">07:00</span>
+                         </div>
+                     </div>
+                 </div>
+
+                <!-- Guest Services -->
+                <div class="control-section compact services-section" style="margin-top: 20px;">
+                    <h2 class="section-title">Services</h2>
+                    
+                    <div class="service-controls">
+                        <button class="service-btn" onclick="showAttractions()">
+                            <i class="bi bi-geo-alt"></i>
+                            <span>Attraction Around</span>
+                        </button>
+                        <button class="service-btn" onclick="callRoomService()">
+                            <i class="bi bi-telephone"></i>
+                            <span>Call Room Service</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="wifi-status">
+                <i class="bi bi-wifi wifi-icon"></i>
+                <span>Wi-Fi</span>
+            </div>
+            <div class="time-date" id="currentTime">
+                10:47 AM | Tue, Apr 23
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ESP32 Configuration from Django context
+        const esp32Config = {
+            ipAddress: '{{ esp32.ip_address|default:"192.168.1.100" }}',
+            authUsername: '{{ esp32.auth_username|default:"" }}',
+            authPassword: '{{ esp32.auth_password|default:"" }}',
+            endpoints: {
+                outdoorLightsOn: '{{ config.outdoor_lights_on_endpoint|default:"light/outdoor/on" }}',
+                outdoorLightsOff: '{{ config.outdoor_lights_off_endpoint|default:"light/outdoor/off" }}',
+                mainLightOn: '{{ config.main_light_on_endpoint|default:"light/main/on" }}',
+                mainLightOff: '{{ config.main_light_off_endpoint|default:"light/main/off" }}',
+                spotLightOn: '{{ config.spot_light_on_endpoint|default:"light/spot/on" }}',
+                spotLightOff: '{{ config.spot_light_off_endpoint|default:"light/spot/off" }}',
+                moodLightOn: '{{ config.mood_light_on_endpoint|default:"light/mood/on" }}',
+                moodLightOff: '{{ config.mood_light_off_endpoint|default:"light/mood/off" }}',
+                moodLightColor: '{{ config.mood_light_color_endpoint|default:"light/mood/color" }}',
+                acPower: '{{ config.ac_power_endpoint|default:"ac/power" }}',
+                acTemperature: '{{ config.ac_temperature_endpoint|default:"ac/temperature" }}',
+                acMode: '{{ config.ac_mode_endpoint|default:"ac/mode" }}',
+                scene: '{{ config.scene_endpoint|default:"scene" }}',
+                alarmSet: '{{ config.alarm_set_endpoint|default:"alarm/set" }}',
+                alarmEnable: '{{ config.alarm_enable_endpoint|default:"alarm/enable" }}',
+                alarmDisable: '{{ config.alarm_disable_endpoint|default:"alarm/disable" }}'
+            }
+        };
+        
+        // Helper function to make ESP32 API call
+        function callESP32(endpoint, method = 'POST', data = null) {
+            const url = `http://${esp32Config.ipAddress}/${endpoint}`;
+            
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            // Add basic auth if configured
+            if (esp32Config.authUsername && esp32Config.authPassword) {
+                const credentials = btoa(`${esp32Config.authUsername}:${esp32Config.authPassword}`);
+                options.headers['Authorization'] = `Basic ${credentials}`;
+            }
+            
+            // Add data for POST requests
+            if (data && method === 'POST') {
+                options.body = JSON.stringify(data);
+            }
+            
+            return fetch(url, options);
+        }
+        
+        // Toggle switch functionality with support for both query parameters and endpoints
+        function toggleSwitch(element) {
+            // Get the device type from the control label
+            const controlItem = element.closest('.control-item');
+            const label = controlItem.querySelector('.control-label').textContent.trim();
+            const isCurrentlyActive = element.classList.contains('active');
+            const newState = isCurrentlyActive ? 'OFF' : 'ON';
+            
+            let fullUrl;
+            let useQueryParams = false;
+            
+            // Check if endpoints contain query parameters (indicated by '?' or '=')
+            // If so, use query parameter format, otherwise use endpoint format
+            const deviceEndpointMap = {
+                'Outdoor Lights': {
+                    on: esp32Config.endpoints.outdoorLightsOn,
+                    off: esp32Config.endpoints.outdoorLightsOff
+                },
+                'Main Light': {
+                    on: esp32Config.endpoints.mainLightOn,
+                    off: esp32Config.endpoints.mainLightOff
+                },
+                'Spot Light': {
+                    on: esp32Config.endpoints.spotLightOn,
+                    off: esp32Config.endpoints.spotLightOff
+                },
+                'Mood Light': {
+                    on: esp32Config.endpoints.moodLightOn,
+                    off: esp32Config.endpoints.moodLightOff
+                }
+            };
+            
+            const deviceConfig = deviceEndpointMap[label];
+            if (!deviceConfig) {
+                console.error('Unknown device type for label:', label);
+                showNotification(`Unknown device: ${label}`, 'error');
+                return;
+            }
+            
+            // Determine which endpoint to use based on current state
+            const targetEndpoint = isCurrentlyActive ? deviceConfig.off : deviceConfig.on;
+            
+            // Check if the endpoint contains query parameters
+            if (targetEndpoint.includes('?') || targetEndpoint.includes('=')) {
+                // Query parameter format: use the endpoint as-is
+                fullUrl = `http://${esp32Config.ipAddress}/${targetEndpoint}`;
+                useQueryParams = true;
+            } else {
+                // Traditional endpoint format
+                fullUrl = `http://${esp32Config.ipAddress}/${targetEndpoint}`;
+                useQueryParams = false;
+            }
+            
+            // Show confirmation prompt
+            const formatType = useQueryParams ? 'Query Parameter' : 'Endpoint';
+            const confirmed = confirm(`🔄 ESP32 Device Control Confirmation\n\nDevice: ${label}\nAction: Turn ${newState}\nFormat: ${formatType}\nESP32 URL: ${fullUrl}\n\nDo you want to proceed?`);
+            
+            if (confirmed) {
+                console.log(`🚀 Sending command to ESP32 (${formatType}): ${fullUrl}`);
+                
+                // Toggle the visual state immediately for better UX
+                element.classList.toggle('active');
+                
+                // Prepare headers
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Add basic auth if configured
+                if (esp32Config.authUsername && esp32Config.authPassword) {
+                    headers['Authorization'] = `Basic ${btoa(`${esp32Config.authUsername}:${esp32Config.authPassword}`)}`;
+                }
+                
+                // Make ESP32 API call using POST method
+                fetch(fullUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    mode: 'no-cors' // Handle CORS issues
+                })
+                .then(response => {
+                    console.log(`📡 ESP32 Response received:`, response);
+                    // Note: with no-cors mode, we can't read the response body
+                    console.log(`✅ ${label} ${newState} (${formatType}) - ESP32 URL: ${fullUrl}`);
+                    showNotification(`${label} turned ${newState}`, 'success');
+                })
+                .catch(error => {
+                    console.error('❌ ESP32 Error:', error);
+                    console.error('Error details:', {
+                        message: error.message,
+                        name: error.name,
+                        stack: error.stack
+                    });
+                    
+                    // Revert visual state on error
+                    element.classList.toggle('active');
+                    showNotification(`Failed to control ${label}: ${error.message}`, 'error');
+                });
+            }
+        }
+
+        // Helper function to get CSRF token
+        function getCsrfToken() {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            return csrfToken ? csrfToken.value : '';
+        }
+        
+        // Helper function to show notifications
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                transition: all 0.3s ease;
+            `;
+            
+            // Set background color based on type
+            const colors = {
+                success: '#4CAF50',
+                error: '#f44336',
+                info: '#2196F3',
+                warning: '#ff9800'
+            };
+            notification.style.backgroundColor = colors[type] || colors.info;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Temperature adjustment with ESP32 direct control
+        let currentTemp = 22;
+        function adjustTemperature(change) {
+            const newTemp = currentTemp + change;
+            
+            if (newTemp < 16 || newTemp > 30) {
+                showNotification('Temperature must be between 16°C and 30°C', 'warning');
+                return;
+            }
+            
+            const endpoint = esp32Config.endpoints.acTemperature;
+            const fullUrl = `http://${esp32Config.ipAddress}/${endpoint}`;
+            
+            // Show confirmation prompt
+            const confirmed = confirm(`🌡️ ESP32 Temperature Control Confirmation\n\nCurrent: ${currentTemp}°C\nNew: ${newTemp}°C\nESP32 URL: ${fullUrl}\n\nDo you want to proceed?`);
+            
+            if (confirmed) {
+                // Update display immediately
+                currentTemp = newTemp;
+                document.getElementById('tempValue').textContent = currentTemp + '°C';
+                
+                // Prepare temperature data
+                const tempData = {
+                    temperature: newTemp
+                };
+                
+                // Make ESP32 API call
+                callESP32(endpoint, 'POST', tempData)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`✅ Temperature set to ${newTemp}°C - ESP32 URL: ${fullUrl}`);
+                        showNotification(`Temperature set to ${newTemp}°C`, 'success');
+                        return response.text();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(responseText => {
+                    console.log('ESP32 Response:', responseText);
+                })
+                .catch(error => {
+                    console.error('ESP32 Error:', error);
+                    // Revert temperature display on error
+                    currentTemp -= change;
+                    document.getElementById('tempValue').textContent = currentTemp + '°C';
+                    showNotification(`Failed to set temperature: ${error.message}`, 'error');
+                });
+            }
+        }
+
+        // Scene selection with ESP32 direct control
+        function setScene(element, sceneName) {
+            const sceneValue = sceneName.toLowerCase().replace(' ', '_');
+            const endpoint = esp32Config.endpoints.scene.replace('{scene_name}', sceneValue);
+            const fullUrl = `http://${esp32Config.ipAddress}/${endpoint}`;
+            
+            // Show confirmation prompt
+            const confirmed = confirm(`🎭 ESP32 Scene Control Confirmation\n\nScene: ${sceneName}\nESP32 URL: ${fullUrl}\n\nDo you want to apply this scene?`);
+            
+            if (confirmed) {
+                // Update UI immediately
+                document.querySelectorAll('.scene-btn').forEach(btn => btn.classList.remove('active'));
+                element.classList.add('active');
+                
+                // Prepare scene data
+                const sceneData = {
+                    scene: sceneValue
+                };
+                
+                // Make ESP32 API call
+                callESP32(endpoint, 'POST', sceneData)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`✅ Scene "${sceneName}" applied - ESP32 URL: ${fullUrl}`);
+                        showNotification(`Scene "${sceneName}" applied`, 'success');
+                        return response.text();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(responseText => {
+                    console.log('ESP32 Response:', responseText);
+                })
+                .catch(error => {
+                    console.error('ESP32 Error:', error);
+                    // Revert UI state on error
+                    element.classList.remove('active');
+                    showNotification(`Failed to apply scene: ${error.message}`, 'error');
+                });
+            }
+        }
+
+        // Color picker
+        function setColor(event) {
+            const rect = event.target.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const percentage = (x / rect.width) * 100;
+            
+            // Update color slider indicator position
+            event.target.style.setProperty('--slider-position', percentage + '%');
+            
+            console.log('Color position:', percentage + '%');
+        }
+
+        // Service functions
+        function showAttractions() {
+            // Here you can add logic to show nearby attractions
+            // For now, we'll show an alert as placeholder
+            alert('🗺️ Nearby Attractions:\n\n• Kintamani Volcano View\n• Lake Batur\n• Traditional Villages\n• Hot Springs\n• Coffee Plantations\n\nWould you like more information about any of these?');
+            console.log('Showing attractions around the area');
+        }
+
+        function callRoomService() {
+            // Here you can add logic to call room service
+            // For now, we'll show an alert as placeholder
+            alert('📞 Calling Room Service...\n\nOur staff will be with you shortly!\n\nServices available:\n• Food & Beverage\n• Housekeeping\n• Concierge\n• Technical Support');
+            console.log('Calling room service');
+        }
+
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            const dateString = now.toLocaleDateString('en-US', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('currentTime').textContent = `${timeString} | ${dateString}`;
+        }
+
+        // Alarm Functions with ESP32 direct control
+        function toggleAlarm(element) {
+            const isCurrentlyActive = element.classList.contains('active');
+            const alarmTime = document.getElementById('alarmTime').textContent;
+            const action = isCurrentlyActive ? 'disable' : 'enable';
+            const endpoint = isCurrentlyActive ? esp32Config.endpoints.alarmDisable : esp32Config.endpoints.alarmEnable;
+            const fullUrl = `http://${esp32Config.ipAddress}/${endpoint}`;
+            
+            // Show confirmation prompt
+            const confirmed = confirm(`⏰ ESP32 Alarm Control Confirmation\n\nAction: ${action.toUpperCase()} alarm\nTime: ${alarmTime}\nESP32 URL: ${fullUrl}\n\nDo you want to proceed?`);
+            
+            if (confirmed) {
+                // Update UI immediately
+                element.classList.toggle('active');
+                const isActive = element.classList.contains('active');
+                
+                // Prepare alarm data
+                const alarmData = {
+                    action: action,
+                    time: alarmTime
+                };
+                
+                // Make ESP32 API call
+                callESP32(endpoint, 'POST', alarmData)
+                .then(response => {
+                    if (response.ok) {
+                        const message = isActive ? `Alarm set for ${alarmTime}` : 'Alarm turned off';
+                        console.log(`✅ ${message} - ESP32 URL: ${fullUrl}`);
+                        showNotification(message, 'success');
+                        return response.text();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(responseText => {
+                    console.log('ESP32 Response:', responseText);
+                })
+                .catch(error => {
+                    console.error('ESP32 Error:', error);
+                    // Revert UI state on error
+                    element.classList.toggle('active');
+                    showNotification(`Failed to ${action} alarm: ${error.message}`, 'error');
+                });
+            }
+        }
+
+        function updateAlarmTime() {
+            const hour = document.getElementById('alarm-hour').value.padStart(2, '0');
+            const minute = document.getElementById('alarm-minute').value.padStart(2, '0');
+            const timeString = `${hour}:${minute}`;
+            const endpoint = esp32Config.endpoints.alarmSet;
+            const fullUrl = `http://${esp32Config.ipAddress}/${endpoint}`;
+            
+            // Show confirmation prompt
+            const confirmed = confirm(`⏰ ESP32 Alarm Time Update Confirmation\n\nNew Time: ${timeString}\nESP32 URL: ${fullUrl}\n\nDo you want to update the alarm time?`);
+            
+            if (confirmed) {
+                // Update display immediately
+                document.getElementById('alarmTime').textContent = timeString;
+                
+                // Prepare alarm time data
+                const alarmTimeData = {
+                    hour: parseInt(hour),
+                    minute: parseInt(minute),
+                    time: timeString
+                };
+                
+                // Make ESP32 API call
+                callESP32(endpoint, 'POST', alarmTimeData)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`✅ Alarm time updated to ${timeString} - ESP32 URL: ${fullUrl}`);
+                        showNotification(`Alarm time set to ${timeString}`, 'success');
+                        return response.text();
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                })
+                .then(responseText => {
+                    console.log('ESP32 Response:', responseText);
+                })
+                .catch(error => {
+                    console.error('ESP32 Error:', error);
+                    showNotification(`Failed to update alarm time: ${error.message}`, 'error');
+                });
+            } else {
+                // Revert the time display if user cancels
+                // You might want to store the previous time to revert to
+                console.log('Alarm time update cancelled');
+            }
+        }
+
+        // Manual test function for ESP32 commands
+        function testESP32Command(url = 'http://192.168.1.91/setstate?readlight=0') {
+            console.log(`🧪 Testing ESP32 command: ${url}`);
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                mode: 'no-cors' // Handle CORS issues
+            })
+            .then(response => {
+                console.log(`📡 ESP32 Response received:`, response);
+                console.log(`✅ Command sent successfully to: ${url}`);
+                alert(`✅ ESP32 Command Sent!\nURL: ${url}\nNote: Response details not available due to CORS`);
+            })
+            .catch(error => {
+                console.error(`❌ ESP32 Error:`, error);
+                console.error('Error details:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                });
+                alert(`❌ ESP32 Error: ${error.message}`);
+            });
+        }
+        
+        // Debug function to check ESP32 config
+        function debugESP32Config() {
+            console.log('🔧 ESP32 Configuration:', esp32Config);
+            console.log('🌐 Current IP Address:', esp32Config.ipAddress);
+            console.log('🔑 Auth configured:', !!(esp32Config.authUsername && esp32Config.authPassword));
+            console.log('📋 Available endpoints:', esp32Config.endpoints);
+        }
+
+        // Initialize
+        updateTime();
+        setInterval(updateTime, 60000); // Update every minute
+        updateAlarmTime(); // Initialize alarm time
+
+        // Add touch feedback for mobile
+        document.querySelectorAll('.toggle-switch, .temp-btn, .scene-btn').forEach(element => {
+            element.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.95)';
+            });
+            
+            element.addEventListener('touchend', function() {
+                this.style.transform = '';
+            });
+        });
+
+        // Smooth animations on load
+        window.addEventListener('load', function() {
+            document.querySelectorAll('.control-section').forEach((section, index) => {
+                section.style.opacity = '0';
+                section.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    section.style.transition = 'all 0.6s ease';
+                    section.style.opacity = '1';
+                    section.style.transform = 'translateY(0)';
+                }, index * 200);
+            });
+        });
+    </script>
+</body>
+</html>

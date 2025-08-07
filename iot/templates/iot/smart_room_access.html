@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Room Access - Birdnest Glamping</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .access-container {
+            background: #2a2a2a;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 
+                0 32px 64px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 32px;
+            gap: 16px;
+        }
+
+        .logo {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo svg {
+            width: 36px;
+            height: 36px;
+            fill: white;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .brand-text {
+            text-align: left;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        .brand-subtitle {
+            font-size: 14px;
+            color: #cccccc;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .welcome-text {
+            margin-bottom: 40px;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .welcome-subtitle {
+            font-size: 16px;
+            color: #cccccc;
+            font-weight: 500;
+        }
+
+        .access-form {
+            margin-bottom: 32px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        .room-input {
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 18px;
+            font-weight: 600;
+            border: 2px solid #444444;
+            border-radius: 16px;
+            background: #1a1a1a;
+            color: #ffffff;
+            text-align: center;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .room-input:focus {
+            border-color: #ff6b35;
+            background: #1a1a1a;
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
+        }
+
+        .room-input::placeholder {
+            color: #888888;
+            font-weight: 500;
+        }
+
+        .access-btn {
+            width: 100%;
+            padding: 18px 24px;
+            font-size: 18px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(255, 107, 53, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .access-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .access-btn:hover::before {
+            left: 100%;
+        }
+
+        .access-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(255, 107, 53, 0.4);
+        }
+
+        .access-btn:active {
+            transform: translateY(0);
+        }
+
+        .access-btn .btn-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 32px;
+        }
+
+        .feature {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            margin: 0 auto 8px;
+            fill: #ff6b35;
+        }
+
+        .feature-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .footer-text {
+            margin-top: 32px;
+            font-size: 12px;
+            color: #888888;
+            font-weight: 500;
+        }
+
+        /* Tablet Styles */
+        @media (max-width: 1024px) and (min-width: 768px) {
+            .access-container {
+                max-width: 600px;
+                padding: 56px 48px;
+            }
+
+            .welcome-title {
+                font-size: 32px;
+            }
+
+            .room-input {
+                font-size: 20px;
+                padding: 20px 24px;
+            }
+
+            .access-btn {
+                font-size: 20px;
+                padding: 20px 28px;
+            }
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 767px) {
+            body {
+                padding: 16px;
+            }
+
+            .access-container {
+                padding: 32px 24px;
+                border-radius: 20px;
+            }
+
+            .logo-section {
+                margin-bottom: 24px;
+                gap: 12px;
+            }
+
+            .logo {
+                width: 48px;
+                height: 48px;
+                border-radius: 12px;
+            }
+
+            .logo svg {
+                width: 28px;
+                height: 28px;
+            }
+
+            .brand-name {
+                font-size: 20px;
+            }
+
+            .brand-subtitle {
+                font-size: 12px;
+            }
+
+            .welcome-title {
+                font-size: 24px;
+            }
+
+            .welcome-subtitle {
+                font-size: 14px;
+            }
+
+            .room-input {
+                font-size: 16px;
+                padding: 14px 18px;
+            }
+
+            .access-btn {
+                font-size: 16px;
+                padding: 16px 20px;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                margin-top: 24px;
+            }
+        }
+
+        /* Animation for page load */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .access-container {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="access-container">
+        <!-- Logo and Brand -->
+        <div class="logo-section">
+            <div class="logo">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                    <path d="M2 17L12 22L22 17"/>
+                    <path d="M2 12L12 17L22 12"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1 class="brand-name">Birdnest</h1>
+                <p class="brand-subtitle">Glamping Resort</p>
+            </div>
+        </div>
+
+        <!-- Welcome Text -->
+        <div class="welcome-text">
+            <h2 class="welcome-title">Smart Room Access</h2>
+            <p class="welcome-subtitle">Enter your room number to access controls</p>
+        </div>
+
+        <!-- Access Form -->
+        <form class="access-form" onsubmit="accessRoom(event)">
+            <div class="input-group">
+                <label class="input-label" for="roomNumber">Room Number</label>
+                <input 
+                    type="text" 
+                    class="room-input" 
+                    id="roomNumber" 
+                    name="room_number"
+                    placeholder="e.g., A101, Suite-1" 
+                    required
+                    maxlength="10"
+                    title="Please enter your room number"
+                >
+            </div>
+            <button type="submit" class="access-btn">
+                <span class="btn-text">Access Room Controls</span>
+            </button>
+        </form>
+
+        <!-- Features -->
+        <div class="features">
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24">
+                    <path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,10.68 7.95,12.16 9.35,13L10,13.5V16H14V13.5L14.65,13C16.05,12.16 17,10.68 17,9A5,5 0 0,0 12,4Z"/>
+                </svg>
+                <div class="feature-text">Smart Lighting</div>
+            </div>
+            <div class="feature">
+                <svg class="feature-icon" viewBox="0 0 24 24">
+                    <path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7A1,1 0 0,1 12,8A1,1 0 0,1 11,7V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M21,14V12L19,10V11A5,5 0 0,1 14,16H13V18A1,1 0 0,1 12,19A1,1 0 0,1 11,18V16H10A5,5 0 0,1 5,11V10L3,12V14L5,16V15A3,3 0 0,0 8,18H16A3,3 0 0,0 19,15V16L21,14Z"/>
+                </svg>
+                <div class="feature-text">Climate Control</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <p class="footer-text">Powered by Birdnest Smart Room Technology</p>
+    </div>
+
+    <script>
+        // Auto fullscreen on page load for tablet devices
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => {
+                    console.log('Fullscreen not supported or denied');
+                });
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) {
+                elem.msRequestFullscreen();
+            }
+        }
+
+        // Check if device is likely a tablet
+        function isTabletDevice() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const isTablet = /(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent);
+            const hasTouch = 'ontouchstart' in window;
+            const screenSize = window.screen.width >= 768 && window.screen.width <= 1024;
+            
+            return isTablet || (hasTouch && screenSize);
+        }
+
+        // Trigger fullscreen when page loads on tablets
+        window.addEventListener('load', function() {
+            if (isTabletDevice()) {
+                setTimeout(enterFullscreen, 1000);
+            }
+        });
+
+        // Room access function
+        function accessRoom(event) {
+            event.preventDefault();
+            const roomNumber = document.getElementById('roomNumber').value.trim();
+            
+            if (roomNumber) {
+                // Add loading state
+                const button = event.target.querySelector('.access-btn');
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span class="btn-text">Accessing...</span>';
+                button.disabled = true;
+                
+                // Simulate brief loading then redirect
+                setTimeout(() => {
+                    window.location.href = `/iot/smart/${roomNumber}/`;
+                }, 500);
+            } else {
+                // Show error for invalid input
+                const input = document.getElementById('roomNumber');
+                input.style.borderColor = '#ef4444';
+                input.style.boxShadow = '0 0 0 4px rgba(239, 68, 68, 0.1)';
+                
+                setTimeout(() => {
+                    input.style.borderColor = '#e5e7eb';
+                    input.style.boxShadow = 'none';
+                }, 2000);
+            }
+        }
+
+        // Auto-focus room input on page load
+        window.addEventListener('load', function() {
+            document.getElementById('roomNumber').focus();
+        });
+
+        // Handle Enter key
+        document.getElementById('roomNumber').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                accessRoom(e);
+            }
+        });
+    </script>
+</body>
+</html>
