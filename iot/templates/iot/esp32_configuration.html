@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Configuration - Room {{ room.room_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #495057;
+        }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ESP32 Configuration</h1>
+            <p>Room {{ room.room_number }} - Device Setup</p>
+            <span class="status {{ esp32.is_online|yesno:'online,offline' }}">
+                {{ esp32.is_online|yesno:'🟢 Online,🔴 Offline' }}
+            </span>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Device Settings -->
+            <div class="section">
+                <h3>🔧 Device Settings</h3>
+                <div class="form-group">
+                    <label for="ip_address">ESP32 IP Address:</label>
+                    <input type="text" id="ip_address" name="ip_address" value="{{ esp32.ip_address }}" required>
+                    <div class="help-text">Enter the IP address of your ESP32 device (e.g., 192.168.1.100)</div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="auth_username">Authentication Username:</label>
+                        <input type="text" id="auth_username" name="auth_username" value="{{ esp32.auth_username }}" required>
+                        <div class="help-text">Username for HTTP Basic Authentication</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="auth_password">Authentication Password:</label>
+                        <input type="password" id="auth_password" name="auth_password" value="{{ esp32.auth_password }}" required>
+                        <div class="help-text">Password for HTTP Basic Authentication</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Light Configuration -->
+            <div class="section">
+                <h3>💡 Main Light Endpoints</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="main_light_on_endpoint">Turn ON Endpoint:</label>
+                        <input type="text" id="main_light_on_endpoint" name="main_light_on_endpoint" value="{{ config.main_light_on_endpoint }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="main_light_off_endpoint">Turn OFF Endpoint:</label>
+                        <input type="text" id="main_light_off_endpoint" name="main_light_off_endpoint" value="{{ config.main_light_off_endpoint }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="main_light_post_data">Additional POST Data (JSON):</label>
+                    <textarea id="main_light_post_data" name="main_light_post_data" placeholder='{"key": "value"}'>{{ config.main_light_post_data|default:"{}"|safe }}</textarea>
+                    <div class="help-text">Optional JSON data to send with main light commands</div>
+                </div>
+            </div>
+
+            <!-- RGB Light Configuration -->
+            <div class="section">
+                <h3>🌈 RGB Light Endpoints</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rgb_light_on_endpoint">Turn ON Endpoint:</label>
+                        <input type="text" id="rgb_light_on_endpoint" name="rgb_light_on_endpoint" value="{{ config.rgb_light_on_endpoint }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="rgb_light_off_endpoint">Turn OFF Endpoint:</label>
+                        <input type="text" id="rgb_light_off_endpoint" name="rgb_light_off_endpoint" value="{{ config.rgb_light_off_endpoint }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="rgb_light_color_endpoint">Color Control Endpoint:</label>
+                    <input type="text" id="rgb_light_color_endpoint" name="rgb_light_color_endpoint" value="{{ config.rgb_light_color_endpoint }}">
+                </div>
+                <div class="form-group">
+                    <label for="rgb_light_post_data">Additional POST Data (JSON):</label>
+                    <textarea id="rgb_light_post_data" name="rgb_light_post_data" placeholder='{"key": "value"}'>{{ config.rgb_light_post_data|default:"{}"|safe }}</textarea>
+                    <div class="help-text">Optional JSON data to send with RGB light commands</div>
+                </div>
+            </div>
+
+            <!-- AC Configuration -->
+            <div class="section">
+                <h3>❄️ Air Conditioning Endpoints</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ac_power_endpoint">Power Control Endpoint:</label>
+                        <input type="text" id="ac_power_endpoint" name="ac_power_endpoint" value="{{ config.ac_power_endpoint }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="ac_temperature_endpoint">Temperature Control Endpoint:</label>
+                        <input type="text" id="ac_temperature_endpoint" name="ac_temperature_endpoint" value="{{ config.ac_temperature_endpoint }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ac_mode_endpoint">Mode Control Endpoint:</label>
+                    <input type="text" id="ac_mode_endpoint" name="ac_mode_endpoint" value="{{ config.ac_mode_endpoint }}">
+                </div>
+                <div class="form-group">
+                    <label for="ac_post_data">Additional POST Data (JSON):</label>
+                    <textarea id="ac_post_data" name="ac_post_data" placeholder='{"key": "value"}'>{{ config.ac_post_data|default:"{}"|safe }}</textarea>
+                    <div class="help-text">Optional JSON data to send with AC commands</div>
+                </div>
+            </div>
+
+            <!-- Locker Configuration -->
+            <div class="section">
+                <h3>🔐 Locker Control</h3>
+                <div class="form-group">
+                    <label for="locker_endpoint">Locker Endpoint:</label>
+                    <input type="text" id="locker_endpoint" name="locker_endpoint" value="{{ config.locker_endpoint }}">
+                    <div class="help-text">Use {locker_number} as placeholder (e.g., open/{locker_number})</div>
+                </div>
+                <div class="form-group">
+                    <label for="locker_post_data">Additional POST Data (JSON):</label>
+                    <textarea id="locker_post_data" name="locker_post_data" placeholder='{"key": "value"}'>{{ config.locker_post_data|default:"{}"|safe }}</textarea>
+                    <div class="help-text">Optional JSON data to send with locker commands</div>
+                </div>
+            </div>
+
+            <!-- Reading Light Configuration -->
+            <div class="section">
+                <h3>📖 Reading Light Endpoints</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="reading_light_on_endpoint">Turn ON Endpoint:</label>
+                        <input type="text" id="reading_light_on_endpoint" name="reading_light_on_endpoint" value="{{ config.reading_light_on_endpoint }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="reading_light_off_endpoint">Turn OFF Endpoint:</label>
+                        <input type="text" id="reading_light_off_endpoint" name="reading_light_off_endpoint" value="{{ config.reading_light_off_endpoint }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="reading_light_post_data">Additional POST Data (JSON):</label>
+                    <textarea id="reading_light_post_data" name="reading_light_post_data" placeholder='{"key": "value"}'>{{ config.reading_light_post_data|default:"{}"|safe }}</textarea>
+                    <div class="help-text">Optional JSON data to send with reading light commands</div>
+                </div>
+            </div>
+
+            <!-- Bedside Light Configuration -->
+            <div class="section">
+                <h3>🛏️ Bedside Light Endpoints</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bedside_light_on_endpoint">Turn ON Endpoint:</label>
+                        <input type="text" id="bedside_light_on_endpoint" name="bedside_light_on_endpoint" value="{{ config.bedside_light_on_endpoint }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="bedside_light_off_endpoint">Turn OFF Endpoint:</label>
+                        <input type="text" id="bedside_light_off_endpoint" name="bedside_light_off_endpoint" value="{{ config.bedside_light_off_endpoint }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bedside_light_post_data">Additional POST Data (JSON):</label>
+                    <textarea id="bedside_light_post_data" name="bedside_light_post_data" placeholder='{"key": "value"}'>{{ config.bedside_light_post_data|default:"{}"|safe }}</textarea>
+                    <div class="help-text">Optional JSON data to send with bedside light commands</div>
+                </div>
+            </div>
+
+            <!-- Custom Endpoints -->
+            <div class="section">
+                <h3>⚙️ Custom Endpoints</h3>
+                <div class="form-group">
+                    <label for="custom_endpoint_1_name">Custom Device 1 Name:</label>
+                    <input type="text" id="custom_endpoint_1_name" name="custom_endpoint_1_name" value="{{ config.custom_endpoint_1_name }}" placeholder="e.g., Fan, TV, Curtains">
+                </div>
+                <div class="form-group">
+                    <label for="custom_endpoint_1">Custom Device 1 Endpoint:</label>
+                    <input type="text" id="custom_endpoint_1" name="custom_endpoint_1" value="{{ config.custom_endpoint_1 }}" placeholder="e.g., device/fan/toggle">
+                </div>
+                <div class="form-group">
+                    <label for="custom_endpoint_1_data">Custom Device 1 POST Data (JSON):</label>
+                    <textarea id="custom_endpoint_1_data" name="custom_endpoint_1_data" placeholder='{"key": "value"}'>{{ config.custom_endpoint_1_data|default:"{}"|safe }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="custom_endpoint_2_name">Custom Device 2 Name:</label>
+                    <input type="text" id="custom_endpoint_2_name" name="custom_endpoint_2_name" value="{{ config.custom_endpoint_2_name }}" placeholder="e.g., Fan, TV, Curtains">
+                </div>
+                <div class="form-group">
+                    <label for="custom_endpoint_2">Custom Device 2 Endpoint:</label>
+                    <input type="text" id="custom_endpoint_2" name="custom_endpoint_2" value="{{ config.custom_endpoint_2 }}" placeholder="e.g., device/tv/power">
+                </div>
+                <div class="form-group">
+                    <label for="custom_endpoint_2_data">Custom Device 2 POST Data (JSON):</label>
+                    <textarea id="custom_endpoint_2_data" name="custom_endpoint_2_data" placeholder='{"key": "value"}'>{{ config.custom_endpoint_2_data|default:"{}"|safe }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="custom_endpoint_3_name">Custom Device 3 Name:</label>
+                    <input type="text" id="custom_endpoint_3_name" name="custom_endpoint_3_name" value="{{ config.custom_endpoint_3_name }}" placeholder="e.g., Fan, TV, Curtains">
+                </div>
+                <div class="form-group">
+                    <label for="custom_endpoint_3">Custom Device 3 Endpoint:</label>
+                    <input type="text" id="custom_endpoint_3" name="custom_endpoint_3" value="{{ config.custom_endpoint_3 }}" placeholder="e.g., device/curtains/open">
+                </div>
+                <div class="form-group">
+                    <label for="custom_endpoint_3_data">Custom Device 3 POST Data (JSON):</label>
+                    <textarea id="custom_endpoint_3_data" name="custom_endpoint_3_data" placeholder='{"key": "value"}'>{{ config.custom_endpoint_3_data|default:"{}"|safe }}</textarea>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="{% url 'iot:room_control' room.room_number %}" class="btn btn-secondary">← Back to Controls</a>
+                <button type="submit" class="btn">💾 Save Configuration</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

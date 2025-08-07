@@ -33,6 +33,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if os.getenv('D
 
 # Application definition
 
+# Add to INSTALLED_APPS
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -41,8 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
-    'widget_tweaks',  # Add this line
-    'pms',  # Your PMS app
+    'widget_tweaks',
+    'pms',
+    'iot',  # Add this line
 ]
 
 MIDDLEWARE = [
@@ -173,3 +175,8 @@ LOGGING = {
         },
     },
 }
+
+
+# Add requests to requirements if not already there
+# You might want to add this to requirements.txt:
+# requests>=2.28.0

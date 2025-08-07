@@ -7,7 +7,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('calendar/', lambda request: render(request, 'pms/calendar.html'), name='calendar'),
     path('calendar/data/', calendar_data, name='calendar_data'),
-    path('', include('pms.urls')),  # Include PMS app URLs at root
+    path('', include('pms.urls')),
+    path('iot/', include('iot.urls')),
 ]
 
 print("Debug: Root URL patterns loaded")
