@@ -98,7 +98,7 @@ class Room(models.Model):
     room_number = models.CharField(max_length=10, unique=True)
     room_type = models.CharField(max_length=20, choices=ROOM_TYPES)
     rate = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='vacant_clean')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='vacant_clean', db_index=True)
     
     # Enhanced room details
     floor = models.PositiveIntegerField(null=True, blank=True, help_text="Floor number")
@@ -333,9 +333,9 @@ class Reservation(models.Model):
     ]
     guest = models.ForeignKey(Guest, on_delete=models.CASCADE)
     room = models.ForeignKey(Room, on_delete=models.CASCADE)
-    check_in = models.DateField()
+    check_in = models.DateField(db_index=True)
     check_in_time = models.TimeField(null=True, blank=True)
-    check_out = models.DateField()
+    check_out = models.DateField(db_index=True)
     num_guests = models.PositiveIntegerField(default=1)
     terms_accepted = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
@@ -399,14 +399,13 @@ class Reservation(models.Model):
         return overlapping.exists()
 
     def clean(self):
-        """Validate the reservation."""
-        from django.core.exceptions import ValidationError
-        # Ensure check_out is after check_in
-        if self.check_out and self.check_in and self.check_out <= self.check_in:
-            raise ValidationError('Check-out date must be after check-in date')
+        # Add check-out date validation
+        if self.check_in and self.check_out and self.check_out <= self.check_in:
+            raise ValidationError("Check-out date must be after check-in date")
+        
         # Check for overlapping active reservations
         if self.has_overlap():
-            raise ValidationError('This room is already reserved for these dates')
+            raise ValidationError(f"Room {self.room.room_number} is already booked for the selected dates.")
         
         super().clean()
 
