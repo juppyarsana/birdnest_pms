@@ -177,6 +177,13 @@ LOGGING = {
 }
 
 
+# IoT Configuration for Production
+# Note: ESP32 IP addresses are configured per room in the database
+# These are only default/fallback values for new ESP32 configurations
+ESP32_DEFAULT_USERNAME = os.getenv('ESP32_DEFAULT_USERNAME', 'admin')
+ESP32_DEFAULT_PASSWORD = os.getenv('ESP32_DEFAULT_PASSWORD', '')
+IOT_NETWORK_ALLOWED = os.getenv('IOT_NETWORK_ALLOWED', 'True').lower() in ['true', '1']
+
 # Add requests to requirements if not already there
 # You might want to add this to requirements.txt:
 # requests>=2.28.0
